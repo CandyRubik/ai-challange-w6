@@ -3,17 +3,20 @@ from __future__ import annotations
 import json
 from pathlib import Path
 import sqlite3
+from concurrent.futures import ThreadPoolExecutor
+from threading import Event
 
 from fastapi.testclient import TestClient
 import pytest
 
 from app.agents.agent import Agent, AgentOutputError
-from app.main import app, get_chat_session_service, get_memory_service
+from app.main import app, get_chat_session_service, get_memory_service, get_goal_coordinator
 from app.memory.service import MemoryService, SQLiteMemoryRepository
 from app.memory.updates import MemoryUpdateConflict, WorkingMemoryInterpreter
 from app.schemas import MemoryCreateRequest
 from app.services.chat_sessions import ChatSessionService
 from app.storage.chat_sessions import ChatTurnConflict, SQLiteChatSessionRepository
+from app.state.task import TaskConflict
 
 
 class JsonModel:
@@ -51,6 +54,165 @@ def create_services(tmp_path: Path, json_model=None, answers=None):
 
 def constraint(value: str) -> dict:
     return {"changes": [{"group": "constraint", "action": "set", "key": "length", "value": value}]}
+
+
+def test_new_goal_branches_without_copying_old_working_memory(tmp_path):
+    service, memories, _ = create_services(tmp_path, JsonModel(
+        {"goal_action": "set", "goal": "Написать письмо", **constraint("коротко")},
+        {"goal_action": "set", "goal": "Подготовить тренировку"},
+    ))
+    original = service.create()
+    service.send(original.id, "Моя цель — написать письмо. Пиши коротко.")
+    memories.add(layer="long_term", category="preference", content="Русский язык", session_id=None)
+    before = service.get(original.id)
+    result = service.send(original.id, "Теперь моя цель — подготовить тренировку.")
+    assert result.session.id != original.id
+    assert result.session.parent_session_id == original.id
+    assert service.get(original.id) == before
+    assert {row.content for row in memories.list_working(original.id)} == {"Написать письмо", "length: коротко"}
+    assert [row.content for row in memories.list_working(result.session.id)] == ["Подготовить тренировку"]
+    assert len(service.list()) == 2
+    assert memories.list_long_term()[0].content == "Русский язык"
+
+
+def test_failed_branch_replays_the_same_operation_after_restart(tmp_path):
+    decisions = JsonModel({"goal_action": "set", "goal": "Письмо"},
+                          {"goal_action": "set", "goal": "Тренировка"})
+    service, _, _ = create_services(tmp_path, decisions, AnswerModel("Письмо", AgentOutputError("temporary")))
+    source = service.create()
+    service.send(source.id, "Цель — письмо")
+    with pytest.raises(AgentOutputError) as failed:
+        service.send(source.id, "Новая цель — тренировка", operation_id="branch-1")
+    target_id = failed.value.branch_session_id
+    message_id = failed.value.branch_message_id
+    restarted_decisions = JsonModel()
+    restarted, _, _ = create_services(tmp_path, restarted_decisions, AnswerModel("Тренировка готова"))
+    recovered = restarted.send(source.id, "Новая цель — тренировка", operation_id="branch-1")
+    assert recovered.session.id == target_id and recovered.user_message.id == message_id
+    assert recovered.assistant_message.content == "Тренировка готова"
+    replayed = restarted.send(source.id, "Новая цель — тренировка", operation_id="branch-1")
+    assert replayed == recovered and len(restarted.list()) == 2
+    assert restarted_decisions.calls == []
+    with pytest.raises(ChatTurnConflict, match="другого сообщения"):
+        restarted.send(source.id, "Другая цель", operation_id="branch-1")
+
+
+def test_new_goal_can_branch_from_an_active_task(tmp_path):
+    service, _, _ = create_services(tmp_path, JsonModel({"goal_action": "set", "goal": "Тренировка"}))
+    source = service.create()
+    before = service.start_task(source.id, "Написать письмо")
+    result = service.send(source.id, "Моя новая цель — тренировка")
+    assert result.session.parent_session_id == source.id
+    assert service.get(source.id) == before
+    assert service.get(result.session.id).task is None
+
+
+def test_manual_goal_api_uses_the_same_branching_and_operation_recovery(tmp_path):
+    service, memories, sessions = create_services(tmp_path)
+    app.dependency_overrides[get_chat_session_service] = lambda: service
+    app.dependency_overrides[get_goal_coordinator] = lambda: lambda: service
+    app.dependency_overrides[get_memory_service] = lambda: MemoryService(memories, sessions)
+    try:
+        with TestClient(app) as client:
+            source = client.post("/api/chat/sessions", json={}).json()["id"]
+            first = {"layer": "working", "category": "goal", "content": "Письмо", "session_id": source}
+            assert client.post("/api/memory", json=first).json()["session_id"] == source
+            second = {**first, "content": "Тренировка", "operation_id": "manual-branch"}
+            response = client.post("/api/memory", json=second)
+            assert response.status_code == 201
+            target = response.json()["session_id"]
+            assert target != source
+            assert client.post("/api/memory", json=second).json() == response.json()
+            operation = client.get(f"/api/chat/sessions/{source}/operations/manual-branch").json()
+            assert operation["session"]["id"] == target
+            assert operation["user_message"]["status"] == "done"
+            assert client.get(f"/api/chat/sessions/{target}").json()["parent_session_id"] == source
+            assert [entry["content"] for entry in client.get(f"/api/memory?session_id={source}").json()["working"]] == ["Письмо"]
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_concurrent_replay_does_not_create_a_second_branch(tmp_path):
+    initial, _, _ = create_services(tmp_path, JsonModel({"goal_action": "set", "goal": "Письмо"}))
+    source = initial.create()
+    initial.send(source.id, "Моя цель — письмо")
+    entered, release = Event(), Event()
+
+    class BlockingAnswer(AnswerModel):
+        def generate(self, **kwargs):
+            entered.set()
+            assert release.wait(5)
+            return super().generate(**kwargs)
+
+    decisions = JsonModel({"goal_action": "set", "goal": "Тренировка"})
+    answers = BlockingAnswer()
+    service, _, _ = create_services(tmp_path, decisions, answers)
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        pending = pool.submit(service.send, source.id, "Новая цель — тренировка", operation_id="one-branch")
+        try:
+            assert entered.wait(5)
+            with pytest.raises(TaskConflict, match="уже выполняется"):
+                service.send(source.id, "Новая цель — тренировка", operation_id="one-branch")
+        finally:
+            release.set()
+        completed = pending.result(timeout=5)
+    assert service.send(source.id, "Новая цель — тренировка", operation_id="one-branch") == completed
+    assert len(service.list()) == 2 and len(answers.calls) == len(decisions.calls) == 1
+
+
+def test_explicit_task_with_a_new_goal_branches_and_can_replay(tmp_path):
+    service, _, _ = create_services(tmp_path)
+    source = service.create()
+    service.send(source.id, "/goal Написать письмо")
+    result = service.start_task(source.id, "Подготовить тренировку", operation_id="task-branch")
+    assert result.id != source.id and result.parent_session_id == source.id
+    assert result.task.task == "Подготовить тренировку"
+    assert service.get(source.id).task is None
+    assert service.start_task(source.id, "Подготовить тренировку", operation_id="task-branch").id == result.id
+    assert len(service.list()) == 2
+
+
+def test_failed_branch_http_returns_destination_and_retry_uses_it(tmp_path):
+    service, memories, sessions = create_services(tmp_path, JsonModel(
+        {"goal_action": "set", "goal": "Письмо"}, {"goal_action": "set", "goal": "Тренировка"},
+    ), AnswerModel("Первый ответ", AgentOutputError("temporary"), "Повтор готов"))
+    app.dependency_overrides[get_chat_session_service] = lambda: service
+    try:
+        with TestClient(app) as client:
+            source = client.post("/api/chat/sessions", json={}).json()["id"]
+            url = f"/api/chat/sessions/{source}"
+            assert client.post(url + "/messages", json={"content": "Цель — письмо"}).status_code == 200
+            failed = client.post(url + "/messages", json={"content": "Новая цель — тренировка", "operation_id": "failed-branch"})
+            assert failed.status_code == 502
+            destination = failed.json()["detail"]
+            assert destination["session_id"] != source
+            state = client.get(url + "/operations/failed-branch").json()
+            assert state["session"]["id"] == destination["session_id"]
+            retried = client.post(f"/api/chat/sessions/{destination['session_id']}/messages/{destination['message_id']}/retry")
+            assert retried.status_code == 200 and retried.json()["assistant_message"]["content"] == "Повтор готов"
+            assert len(service.list()) == 2
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_goal_command_does_not_generate_or_extract_memory(tmp_path):
+    class NoExtraction:
+        def __init__(self):
+            self.calls = []
+        def extract(self, **kwargs):
+            self.calls.append(kwargs)
+            return []
+
+    repository = SQLiteChatSessionRepository(tmp_path / "chat.sqlite3")
+    memories = SQLiteMemoryRepository(tmp_path / "chat.sqlite3")
+    answers = AnswerModel()
+    extractor = NoExtraction()
+    service = ChatSessionService(repository, Agent(answers), memories, extractor)
+    source = service.create()
+    reply = service.send(source.id, "/goal " + "Ц" * 4000)
+    assert answers.calls == extractor.calls == []
+    assert reply.assistant_message.model is None
+    assert memories.list_working(source.id)[0].content == "Ц" * 4000
 
 
 def test_failed_answer_survives_restart_and_retry_interprets_only_once(tmp_path):
@@ -95,7 +257,7 @@ def test_correction_replaces_value_and_points_to_correcting_message(tmp_path):
     assert facts[0].source_message_id != first.user_message.id
 
 
-def test_new_goal_clears_working_scope_and_old_dialogue_but_preserves_long_term(tmp_path):
+def test_new_branch_has_fresh_context_and_shared_long_term_memory(tmp_path):
     answers = AnswerModel()
     service, memories, _ = create_services(tmp_path, JsonModel(
         {"goal_action": "set", "goal": "Старая цель", **constraint("коротко")},
@@ -104,9 +266,9 @@ def test_new_goal_clears_working_scope_and_old_dialogue_but_preserves_long_term(
     chat = service.create()
     memories.add(layer="long_term", category="preference", content="Русский язык", session_id=None)
     service.send(chat.id, "Старая цель: короткая статья")
-    service.send(chat.id, "Новая цель: подготовить интервью")
-    service.send(chat.id, "Продолжай")
-    assert [(fact.category, fact.content) for fact in memories.list_working(chat.id)] == [("goal", "Новая цель")]
+    branch = service.send(chat.id, "Новая цель: подготовить интервью")
+    service.send(branch.session.id, "Продолжай")
+    assert [(fact.category, fact.content) for fact in memories.list_working(branch.session.id)] == [("goal", "Новая цель")]
     assert len(memories.list_long_term()) == 1
     for call in answers.calls[1:]:
         assert "Старая цель" not in json.dumps(call, ensure_ascii=False)
@@ -177,6 +339,7 @@ def test_task_memory_survives_history_window_and_isolated_from_new_chat(tmp_path
 def test_api_recovery_and_source_links_for_manual_memory(tmp_path):
     service, memories, sessions = create_services(tmp_path, answers=AnswerModel(AgentOutputError("temporary"), "Готово"))
     app.dependency_overrides[get_chat_session_service] = lambda: service
+    app.dependency_overrides[get_goal_coordinator] = lambda: lambda: service
     app.dependency_overrides[get_memory_service] = lambda: MemoryService(memories, sessions)
     try:
         client = TestClient(app)
@@ -197,7 +360,8 @@ def test_api_recovery_and_source_links_for_manual_memory(tmp_path):
         assert command.status_code == 201
         source = command.json()
         assert source["source_session_id"] == chat["id"]
-        assert source["source_message_id"] == client.get(url).json()["messages"][-1]["id"]
+        assert any(message["id"] == source["source_message_id"] and message["kind"] == "command"
+                   for message in client.get(url).json()["messages"])
     finally:
         app.dependency_overrides.clear()
 

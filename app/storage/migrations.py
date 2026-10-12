@@ -3,6 +3,14 @@
 import sqlite3
 
 
+def remove_retired_rag_chat(connection: sqlite3.Connection) -> None:
+    """The retired chat's data was explicitly approved for deletion."""
+    if not connection.in_transaction:
+        connection.execute("BEGIN IMMEDIATE")
+    for table in ("rag_chat_turns", "rag_chat_state", "rag_chat_sessions"):
+        connection.execute(f"DROP TABLE IF EXISTS {table}")
+
+
 def archive_profile_scope(connection: sqlite3.Connection, table: str) -> None:
     if table not in {"chat_sessions", "long_term_memory"}:
         raise ValueError("Unsupported migration table")

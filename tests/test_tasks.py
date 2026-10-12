@@ -12,7 +12,8 @@ from app.agents.task_state import TaskConflict
 from app.main import app, get_chat_session_service
 from app.providers.deepseek import LlmRequestError, LlmTruncatedResponseError
 from app.schemas import TaskActionRequest
-from app.services.chat_sessions import ChatSessionService, SQLiteChatSessionRepository
+from app.services.chat_sessions import ChatSessionService
+from app.storage.chat_sessions import SQLiteChatSessionRepository
 from app.services.memory import SQLiteMemoryRepository
 
 
@@ -431,7 +432,9 @@ def test_task_api_validation_isolation_and_clear(tmp_path: Path) -> None:
             assert client.post(url + "/task", json={"task": "  "}).status_code == 422
             created = client.post(url + "/task", json={"task": "Учебный курс"})
             assert created.status_code == 201
-            assert client.post(url + "/task", json={"task": "Вторая"}).status_code == 409
+            branch = client.post(url + "/task", json={"task": "Вторая"}).json()
+            assert branch["id"] != first and branch["parent_session_id"] == first
+            assert client.post(url + "/task", json={"task": "Учебный курс"}).status_code == 409
             assert client.get(f"/api/chat/sessions/{second}").json()["task"] is None
             assert client.post(url + "/messages", json={"content": "Выполни"}).status_code == 409
             assert client.post(url + "/task/actions", json={"action": "replan", "revision": 0}).status_code == 422
@@ -464,6 +467,38 @@ def test_task_stages_use_current_working_and_shared_long_term_memory(tmp_path: P
     for prompt in model.prompts:
         assert "CURRENT_CHAT_ONLY" in prompt and "SHARED_KNOWLEDGE" in prompt
         assert "OTHER_CHAT_ONLY" not in prompt and "USER_PROFILE" not in prompt
+
+
+def test_memory_change_during_action_applies_to_the_next_action(tmp_path):
+    entered, release = Event(), Event()
+
+    class BlockingModel(TaskModel):
+        def generate(self, **kwargs):
+            if not self.snapshots:
+                entered.set()
+                assert release.wait(5)
+            return super().generate(**kwargs)
+
+    repository = SQLiteChatSessionRepository(tmp_path / "chat.sqlite3")
+    memories = SQLiteMemoryRepository(tmp_path / "chat.sqlite3")
+    previous = memories.add(layer="working", category="constraint", content="OLD_CONSTRAINT",
+                            session_id=repository.create().id)
+    model = BlockingModel([PLAN, "Готовый первый шаг"])
+    service = ChatSessionService(repository, Agent(model), memory_repository=memories)
+    service.start_task(previous.session_id, "Курс для новичков")
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        running = pool.submit(act, service, previous.session_id, "generate_plan")
+        try:
+            assert entered.wait(5)
+            memories.delete("working", previous.id)
+            memories.add(layer="working", category="constraint", content="NEW_CONSTRAINT", session_id=previous.session_id)
+        finally:
+            release.set()
+        assert running.result(timeout=5).task.state == "awaiting_approval"
+    act(service, previous.session_id, "approve")
+    act(service, previous.session_id, "execute_step")
+    assert "OLD_CONSTRAINT" in model.prompts[0] and "NEW_CONSTRAINT" not in model.prompts[0]
+    assert "NEW_CONSTRAINT" in model.prompts[1] and "OLD_CONSTRAINT" not in model.prompts[1]
 
 
 def test_task_creation_is_available_immediately(tmp_path: Path) -> None:

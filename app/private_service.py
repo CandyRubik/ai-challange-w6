@@ -13,7 +13,7 @@ from starlette.responses import JSONResponse
 
 
 GENERATION_PATH = re.compile(
-    r"^/api/(?:chat|rag-chat)/sessions/[^/]+/"
+    r"^/api/chat/sessions/[^/]+/"
     r"(?:messages(?:/[^/]+/retry)?|turns(?:/[^/]+/retry)?|task/actions)$"
 )
 

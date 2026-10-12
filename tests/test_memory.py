@@ -12,11 +12,8 @@ from app.agents.agent import Agent, AgentMessage
 from app.agents.memory_extractor import MemoryCandidate, MemoryExtractor
 from app.main import app, get_memory_service
 from app.schemas import MemoryCreateRequest
-from app.services.chat_sessions import (
-    ChatSessionNotFound,
-    ChatSessionService,
-    SQLiteChatSessionRepository,
-)
+from app.services.chat_sessions import ChatSessionService
+from app.storage.chat_sessions import ChatSessionNotFound, SQLiteChatSessionRepository
 from app.services.memory import (
     MemoryService,
     MemoryValidationError,
@@ -68,6 +65,21 @@ def services(
     sessions = SQLiteChatSessionRepository(database_path)
     memories = SQLiteMemoryRepository(database_path)
     return sessions, memories, MemoryService(memories, sessions)
+
+
+def test_manual_fact_api_is_independent_of_model_configuration(tmp_path, monkeypatch):
+    _, _, memory = services(tmp_path)
+    monkeypatch.setenv("OLLAMA_NUM_CTX", "invalid")
+    app.dependency_overrides[get_memory_service] = lambda: memory
+    try:
+        with TestClient(app) as client:
+            response = client.post("/api/memory", json={
+                "layer": "long_term", "category": "fact", "content": "Сохранить без модели",
+            })
+            assert response.status_code == 201
+            assert client.get("/api/memory").json()["long_term"][0]["content"] == "Сохранить без модели"
+    finally:
+        app.dependency_overrides.clear()
 
 
 def test_memory_writes_require_an_explicit_valid_scope(tmp_path: Path) -> None:

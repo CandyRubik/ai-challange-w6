@@ -13,7 +13,7 @@ from uuid import uuid4
 
 from ..memory.messages import StoredMessage
 from ..state.task import StoredTask, TaskContext, TaskConflict, TaskState
-from .migrations import archive_profile_scope
+from .migrations import archive_profile_scope, remove_retired_rag_chat
 
 
 DEFAULT_CHAT_DB_PATH = Path(__file__).resolve().parents[2] / "data" / "chat.sqlite3"
@@ -37,9 +37,19 @@ class StoredSession:
     messages: tuple[StoredMessage, ...] = ()
     task: StoredTask | None = None
     provider: str = "deepseek"
+    parent_session_id: str | None = None
 
 
 class ChatSessionRepository(Protocol):
+    def operation_guard(self, operation_id: str) -> AbstractContextManager[None]: ...
+
+    def operation(self, source_session_id: str, operation_id: str) -> tuple[StoredSession, StoredMessage] | None: ...
+
+    def begin_turn(self, session_id: str, content: str, *, operation_id: str, message_id: str,
+                   branch: bool = False, memory_update: str | None = None,
+                   provider: str | None = None, model: str | None = None,
+                   project_help: dict | None = None) -> tuple[StoredSession, StoredMessage]: ...
+
     def create(self, *, provider: str = "deepseek") -> StoredSession: ...
 
     def set_provider(self, session_id: str, provider: str) -> StoredSession: ...
@@ -72,6 +82,7 @@ class ChatSessionRepository(Protocol):
 
     def finish_turn(
         self, session_id: str, message_id: str, answer: str, *, refusal: bool = False,
+        generated: bool = True,
         on_commit: Callable[[sqlite3.Connection], None] | None = None,
         project_help: dict | None = None,
     ) -> StoredSession: ...
@@ -81,6 +92,7 @@ class ChatSessionRepository(Protocol):
 
     def create_task(
         self, session_id: str, task: TaskContext, *, assistant_content: str | None = None,
+        branch: bool = False, operation_id: str | None = None,
     ) -> StoredSession: ...
 
     def update_task(
@@ -163,6 +175,8 @@ class SQLiteChatSessionRepository:
             archive_profile_scope(connection, "chat_sessions")
             if "provider" not in session_columns:
                 connection.execute("ALTER TABLE chat_sessions ADD COLUMN provider TEXT NOT NULL DEFAULT 'deepseek'")
+            if "parent_session_id" not in session_columns:
+                connection.execute("ALTER TABLE chat_sessions ADD COLUMN parent_session_id TEXT REFERENCES chat_sessions(id) ON DELETE SET NULL")
             message_columns = {
                 row["name"]
                 for row in connection.execute("PRAGMA table_info(chat_messages)")
@@ -185,6 +199,13 @@ class SQLiteChatSessionRepository:
             ):
                 if column not in message_columns:
                     connection.execute(f"ALTER TABLE chat_messages ADD COLUMN {column} {declaration}")
+            remove_retired_rag_chat(connection)
+            connection.execute("""CREATE TABLE IF NOT EXISTS chat_operations (
+                operation_id TEXT PRIMARY KEY,
+                source_session_id TEXT NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
+                target_session_id TEXT NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
+                message_id TEXT NOT NULL REFERENCES chat_messages(id) ON DELETE CASCADE
+            )""")
 
     @staticmethod
     def _timestamp(value: datetime) -> str:
@@ -201,7 +222,7 @@ class SQLiteChatSessionRepository:
     ) -> StoredSession:
         row = connection.execute(
             """
-            SELECT id, title, created_at, updated_at, provider
+            SELECT id, title, created_at, updated_at, provider, parent_session_id
             FROM chat_sessions
             WHERE id = ?
             """,
@@ -250,6 +271,7 @@ class SQLiteChatSessionRepository:
             messages=messages,
             task=task,
             provider=row["provider"],
+            parent_session_id=row["parent_session_id"],
         )
 
     def create(self, *, provider: str = "deepseek") -> StoredSession:
@@ -383,6 +405,7 @@ class SQLiteChatSessionRepository:
 
     def finish_turn(
         self, session_id: str, message_id: str, answer: str, *, refusal: bool = False,
+        generated: bool = True,
         on_commit: Callable[[sqlite3.Connection], None] | None = None,
         project_help: dict | None = None,
     ) -> StoredSession:
@@ -402,8 +425,8 @@ class SQLiteChatSessionRepository:
                 """INSERT INTO chat_messages (id, session_id, position, role, content, created_at, is_refusal, provider, model, project_help)
                    VALUES (?, ?, ?, 'assistant', ?, ?, ?, ?, ?, ?)""",
                 (str(uuid4()), session_id, len(session.messages), answer, timestamp, int(refusal),
-                 None if refusal else session.messages[-1].provider,
-                 None if refusal else session.messages[-1].model,
+                 None if refusal or not generated else session.messages[-1].provider,
+                 None if refusal or not generated else session.messages[-1].model,
                  json.dumps(project_help, ensure_ascii=False) if project_help is not None else None),
             )
             connection.execute("UPDATE chat_sessions SET updated_at = ? WHERE id = ?", (timestamp, session_id))
@@ -454,20 +477,41 @@ class SQLiteChatSessionRepository:
         # this lock; a running generation can finish into a paused snapshot.
         with self._task_locks_guard:
             lock = self._task_locks.setdefault(session_id, Lock())
-        if not lock.acquire(blocking=False):
-            raise TaskConflict("Шаг уже выполняется. Дождитесь ответа агента")
+            if not lock.acquire(blocking=False):
+                raise TaskConflict("Шаг уже выполняется. Дождитесь ответа агента")
         try:
             yield
         finally:
-            lock.release()
+            with self._task_locks_guard:
+                lock.release()
+                del self._task_locks[session_id]
+
+    def operation_guard(self, operation_id: str) -> AbstractContextManager[None]:
+        return self.task_operation("operation:" + operation_id)
 
     def create_task(
         self, session_id: str, task: TaskContext, *, assistant_content: str | None = None,
+        branch: bool = False, operation_id: str | None = None,
     ) -> StoredSession:
         with self._connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
+            source_id = session_id
+            existing = self._operation(connection, source_id, operation_id) if operation_id else None
+            if existing is not None:
+                if existing[1].content != "Задача: " + task.task:
+                    raise ChatTurnConflict("Идентификатор операции уже использован для другого сообщения")
+                return existing[0]
             session = self._load_session(connection, session_id)
             self._require_resolved(session)
+            if branch:
+                session_id = str(uuid4())
+                now = self._timestamp(datetime.now(timezone.utc))
+                connection.execute(
+                    """INSERT INTO chat_sessions (id, title, created_at, updated_at, provider, parent_session_id)
+                       VALUES (?, 'Новый чат', ?, ?, ?, ?)""",
+                    (session_id, now, now, session.provider, source_id),
+                )
+                session = self._load_session(connection, session_id)
             if session.task is not None:
                 raise TaskConflict("В этом чате уже есть задача. Создайте новый чат")
             connection.execute(
@@ -479,6 +523,10 @@ class SQLiteChatSessionRepository:
                 assistant_content if assistant_content is not None else
                 "Задача создана. Нажмите «Сформировать план», затем утвердите его.",
             )
+            if operation_id:
+                created = self._load_session(connection, session_id)
+                connection.execute("INSERT INTO chat_operations VALUES (?, ?, ?, ?)",
+                                   (operation_id, source_id, session_id, created.messages[-2].id))
         return self.get(session_id)
 
     def update_task(
@@ -516,3 +564,59 @@ class SQLiteChatSessionRepository:
             )
             self._append_exchange(connection, session, user_content, assistant_content, provider=provider, model=model)
         return self.get(session_id)
+
+    def _operation(self, connection, source_session_id, operation_id):
+        row = connection.execute(
+            "SELECT source_session_id, target_session_id, message_id FROM chat_operations WHERE operation_id = ?",
+            (operation_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        if row["source_session_id"] != source_session_id:
+            raise ChatTurnConflict("Операция принадлежит другому чату")
+        target = self._load_session(connection, row["target_session_id"])
+        turn = next(message for message in target.messages if message.id == row["message_id"])
+        return target, turn
+
+    def operation(self, source_session_id: str, operation_id: str) -> tuple[StoredSession, StoredMessage] | None:
+        with self._connection() as connection:
+            return self._operation(connection, source_session_id, operation_id)
+
+    def begin_turn(
+        self, session_id: str, content: str, *, operation_id: str, message_id: str,
+        branch: bool = False, memory_update: str | None = None,
+        provider: str | None = None, model: str | None = None, project_help: dict | None = None,
+    ) -> tuple[StoredSession, StoredMessage]:
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            existing = self._operation(connection, session_id, operation_id)
+            if existing is not None:
+                if existing[1].content != content.strip():
+                    raise ChatTurnConflict("Идентификатор операции уже использован для другого сообщения")
+                return existing
+            source = self._load_session(connection, session_id)
+            self._require_resolved(source)
+            now = self._timestamp(datetime.now(timezone.utc))
+            target_id = session_id
+            if branch:
+                target_id = str(uuid4())
+                connection.execute(
+                    """INSERT INTO chat_sessions (id, title, created_at, updated_at, provider, parent_session_id)
+                       VALUES (?, ?, ?, ?, ?, ?)""",
+                    (target_id, content.strip()[:60], now, now, provider or source.provider, session_id),
+                )
+            target = self._load_session(connection, target_id)
+            connection.execute(
+                """INSERT INTO chat_messages
+                   (id, session_id, position, role, kind, content, created_at, status, provider, model, memory_update, project_help)
+                   VALUES (?, ?, ?, 'user', ?, ?, ?, 'pending', ?, ?, ?, ?)""",
+                (message_id, target_id, len(target.messages), "command" if content.startswith("/goal ") else "message",
+                 content.strip(), now, provider, model, memory_update,
+                 json.dumps(project_help, ensure_ascii=False) if project_help is not None else None),
+            )
+            connection.execute("UPDATE chat_sessions SET title = ?, updated_at = ? WHERE id = ?",
+                               (target.title if target.messages else content.strip()[:60], now, target_id))
+            connection.execute("INSERT INTO chat_operations VALUES (?, ?, ?, ?)",
+                               (operation_id, session_id, target_id, message_id))
+            updated = self._load_session(connection, target_id)
+            return updated, updated.messages[-1]

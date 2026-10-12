@@ -164,28 +164,3 @@ def test_malformed_task_actions_reach_http_validation(action):
     with TestClient(app, raise_server_exceptions=False) as client:
         response = client.post("/api/chat/sessions/test/task/actions", json={"action": action, "revision": 0})
         assert response.status_code == 422
-
-
-def test_private_rag_catalog_reports_effective_limits_and_allowed_model(tmp_path, monkeypatch):
-    from app import main
-    monkeypatch.setenv("PRIVATE_SERVICE", "1")
-    monkeypatch.setenv("CHAT_DB_PATH", str(tmp_path / "rag.sqlite3"))
-    main.get_rag_chat_service.cache_clear()
-    client_type = httpx.Client
-    def handler(request):
-        assert request.url.path == "/api/tags"
-        return httpx.Response(200, json={"models": [{"name": "qwen3.5:9b-q4_K_M"}]})
-    monkeypatch.setattr(httpx, "Client", lambda **kwargs: client_type(
-        transport=httpx.MockTransport(handler), **kwargs))
-    try:
-        with TestClient(main.app, raise_server_exceptions=False) as client:
-            response = client.get("/api/rag-chat/configurations")
-            assert response.status_code == 200
-            configurations = response.json()["configurations"]
-            assert {item["id"] for item in configurations} == {"baseline", "compact", "optimized"}
-            for item in configurations:
-                assert item["profile"]["num_ctx"] <= 8192
-                assert item["profile"]["max_num_ctx"] <= 8192
-                assert item["profile"]["max_tokens"] <= 1000
-    finally:
-        main.get_rag_chat_service.cache_clear()

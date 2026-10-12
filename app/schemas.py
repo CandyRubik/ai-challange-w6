@@ -17,6 +17,7 @@ class StrictModel(BaseModel):
 class ChatSendRequest(StrictModel):
     content: Annotated[str, Field(min_length=1, max_length=12_000)]
     provider: Literal["ollama", "deepseek"] | None = None
+    operation_id: Annotated[str, Field(min_length=1, max_length=128)] | None = None
 
 
 class ChatSessionCreateRequest(StrictModel):
@@ -44,6 +45,7 @@ class ChatMessage(StrictModel):
 
 class TaskStartRequest(StrictModel):
     task: Annotated[str, Field(min_length=1, max_length=12_000)]
+    operation_id: Annotated[str, Field(min_length=1, max_length=128)] | None = None
 
 
 TaskAction = Literal["generate_plan", "execute_step", "validate", "approve", "pause", "resume", "replan"]
@@ -99,6 +101,7 @@ class ChatSessionSummary(StrictModel):
     updated_at: datetime
     provider: Literal["ollama", "deepseek"] = "deepseek"
     task: TaskSummary | None = None
+    parent_session_id: str | None = None
 
 
 class ChatSession(ChatSessionSummary):
@@ -112,6 +115,11 @@ class ChatSendResponse(StrictModel):
     assistant_message: ChatMessage
 
 
+class ChatOperationStatus(StrictModel):
+    session: ChatSessionSummary
+    user_message: ChatMessage
+
+
 MemoryLayer = Literal["working", "long_term"]
 class MemoryCreateRequest(StrictModel):
     layer: MemoryLayer
@@ -120,6 +128,7 @@ class MemoryCreateRequest(StrictModel):
     session_id: str | None = None
     source_session_id: str | None = None
     source_text: Annotated[str, Field(min_length=1, max_length=4_000)] | None = None
+    operation_id: Annotated[str, Field(min_length=1, max_length=128)] | None = None
 
 
 class MemoryEntry(StrictModel):

@@ -9,6 +9,8 @@ let invariantSaving = false;
 const sessionList = document.querySelector("#sessions");
 const messages = document.querySelector("#messages");
 const title = document.querySelector("#chat-title");
+const parentChatButton = document.querySelector("#parent-chat");
+const pendingOperations = new Map();
 const status = document.querySelector("#status");
 const modelSelect = document.querySelector("#model-select");
 const modelStatus = document.querySelector("#model-status");
@@ -90,7 +92,9 @@ async function api(path, options = {}) {
     const message = typeof detail === "string"
       ? detail
       : detail?.message || (Array.isArray(detail) ? detail.map((item) => item.msg).join("; ") : "");
-    throw new Error(message || "Backend не смог выполнить запрос");
+    const error = new Error(message || "Backend не смог выполнить запрос");
+    error.sessionId = detail?.session_id;
+    throw error;
   }
   return response.status === 204 ? null : response.json();
 }
@@ -280,15 +284,15 @@ function syncControls() {
   const blocked = busy || controlBusy || modelSaving;
   modelSelect.disabled = modelSaving || !currentSessionId || !modelProviders.length;
   const unresolved = unresolvedMessage();
-  input.disabled = Boolean(controlBusy || taskRunning || active || unresolved);
-  form.querySelector('button[type="submit"]').disabled = Boolean(controlBusy || taskRunning || active || unresolved || modelSaving);
+  input.disabled = Boolean(controlBusy || unresolved);
+  form.querySelector('button[type="submit"]').disabled = Boolean(controlBusy || unresolved || modelSaving);
   startTaskButton.disabled = Boolean(blocked || task || unresolved);
   newButton.disabled = blocked;
   clearDatabaseButton.disabled = blocked;
   refreshButton.disabled = blocked;
-  form.hidden = Boolean(active);
+  form.hidden = false;
   taskToolbar.hidden = !active;
-  input.placeholder = unresolved ? "Повторите последний ответ" : "Сообщение или /команда…";
+  input.placeholder = unresolved ? "Повторите последний ответ" : active ? "Новая цель или /help…" : "Сообщение или /команда…";
   if (!task) return;
   const allowed = task.allowed_actions;
   const nextAction = task.expected_action === "approve_plan" ? "approve" : task.expected_action;
@@ -563,6 +567,7 @@ function applySession(session) {
   const { messages: ignoredMessages, ...summary } = session;
   sessions = [summary, ...sessions.filter((item) => item.id !== session.id)];
   title.textContent = session.title;
+  parentChatButton.hidden = !session.parent_session_id;
   renderSessions();
   renderTask(session.task);
   syncControls();
@@ -684,10 +689,13 @@ async function executeMemoryCommand(command) {
     return;
   }
 
+  const sourceSessionId = currentSessionId;
+  const operation = command.category === "goal"
+    ? pendingOperation(sourceSessionId, `${command.name} ${command.content}`, selectedProvider()) : null;
   setBusy(true);
   status.textContent = "Сохраняю команду в память…";
   try {
-    await api("/api/memory", {
+    const entry = await api("/api/memory", {
       method: "POST",
       body: JSON.stringify({
         layer: command.layer,
@@ -696,8 +704,11 @@ async function executeMemoryCommand(command) {
         session_id: command.layer === "working" ? currentSessionId : null,
         source_session_id: currentSessionId,
         source_text: `${command.name} ${command.content}`,
+        operation_id: operation?.id,
       }),
     });
+    if (operation) pendingOperations.delete(operation.key);
+    if (entry.session_id) currentSessionId = entry.session_id;
     hideCommandMenu();
     const [session, updatedSessions, memory] = await Promise.all([
       api(`/api/chat/sessions/${currentSessionId}`),
@@ -711,6 +722,11 @@ async function executeMemoryCommand(command) {
       ? `Сохранено в рабочую память: ${command.category}`
       : `Сохранено в долговременную память: ${command.category}`;
   } catch (error) {
+    if (operation) {
+      const recovered = await recoverOperation(sourceSessionId, operation.id, error).catch(() => false);
+      if (recovered) pendingOperations.delete(operation.key);
+      else if (!input.value) input.value = `${command.name} ${command.content}`;
+    }
     status.textContent = error.message;
   } finally {
     setBusy(false);
@@ -930,7 +946,34 @@ async function openSession(sessionId) {
   }
 }
 
+function pendingOperation(sessionId, content, provider) {
+  const key = `${sessionId}\u0000${content}`;
+  if (!pendingOperations.has(key)) pendingOperations.set(key, { id: crypto.randomUUID(), provider });
+  return { key, ...pendingOperations.get(key) };
+}
+
+async function recoverOperation(sourceSessionId, operationId, error) {
+  let targetId = error.sessionId;
+  if (!targetId) {
+    try {
+      const saved = await api(`/api/chat/sessions/${sourceSessionId}/operations/${encodeURIComponent(operationId)}`);
+      targetId = saved.session.id;
+    } catch { /* The request may not have reached the backend yet. */ }
+  }
+  if (!targetId) return false;
+  currentSessionId = targetId;
+  await reloadCurrentChat();
+  return true;
+}
+
+parentChatButton.addEventListener("click", () => {
+  if (currentSession?.parent_session_id) void openSession(currentSession.parent_session_id);
+});
+
 async function sendChatMessage(content, provider = selectedProvider()) {
+  const sourceSessionId = currentSessionId;
+  const operation = pendingOperation(sourceSessionId, content, provider);
+  provider = operation.provider;
   setBusy(true);
   const optimisticMessages = [
     ...currentMessages,
@@ -941,8 +984,10 @@ async function sendChatMessage(content, provider = selectedProvider()) {
   try {
     const result = await api(`/api/chat/sessions/${currentSessionId}/messages`, {
       method: "POST",
-      body: JSON.stringify({ content, provider }),
+      body: JSON.stringify({ content, provider, operation_id: operation.id }),
     });
+    pendingOperations.delete(operation.key);
+    currentSessionId = result.session.id;
     const [session, memory] = await Promise.all([
       api(`/api/chat/sessions/${currentSessionId}`),
       api(`/api/memory?session_id=${encodeURIComponent(currentSessionId)}`),
@@ -955,7 +1000,12 @@ async function sendChatMessage(content, provider = selectedProvider()) {
     applySession(session);
     status.textContent = "Готов";
   } catch (error) {
-    await reloadCurrentChat().catch(() => renderMessages(currentMessages));
+    const recovered = await recoverOperation(sourceSessionId, operation.id, error).catch(() => false);
+    if (recovered) pendingOperations.delete(operation.key);
+    else {
+      await reloadCurrentChat().catch(() => renderMessages(currentMessages));
+      if (!input.value && !unresolvedMessage()) input.value = content;
+    }
     status.textContent = error.message;
   } finally {
     setBusy(false);
@@ -1122,16 +1172,22 @@ startTaskButton.addEventListener("click", async () => {
     input.focus();
     return;
   }
+  const sourceSessionId = currentSessionId;
+  const operation = pendingOperation(sourceSessionId, `/task ${task}`, selectedProvider());
   setBusy(true);
   let failed = false;
   try {
     const session = await api(`/api/chat/sessions/${currentSessionId}/task`, {
-      method: "POST", body: JSON.stringify({ task }),
+      method: "POST", body: JSON.stringify({ task, operation_id: operation.id }),
     });
+    pendingOperations.delete(operation.key);
     input.value = "";
     applySession(session);
   } catch (error) {
     failed = true;
+    const recovered = await recoverOperation(sourceSessionId, operation.id, error).catch(() => false);
+    if (recovered) pendingOperations.delete(operation.key);
+    else await reloadCurrentChat().catch(() => {});
     status.textContent = error.message;
   } finally {
     setBusy(false);
@@ -1171,6 +1227,7 @@ async function runTaskAction(action, content = "") {
     }
     syncControls();
     if (!failed) status.textContent = readyStatus();
+    void drainQueue();
   }
 }
 
