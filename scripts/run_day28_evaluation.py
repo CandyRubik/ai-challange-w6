@@ -68,7 +68,7 @@ def run(output: Path, repeats: int, providers: list[str], questions_path: Path) 
         "created_at": datetime.now(timezone.utc).isoformat(), "repeats": repeats,
         "models": {p: registry.resolve(p).model for p in providers},
         "platform": platform.platform(), "architecture": platform.machine(),
-        "index": manifest, "pdf_sha256": hashlib.sha256(index.pdf_path.read_bytes()).hexdigest(),
+        "index": manifest, "corpus_fingerprint": manifest["fingerprint"],
         "method": "Local interpretation and retrieval once per question; identical document context and user question for each provider and repeat; no answer history or task memory. Ollama receives a native JSON Schema; DeepSeek receives the equivalent schema in its prompt with JSON mode.",
         "dependencies": {name: version(name) for name in (
             "sentence-transformers", "transformers", "torch", "faiss-cpu", "numpy", "httpx", "openai",
@@ -87,8 +87,8 @@ def run(output: Path, repeats: int, providers: list[str], questions_path: Path) 
         output.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     started = monotonic()
     # Report process startup cost separately; do not count it as steady-state retrieval.
-    warm_hits = index.search("Executor", k=3)
-    rag.reranker.score("Executor", warm_hits)
+    warm_hits = index.search("ChatSessionService", k=3)
+    rag.reranker.score("ChatSessionService", warm_hits)
     report["retrieval_cold_start_seconds"] = monotonic() - started
     with TemporaryDirectory(prefix="day28-evaluation-") as temporary:
         chat = RagChatService(SQLiteRagChatRepository(Path(temporary) / "rag.sqlite3"),
@@ -123,10 +123,10 @@ def run(output: Path, repeats: int, providers: list[str], questions_path: Path) 
                         data = {"content": "", "sources": [], "citations": [], "status": "provider_error",
                                 "error": type(error).__name__}
                     elapsed = monotonic() - started
-                    positive = bool(case["sections"])
+                    positive = case["expected_status"] == "answered"
                     automatic_pass = (
                         data["status"] == "answered" and any(
-                            source["section"] in case["sections"] for source in data["sources"]
+                            source["source"] == "README.md" or source["source"].startswith("docs/") for source in data["sources"]
                         ) if positive else data["status"] == "insufficient_context" and not data["sources"]
                     )
                     result["runs"].append({

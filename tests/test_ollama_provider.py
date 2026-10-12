@@ -54,20 +54,20 @@ def test_truncated_text_continues_with_context():
     assert calls[1]["messages"][-2] == {"role": "assistant", "content": "Начало "}
 
 
-def test_complete_forwards_profile_schema_to_native_format():
-    from app.orchestration.profile_interviewer import ProfileInterviewOutput
-    schema = ProfileInterviewOutput.model_json_schema()
+def test_complete_forwards_evidence_schema_to_native_format():
+    from app.indexing.grounding import DraftEvidence
+    schema = DraftEvidence.model_json_schema()
     calls = []
     def handler(request):
         calls.append(json.loads(request.content))
-        return answer('{"description":null}')
+        return answer('{"chunk_id":"structure-0001","quote":"Exact source quotation"}')
     provider_with(handler).complete(
-        system_prompt="Верни профиль как JSON", user_prompt="Краткие ответы",
-        response_format={"type": "json_schema", "json_schema": {"name": "profile", "schema": schema}},
+        system_prompt="Верни цитату как JSON", user_prompt="Источник",
+        response_format={"type": "json_schema", "json_schema": {"name": "evidence", "schema": schema}},
     )
     assert calls[0]["format"] == schema
-    assert "description" in calls[0]["format"]["required"]
-    assert schema["properties"]["description"]["anyOf"][0]["minLength"] == 1
+    assert "quote" in calls[0]["format"]["required"]
+    assert schema["properties"]["quote"]["minLength"] == 12
 
 
 def test_truncated_json_is_rejected_without_concatenating():

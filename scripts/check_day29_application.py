@@ -59,9 +59,9 @@ def main_check():
                 assert result.status == "answered"
                 save()
         started = monotonic()
-        main.get_document_index().search("Executor", k=3)
-        hits = main.get_document_index().search("Executor", k=3)
-        main.get_document_reranker().score("Executor", hits)
+        main.get_document_index().ensure_built()
+        hits = main.get_document_index().search("ChatSessionService", k=3)
+        main.get_document_reranker().score("ChatSessionService", hits)
         report["retrieval_startup_seconds"] = monotonic() - started
         with TemporaryDirectory(prefix="day29-http-") as temporary:
             for repeat in range(1, 4):

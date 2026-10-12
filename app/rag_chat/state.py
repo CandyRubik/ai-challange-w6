@@ -39,8 +39,7 @@ class TurnDecision(StrictModel):
 class TurnInterpreter:
     """One JSON call turns the latest user message into a bounded state patch."""
 
-    system_prompt = """You interpret ONE user turn in a Russian RAG chat about the indexed sample of
-Java Concurrency in Practice, chapter 6. Return one JSON object with exactly:
+    system_prompt = """You interpret ONE user turn in a Russian RAG chat about the indexed project README and docs. Return one JSON object with exactly:
 kind, question_scope, search_question, goal_action, goal, changes, clarification.
 kind is question, statement, or clarification_needed. A user request for an
 explanation is a question even without a question mark. A pure clarification or
@@ -49,26 +48,26 @@ goal in this chat, or says to cancel 'this' when the referent is unclear, use
 clarification_needed and ask one short clarifying question in clarification;
 make no state changes in that case.
 
-question_scope is document for questions about the book, goal for questions
+question_scope is document for questions about the project documentation, goal for questions
 about the user's active goal, and state for questions about other agreements.
 For EVERY question produce a standalone, concise English search_question for
-the indexed chapter, preserving named technical terms. The search still runs
-for questions about agreements, but retrieved book text is not evidence for
+the project documentation, preserving named technical terms. The search still runs
+for questions about agreements, but retrieved documentation text is not evidence for
 what the user agreed to. For statements set search_question to an empty string.
 
 Only record goal, constraints, term meanings, or clarifications EXPLICITLY
 provided by the current user message. Do not infer them from assistant turns,
-book text, or a question. goal_action is keep, set, or clear; goal is nonempty
+documentation text, or a question. goal_action is keep, set, or clear; goal is nonempty
 only for set. Setting a different active goal replaces the previous task scope.
 changes is a list of {group,action,key,value}; group is constraint, term, or
 clarification; action is set or remove. Use short stable keys, for example
-'length', 'Timer', or 'audience'. Set a value only when explicitly given by the
+'length', 'memory', or 'audience'. Set a value only when explicitly given by the
 user. A clear correction replaces the earlier value with the same key. Use
 remove only when the target is unambiguous. Never store unsupported claims
-about the book as facts about the book. Do not store secrets.
+about the project documentation as facts about the project documentation. Do not store secrets.
 
-Return JSON only. Example for 'Моя цель — объяснить Executor новичку. Что это?':
-{"kind":"question","question_scope":"document","search_question":"What is Executor in chapter 6?","goal_action":"set","goal":"Объяснить Executor новичку","changes":[],"clarification":""}
+Return JSON only. Example for 'Моя цель — объяснить ChatSessionService новичку. Что это?':
+{"kind":"question","question_scope":"document","search_question":"What is ChatSessionService in this project?","goal_action":"set","goal":"Объяснить ChatSessionService новичку","changes":[],"clarification":""}
 """
 
     def __init__(self, model: JsonModel) -> None:
@@ -89,11 +88,11 @@ constraint with key 'length'. Reuse an existing constraint key for a correction.
 A goal declaration is a statement, unless there is a separate question or a
 request to explain something now. Do not treat 'Моя цель — объяснить...' alone
 as a request for an immediate explanation.
-For search_question, do not add the book title, chapter title, or unrelated
+For search_question, do not add the project title, section title, or unrelated
 capitalized words. Use only technical concepts needed for the actual question.
 
-Example input: 'Моя цель — объяснить Executor новичку. Отвечай кратко.'
-{"kind":"statement","question_scope":"document","search_question":"","goal_action":"set","goal":"Объяснить Executor новичку","changes":[{"group":"constraint","action":"set","key":"length","value":"Кратко"}],"clarification":""}
+Example input: 'Моя цель — объяснить ChatSessionService новичку. Отвечай кратко.'
+{"kind":"statement","question_scope":"document","search_question":"","goal_action":"set","goal":"Объяснить ChatSessionService новичку","changes":[{"group":"constraint","action":"set","key":"length","value":"Кратко"}],"clarification":""}
 Example input: 'Нет, отвечай подробно.'
 {"kind":"statement","question_scope":"document","search_question":"","goal_action":"keep","goal":"","changes":[{"group":"constraint","action":"set","key":"length","value":"Подробно"}],"clarification":""}
 Questions about saved goals or constraints are QUESTIONS, never statements.
@@ -101,11 +100,11 @@ They must not add clarifications or change memory. Read only the current user
 message to decide whether this turn is a question; prior statements do not
 make the current question a statement.
 Example input: 'Какую цель мы зафиксировали?'
-{"kind":"question","question_scope":"goal","search_question":"Executor explanation goal","goal_action":"keep","goal":"","changes":[],"clarification":""}
+{"kind":"question","question_scope":"goal","search_question":"ChatSessionService explanation goal","goal_action":"keep","goal":"","changes":[],"clarification":""}
 Example input: 'Какие ограничения мы согласовали?'
-{"kind":"question","question_scope":"state","search_question":"Executor explanation constraints","goal_action":"keep","goal":"","changes":[],"clarification":""}
-Example input: 'Почему обработчик ThreadPerTaskWebServer должен быть потокобезопасным?'
-{"kind":"question","question_scope":"document","search_question":"Why must the ThreadPerTaskWebServer request handler be thread-safe?","goal_action":"keep","goal":"","changes":[],"clarification":""}
+{"kind":"question","question_scope":"state","search_question":"ChatSessionService explanation constraints","goal_action":"keep","goal":"","changes":[],"clarification":""}
+Example input: 'Где хранятся чат-сессии и память?'
+{"kind":"question","question_scope":"document","search_question":"Where are chat sessions and memory stored?","goal_action":"keep","goal":"","changes":[],"clarification":""}
 """
         try:
             raw = self._model.generate_json(messages=[

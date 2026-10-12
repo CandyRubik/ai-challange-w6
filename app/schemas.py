@@ -20,7 +20,6 @@ class ChatSendRequest(StrictModel):
 
 
 class ChatSessionCreateRequest(StrictModel):
-    profile_id: str = "default"
     provider: Literal["ollama", "deepseek"] | None = None
 
 
@@ -40,6 +39,7 @@ class ChatMessage(StrictModel):
     error: str | None = None
     provider: Literal["ollama", "deepseek"] | None = None
     model: str | None = None
+    project_help: dict | None = None
 
 
 class TaskStartRequest(StrictModel):
@@ -94,7 +94,6 @@ class TaskView(TaskSummary):
 
 class ChatSessionSummary(StrictModel):
     id: str
-    profile_id: str
     title: str
     created_at: datetime
     updated_at: datetime
@@ -114,42 +113,11 @@ class ChatSendResponse(StrictModel):
 
 
 MemoryLayer = Literal["working", "long_term"]
-ProfileTone = Literal["neutral", "friendly", "formal", "technical"]
-ProfileDetailLevel = Literal["brief", "balanced", "detailed"]
-ProfileResponseFormat = Literal["plain", "bullets", "steps"]
-ProfileConstraint = Annotated[str, Field(min_length=1, max_length=200)]
-
-
-class UserProfileCreateRequest(StrictModel):
-    name: Annotated[str, Field(min_length=1, max_length=80)]
-    description: Annotated[str, Field(max_length=1_000)] = ""
-    language: Annotated[str, Field(min_length=2, max_length=40)] = "ru"
-    tone: ProfileTone = "neutral"
-    detail_level: ProfileDetailLevel = "balanced"
-    response_format: ProfileResponseFormat = "plain"
-    constraints: Annotated[list[ProfileConstraint], Field(max_length=10)] = Field(
-        default_factory=list,
-    )
-
-
-class UserProfileUpdateRequest(UserProfileCreateRequest):
-    pass
-
-
-class UserProfile(UserProfileCreateRequest):
-    id: str
-    onboarding_step: Annotated[int, Field(ge=0, le=3)]
-    onboarding_complete: bool
-    created_at: datetime
-    updated_at: datetime
-
-
 class MemoryCreateRequest(StrictModel):
     layer: MemoryLayer
     category: Annotated[str, Field(min_length=1, max_length=40)]
     content: Annotated[str, Field(min_length=1, max_length=4_000)]
     session_id: str | None = None
-    profile_id: str | None = None
     source_session_id: str | None = None
     source_text: Annotated[str, Field(min_length=1, max_length=4_000)] | None = None
 
@@ -160,7 +128,6 @@ class MemoryEntry(StrictModel):
     category: str
     content: str
     session_id: str | None
-    profile_id: str | None
     created_at: datetime
     updated_at: datetime
     source_session_id: str | None = None

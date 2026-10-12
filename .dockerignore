@@ -6,5 +6,8 @@
 !app/**
 !static/
 !static/**
+!README.md
+!docs/
+!docs/**
 **/__pycache__
 **/*.pyc

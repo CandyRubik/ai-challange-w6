@@ -1,62 +1,92 @@
 [
   {
     "id": 1,
-    "question": "Чем ThreadPerTaskWebServer отличается от последовательного сервера при обработке соединения?",
-    "expected": "Для каждого соединения основной цикл создаёт отдельный поток вместо обработки запроса в основном потоке.",
-    "sections": ["6.1.2 Explicitly creating threads for tasks"]
+    "question": "Как устроен проект?",
+    "expected": "Оркестрация, память, состояния, хранилище и агенты разделены по каталогам.",
+    "expected_status": "answered"
   },
   {
     "id": 2,
-    "question": "Почему обработчик запроса в ThreadPerTaskWebServer должен быть потокобезопасным?",
-    "expected": "Обработчик может одновременно выполняться для нескольких запросов.",
-    "sections": ["6.1.2 Explicitly creating threads for tasks"]
+    "question": "Где хранится история чатов?",
+    "expected": "История хранится в SQLite; выбранная модель сохраняется для чата.",
+    "expected_status": "answered"
   },
   {
     "id": 3,
-    "question": "Что FutureRenderer успевает делать, пока загружаются изображения?",
-    "expected": "Он отображает текст страницы параллельно загрузке изображений, а затем ждёт Future.get для их отрисовки.",
-    "sections": ["6.3.3 Example: page renderer with Future"]
+    "question": "Как устроена память проекта?",
+    "expected": "Есть краткосрочная, рабочая и долговременная память.",
+    "expected_status": "answered"
   },
   {
     "id": 4,
-    "question": "Почему распараллеливание двух разнородных задач плохо масштабируется?",
-    "expected": "Размеры задач могут различаться, а без более мелких однотипных независимых задач добавление работников даёт убывающую отдачу.",
-    "sections": ["6.3.4 Limitations of parallelizing heterogeneous tasks"]
+    "question": "Как устроен /help?",
+    "expected": "Команда отвечает по README и docs и получает ветку через MCP.",
+    "expected_status": "answered"
   },
   {
     "id": 5,
-    "question": "Как Renderer с CompletionService повышает отзывчивость страницы с изображениями?",
-    "expected": "Каждое изображение загружается отдельной задачей, и готовые изображения отображаются по мере завершения.",
-    "sections": ["6.3.6 Example: page renderer with CompletionService"]
+    "question": "Как запустить backend?",
+    "expected": "Нужны Python, зависимости и запуск uvicorn.",
+    "expected_status": "answered"
   },
   {
     "id": 6,
-    "question": "Как узнать, что все результаты пакета получены из CompletionService при общем Executor?",
-    "expected": "Запомнить число отправленных задач и посчитать полученные завершённые результаты.",
-    "sections": ["6.3.6 Example: page renderer with CompletionService"]
+    "question": "Как создать чат через API?",
+    "expected": "POST /api/chat/sessions создаёт чат.",
+    "expected_status": "answered"
   },
   {
     "id": 7,
-    "question": "Что делает пример с рекламой, если timed Future.get не успел вернуть результат?",
-    "expected": "Отменяет задачу загрузки рекламы и показывает объявление по умолчанию.",
-    "sections": ["6.3.7 Placing time limits on tasks"]
+    "question": "Какие состояния есть у задачи?",
+    "expected": "Процесс включает планирование, утверждение, выполнение, проверку и завершение.",
+    "expected_status": "answered"
   },
   {
     "id": 8,
-    "question": "Какой точный размер thread pool книга предписывает для сервера с 64 ядрами?",
-    "expected": "В доступных фрагментах нет численной рекомендации именно для 64-ядерного сервера.",
-    "sections": []
+    "question": "Как переиндексировать документацию?",
+    "expected": "Используется scripts/build_project_index.py или автоматическое обновление по хешам.",
+    "expected_status": "answered"
   },
   {
     "id": 9,
-    "question": "Как в этой главе работает Java StructuredTaskScope?",
-    "expected": "В главе нет описания StructuredTaskScope.",
-    "sections": []
+    "question": "Как настроен Apache Spark?",
+    "expected": "Документация не содержит подтверждённых сведений.",
+    "expected_status": "unknown"
   },
   {
     "id": 10,
-    "question": "Как книга настраивает cooperative scheduling в Rust Tokio?",
-    "expected": "В главе нет описания Rust Tokio.",
-    "sections": []
+    "question": "Как подключён Kafka?",
+    "expected": "Документация не содержит подтверждённых сведений.",
+    "expected_status": "unknown"
+  },
+  {
+    "id": 11,
+    "question": "Как настроена репликация PostgreSQL?",
+    "expected": "Документация не содержит подтверждённых сведений.",
+    "expected_status": "unknown"
+  },
+  {
+    "id": 12,
+    "question": "Как настроен Kubernetes?",
+    "expected": "Документация не содержит подтверждённых сведений.",
+    "expected_status": "unknown"
+  },
+  {
+    "id": 13,
+    "question": "Как работает интеграция с Jira?",
+    "expected": "Документация не содержит подтверждённых сведений.",
+    "expected_status": "unknown"
+  },
+  {
+    "id": 14,
+    "question": "Какая схема Redis Cluster?",
+    "expected": "Документация не содержит подтверждённых сведений.",
+    "expected_status": "unknown"
+  },
+  {
+    "id": 15,
+    "question": "Как реализован GraphQL API?",
+    "expected": "Документация не содержит подтверждённых сведений.",
+    "expected_status": "unknown"
   }
 ]

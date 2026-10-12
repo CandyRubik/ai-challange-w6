@@ -183,7 +183,7 @@ def test_memory_extractor_returns_only_valid_bounded_candidates() -> None:
                 },
                 {
                     "layer": "working",
-                    "category": "profile",
+                    "category": "fact",
                     "content": "Категория не подходит слою",
                 },
                 {
@@ -277,7 +277,7 @@ def test_agent_marks_memory_as_data_in_separate_prompt_sections() -> None:
     )
 
     system_prompt = model.calls[0][0]["content"]
-    assert "LONG_TERM_MEMORY (shared across this user's profile)" in system_prompt
+    assert "LONG_TERM_MEMORY (shared across chats)" in system_prompt
     assert "WORKING_MEMORY (current task only)" in system_prompt
     assert "Отвечать по-русски" in system_prompt
     assert "Подготовить демо" in system_prompt

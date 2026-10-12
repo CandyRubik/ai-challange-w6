@@ -99,7 +99,7 @@ def test_oversized_context_is_a_client_error_without_model_request(tmp_path, mon
     monkeypatch.setenv("PRIVATE_SERVICE", "1")
     monkeypatch.setenv("CHAT_DB_PATH", str(tmp_path / "private.sqlite3"))
     repositories = (main.get_chat_repository, main.get_memory_repository,
-                    main.get_profile_repository, main.get_invariant_repository)
+                    main.get_invariant_repository)
     for repository in repositories:
         repository.cache_clear()
     def forbidden(request):
@@ -112,8 +112,7 @@ def test_oversized_context_is_a_client_error_without_model_request(tmp_path, mon
             settings = client.get("/api/invariants").json()
             settings.update(emoji_enabled=False, uppercase_enabled=False, sentence_limit_enabled=False)
             assert client.put("/api/invariants", json=settings).status_code == 200
-            profile = client.post("/api/profiles", json={"name": "Тест"}).json()
-            session = client.post("/api/chat/sessions", json={"profile_id": profile["id"]}).json()
+            session = client.post("/api/chat/sessions").json()
             response = client.post(f"/api/chat/sessions/{session['id']}/messages",
                                    json={"content": "а" * 5000})
             assert response.status_code == 422

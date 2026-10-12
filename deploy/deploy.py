@@ -61,15 +61,15 @@ def main():
         def remote(command):
             subprocess.run(ssh + [target, command], check=True)
         remote("mkdir -p " + " ".join(shlex.quote(directory + suffix) for suffix in
-               ("/app", "/static", "/deploy", "/data/models", "/data/document_index", "/data/documents")))
+               ("/app", "/static", "/docs", "/deploy", "/data/models")))
         rsync = ["rsync", "-az", "-e", shlex.join(ssh)]
-        # Delete stale runtime files only inside these two source directories.
+        # Delete stale runtime files only inside these source directories.
         # SQLite volumes, model weights and deployment credentials are preserved.
-        for name in ("app", "static"):
+        for name in ("app", "static", "docs"):
             subprocess.run(rsync + ["--delete", "--exclude=__pycache__/", str(ROOT / name) + "/",
                                     f"{target}:{directory}/{name}/"], check=True)
         subprocess.run(rsync + [str(ROOT / name) for name in
-                       ("Dockerfile", ".dockerignore", "compose.yaml", "requirements.txt", "requirements-indexing.txt")]
+                       ("Dockerfile", ".dockerignore", "compose.yaml", "requirements.txt", "requirements-indexing.txt", "README.md")]
                        + [f"{target}:{directory}/"], check=True)
         subprocess.run(rsync + [str(ROOT / "deploy/Caddyfile"), str(work / "private.env"),
                                 f"{target}:{directory}/deploy/"], check=True)

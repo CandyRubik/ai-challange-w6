@@ -20,27 +20,6 @@ const input = document.querySelector("#message-input");
 const submitButton = form.querySelector("button[type='submit']");
 const newButton = document.querySelector("#new-session");
 const clearDatabaseButton = document.querySelector("#clear-database");
-const profileSelect = document.querySelector("#profile-select");
-const newProfileButton = document.querySelector("#new-profile");
-const editProfileButton = document.querySelector("#edit-profile");
-const activeProfileName = document.querySelector("#active-profile-name");
-const activeProfileStatus = document.querySelector("#active-profile-status");
-const activeProfileSummary = document.querySelector("#active-profile-summary");
-const activeProfileConstraints = document.querySelector("#active-profile-constraints");
-const profileDialog = document.querySelector("#profile-dialog");
-const profileForm = document.querySelector("#profile-form");
-const profileDialogTitle = document.querySelector("#profile-dialog-title");
-const profileIdInput = document.querySelector("#profile-id");
-const profileNameInput = document.querySelector("#profile-name");
-const profileDescriptionInput = document.querySelector("#profile-description");
-const profileLanguageInput = document.querySelector("#profile-language");
-const profileToneInput = document.querySelector("#profile-tone");
-const profileDetailInput = document.querySelector("#profile-detail-level");
-const profileFormatInput = document.querySelector("#profile-response-format");
-const profileConstraintsInput = document.querySelector("#profile-constraints-input");
-const closeProfileDialogButton = document.querySelector("#close-profile-dialog");
-const cancelProfileButton = document.querySelector("#cancel-profile");
-const deleteProfileButton = document.querySelector("#delete-profile");
 const commandMenu = document.querySelector("#command-menu");
 const followupQueue = document.querySelector("#followup-queue");
 const queuedMessagesContainer = document.querySelector("#queued-messages");
@@ -84,8 +63,6 @@ let taskOperation = null;
 let taskTimer = null;
 let taskError = "";
 let sessions = [];
-let profiles = [];
-let currentProfileId = null;
 let currentSessionId = null;
 let currentMessages = [];
 let memorySnapshot = { working: [], long_term: [] };
@@ -97,30 +74,10 @@ const memoryCommands = [
   { name: "/goal", layer: "working", category: "goal", description: "цель текущей задачи" },
   { name: "/constraint", layer: "working", category: "constraint", description: "ограничение текущей задачи" },
   { name: "/decision", layer: "working", category: "decision", description: "решение текущей задачи" },
-  { name: "/profile", layer: "long_term", category: "profile", description: "устойчивый факт профиля" },
+  { name: "/fact", layer: "long_term", category: "fact", description: "факт для будущих чатов" },
   { name: "/preference", layer: "long_term", category: "preference", description: "предпочтение пользователя" },
   { name: "/knowledge", layer: "long_term", category: "knowledge", description: "знание для будущих чатов" },
 ];
-
-const profileLabels = {
-  tone: {
-    neutral: "нейтральный",
-    friendly: "дружелюбный",
-    formal: "формальный",
-    technical: "технический",
-  },
-  detail_level: {
-    brief: "кратко",
-    balanced: "сбалансированно",
-    detailed: "подробно",
-  },
-  response_format: {
-    plain: "обычный текст",
-    bullets: "списки",
-    steps: "пошагово",
-  },
-  language: { ru: "русский", en: "English" },
-};
 
 async function api(path, options = {}) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -311,11 +268,8 @@ invariantsForm.addEventListener("submit", async (event) => {
 function setBusy(value) {
   busy = value;
   submitButton.textContent = value ? "В очередь" : "Отправить";
-  newButton.disabled = value || activeProfile()?.onboarding_complete === false;
+  newButton.disabled = value;
   clearDatabaseButton.disabled = value;
-  profileSelect.disabled = value;
-  newProfileButton.disabled = value;
-  editProfileButton.disabled = value;
   syncControls();
   if (value) status.textContent = readyStatus();
 }
@@ -328,12 +282,8 @@ function syncControls() {
   const unresolved = unresolvedMessage();
   input.disabled = Boolean(controlBusy || taskRunning || active || unresolved);
   form.querySelector('button[type="submit"]').disabled = Boolean(controlBusy || taskRunning || active || unresolved || modelSaving);
-  startTaskButton.disabled = Boolean(blocked || task || unresolved || !activeProfile()?.onboarding_complete);
-  newButton.disabled = blocked || activeProfile()?.onboarding_complete === false;
-  profileSelect.disabled = blocked;
-  newProfileButton.disabled = blocked;
-  editProfileButton.disabled = blocked;
-  startTaskButton.title = activeProfile()?.onboarding_complete ? "Создать пошаговую задачу" : "Сначала завершите интервью в обычном чате или отправьте /skip";
+  startTaskButton.disabled = Boolean(blocked || task || unresolved);
+  newButton.disabled = blocked;
   clearDatabaseButton.disabled = blocked;
   refreshButton.disabled = blocked;
   form.hidden = Boolean(active);
@@ -620,101 +570,6 @@ function applySession(session) {
   status.textContent = readyStatus();
 }
 
-function activeProfile() {
-  return profiles.find((profile) => profile.id === currentProfileId) || null;
-}
-
-function renderActiveProfile() {
-  const profile = activeProfile();
-  if (!profile) return;
-  activeProfileName.textContent = profile.name;
-  newButton.disabled = busy || !profile.onboarding_complete;
-  newButton.title = profile.onboarding_complete
-    ? "Создать новый чат"
-    : "Сначала завершите интервью";
-  editProfileButton.disabled = busy;
-  activeProfileStatus.textContent = profile.onboarding_complete
-    ? "PROFILE · READY"
-    : `INTERVIEW · ${profile.onboarding_step}/3`;
-  const settings = [
-    profileLabels.language[profile.language] || profile.language,
-    profileLabels.tone[profile.tone] || profile.tone,
-    profileLabels.detail_level[profile.detail_level] || profile.detail_level,
-    profileLabels.response_format[profile.response_format] || profile.response_format,
-  ];
-  activeProfileSummary.textContent = profile.onboarding_complete
-    ? (profile.description
-      ? `${profile.description} · ${settings.join(" · ")}`
-      : settings.join(" · "))
-    : "Агент ещё собирает профиль из диалога";
-  activeProfileConstraints.replaceChildren(...profile.constraints.map((constraint) => {
-    const tag = document.createElement("small");
-    tag.textContent = constraint;
-    return tag;
-  }));
-  syncControls();
-}
-
-function renderProfiles() {
-  profileSelect.replaceChildren(...profiles.map((profile) => {
-    const option = document.createElement("option");
-    option.value = profile.id;
-    option.textContent = profile.onboarding_complete
-      ? profile.name
-      : `${profile.name} · интервью`;
-    return option;
-  }));
-  if (currentProfileId) profileSelect.value = currentProfileId;
-  renderActiveProfile();
-}
-
-function rememberSelectedProfile() {
-  try {
-    localStorage.setItem("rubik-active-profile", currentProfileId);
-  } catch (_) {
-    // Persistence is optional when storage is blocked by the browser.
-  }
-}
-
-function openProfileDialog(profile) {
-  if (busy || controlBusy) return;
-  profileDialogTitle.textContent = profile.onboarding_complete
-    ? "Проверка профиля"
-    : "Интервью не завершено";
-  profileIdInput.value = profile.id;
-  profileNameInput.value = profile.name;
-  profileDescriptionInput.value = profile.description;
-  profileLanguageInput.value = profile.language;
-  profileToneInput.value = profile.tone;
-  profileDetailInput.value = profile.detail_level;
-  profileFormatInput.value = profile.response_format;
-  profileConstraintsInput.value = profile.constraints.join("\n");
-  deleteProfileButton.hidden = profile.id === "default";
-  profileForm.querySelector("button[type='submit']").disabled = !profile.onboarding_complete;
-  profileDialog.showModal();
-  profileNameInput.focus();
-}
-
-function closeProfileDialog() {
-  profileDialog.close();
-  profileForm.reset();
-}
-
-function profilePayload() {
-  return {
-    name: profileNameInput.value.trim(),
-    description: profileDescriptionInput.value.trim(),
-    language: profileLanguageInput.value,
-    tone: profileToneInput.value,
-    detail_level: profileDetailInput.value,
-    response_format: profileFormatInput.value,
-    constraints: profileConstraintsInput.value
-      .split("\n")
-      .map((constraint) => constraint.trim())
-      .filter(Boolean),
-  };
-}
-
 function renderQueue() {
   const activeQueue = queuedMessages.filter((item) => item.sessionId === currentSessionId);
   queueCount.textContent = String(activeQueue.length);
@@ -763,7 +618,7 @@ function enqueueMessage(content) {
 function commandMatches() {
   const value = input.value;
   if (!value.startsWith("/") || /\s/.test(value)) return [];
-  return memoryCommands.filter((command) => command.name.startsWith(value.toLowerCase()));
+  return [...memoryCommands, { name: "/help", layer: "project", description: "вопрос о проекте и текущей ветке" }].filter((command) => command.name.startsWith(value.toLowerCase()));
 }
 
 function hideCommandMenu() {
@@ -800,7 +655,7 @@ function renderCommandMenu() {
     description.textContent = command.description;
     const layer = document.createElement("small");
     layer.className = command.layer;
-    layer.textContent = command.layer === "working" ? "WORKING" : "LONG-TERM";
+    layer.textContent = command.layer === "project" ? "ПРОЕКТ" : command.layer === "working" ? "WORKING" : "LONG-TERM";
     option.append(name, description, layer);
     option.addEventListener("mousedown", (event) => {
       event.preventDefault();
@@ -839,7 +694,6 @@ async function executeMemoryCommand(command) {
         category: command.category,
         content: command.content,
         session_id: command.layer === "working" ? currentSessionId : null,
-        profile_id: command.layer === "long_term" ? currentProfileId : null,
         source_session_id: currentSessionId,
         source_text: `${command.name} ${command.content}`,
       }),
@@ -847,7 +701,7 @@ async function executeMemoryCommand(command) {
     hideCommandMenu();
     const [session, updatedSessions, memory] = await Promise.all([
       api(`/api/chat/sessions/${currentSessionId}`),
-      api(`/api/chat/sessions?profile_id=${encodeURIComponent(currentProfileId)}`),
+      api("/api/chat/sessions"),
       api(`/api/memory?session_id=${encodeURIComponent(currentSessionId)}`),
     ]);
     sessions = updatedSessions;
@@ -879,15 +733,44 @@ function renderSessions() {
   }));
 }
 
+function renderProjectHelp(details) {
+  const box = document.createElement("div");
+  box.className = "project-help";
+  for (const source of details.sources || []) {
+    if (source.kind === "tool") continue;
+    const link = document.createElement("a");
+    link.href = `/api/document-index/source?${new URLSearchParams({ path: source.source, ...(source.sha256 ? { sha256: source.sha256 } : {}) })}#L${source.line_start}`;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = `${source.source} · ${source.section} · строки ${source.line_start}–${source.line_end}`;
+    box.append(link);
+  }
+  const context = document.createElement("details");
+  const summary = document.createElement("summary");
+  summary.textContent = "Контекст проекта";
+  context.append(summary);
+  const mcp = details.mcp || {};
+  const info = document.createElement("p");
+  info.textContent = mcp.status === "ok"
+    ? `Репозиторий: ${mcp.repository}\nВетка: ${mcp.branch || "detached HEAD"}\nHEAD: ${mcp.commit || "нет коммитов"}\nMCP: git_branch · stdio · успешно\nПолучено: ${mcp.observed_at}`
+    : (mcp.error || "MCP недоступен");
+  context.append(info);
+  for (const citation of details.citations || []) {
+    const quote = document.createElement("blockquote");
+    quote.textContent = citation.quote;
+    context.append(quote);
+  }
+  box.append(context);
+  return box;
+}
+
 function renderMessages(items, updateState = true) {
   if (updateState) {
     currentMessages = items;
     renderMemory();
   }
   if (!items.length) {
-    const hint = activeProfile()?.onboarding_complete
-      ? "Задайте вопрос или опишите задачу."
-      : "Напишите первую задачу. Перед работой агент коротко познакомится с вами.";
+    const hint = "Задайте вопрос, опишите задачу или введите /help для справки о проекте.";
     messages.innerHTML = `<div class="empty"><span>✦</span><h2>Чем помочь?</h2><p>${hint}</p></div>`;
     return;
   }
@@ -919,6 +802,7 @@ function renderMessages(items, updateState = true) {
       content.textContent = message.content;
     }
     article.append(label, content);
+    if (message.role === "assistant" && message.project_help) article.append(renderProjectHelp(message.project_help));
     if (message.id && message === items.at(-1) && message.role === "user" && message.status !== "done") {
       const error = document.createElement("p");
       error.className = "message-retry-note";
@@ -1059,18 +943,15 @@ async function sendChatMessage(content, provider = selectedProvider()) {
       method: "POST",
       body: JSON.stringify({ content, provider }),
     });
-    const [session, memory, loadedProfiles] = await Promise.all([
+    const [session, memory] = await Promise.all([
       api(`/api/chat/sessions/${currentSessionId}`),
       api(`/api/memory?session_id=${encodeURIComponent(currentSessionId)}`),
-      api("/api/profiles"),
     ]);
-    profiles = loadedProfiles;
     memorySnapshot = memory;
     sessions = sessions.filter((item) => item.id !== result.session.id);
     sessions.unshift(result.session);
     title.textContent = result.session.title;
     renderSessions();
-    renderProfiles();
     applySession(session);
     status.textContent = "Готов";
   } catch (error) {
@@ -1135,7 +1016,7 @@ async function createSession() {
   try {
     const session = await api("/api/chat/sessions", {
       method: "POST",
-      body: JSON.stringify({ profile_id: currentProfileId }),
+      body: JSON.stringify({}),
     });
     sessions.unshift(session);
     await openSession(session.id);
@@ -1146,44 +1027,9 @@ async function createSession() {
 
 async function loadSessions() {
   try {
-    sessions = await api(`/api/chat/sessions?profile_id=${encodeURIComponent(currentProfileId)}`);
+    sessions = await api("/api/chat/sessions");
     if (sessions.length) await openSession(sessions[0].id);
     else await createSession();
-  } catch (error) {
-    status.textContent = error.message;
-  }
-}
-
-async function activateProfile(profileId) {
-  currentProfileId = profileId;
-  currentSessionId = null;
-  currentSession = null;
-  renderTask(null);
-  currentMessages = [];
-  memorySnapshot = { working: [], long_term: [] };
-  queuedMessages = [];
-  rememberSelectedProfile();
-  renderProfiles();
-  renderQueue();
-  renderMessages([]);
-  title.textContent = "Новый чат";
-  await loadSessions();
-}
-
-async function loadProfiles() {
-  try {
-    profiles = await api("/api/profiles");
-    let savedProfileId = null;
-    try {
-      savedProfileId = localStorage.getItem("rubik-active-profile");
-    } catch (_) {
-      // Use the default profile when storage is unavailable.
-    }
-    const selected = profiles.some((profile) => profile.id === savedProfileId)
-      ? savedProfileId
-      : profiles[0]?.id;
-    if (!selected) throw new Error("Не удалось создать основной профиль");
-    await activateProfile(selected);
   } catch (error) {
     status.textContent = error.message;
   }
@@ -1245,89 +1091,12 @@ input.addEventListener("input", () => {
 });
 
 newButton.addEventListener("click", createSession);
-profileSelect.addEventListener("change", async () => {
-  if (busy || controlBusy) {
-    profileSelect.value = currentProfileId;
-    return;
-  }
-  await activateProfile(profileSelect.value);
-});
-newProfileButton.addEventListener("click", async () => {
-  if (busy || controlBusy) return;
-  setBusy(true);
-  status.textContent = "Создаю автопрофиль…";
-  try {
-    const created = await api("/api/profiles/auto", { method: "POST" });
-    profiles = await api("/api/profiles");
-    setBusy(false);
-    await activateProfile(created.id);
-    status.textContent = "Напишите первую задачу — агент начнёт интервью";
-  } catch (error) {
-    status.textContent = error.message;
-  } finally {
-    setBusy(false);
-  }
-});
-editProfileButton.addEventListener("click", () => openProfileDialog(activeProfile()));
-closeProfileDialogButton.addEventListener("click", closeProfileDialog);
-cancelProfileButton.addEventListener("click", closeProfileDialog);
-deleteProfileButton.addEventListener("click", async () => {
-  const profile = activeProfile();
-  if (!profile || profile.id === "default" || busy) return;
-  const confirmed = window.confirm(
-    `Удалить профиль «${profile.name}» вместе со всеми его чатами и памятью? Это действие нельзя отменить.`,
-  );
-  if (!confirmed) return;
-
-  deleteProfileButton.disabled = true;
-  setBusy(true);
-  status.textContent = "Удаляю профиль…";
-  try {
-    await api(`/api/profiles/${encodeURIComponent(profile.id)}`, { method: "DELETE" });
-    closeProfileDialog();
-    profiles = await api("/api/profiles");
-    const fallbackProfile = profiles[0];
-    if (!fallbackProfile) throw new Error("После удаления не осталось профилей");
-    setBusy(false);
-    await activateProfile(fallbackProfile.id);
-    status.textContent = "Профиль и связанные данные удалены";
-  } catch (error) {
-    status.textContent = error.message;
-  } finally {
-    deleteProfileButton.disabled = false;
-    setBusy(false);
-  }
-});
-profileDialog.addEventListener("click", (event) => {
-  if (event.target === profileDialog) closeProfileDialog();
-});
-profileForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const profileId = profileIdInput.value;
-  const saveButton = profileForm.querySelector("button[type='submit']");
-  saveButton.disabled = true;
-  status.textContent = "Сохраняю профиль…";
-  try {
-    const saved = await api(`/api/profiles/${encodeURIComponent(profileId)}`, {
-      method: "PUT",
-      body: JSON.stringify(profilePayload()),
-    });
-    profiles = await api("/api/profiles");
-    closeProfileDialog();
-    await activateProfile(saved.id);
-    status.textContent = "Профиль скорректирован";
-  } catch (error) {
-    status.textContent = error.message;
-  } finally {
-    saveButton.disabled = false;
-  }
-});
 clearDatabaseButton.addEventListener("click", async () => {
-  if (busy || !window.confirm("Удалить чаты активного профиля и их рабочую память? Долговременная память сохранится.")) return;
+  if (busy || !window.confirm("Удалить все чаты и их рабочую память? Долговременная память сохранится.")) return;
 
   setBusy(true);
   try {
-    await api(`/api/chat/sessions?profile_id=${encodeURIComponent(currentProfileId)}`, { method: "DELETE" });
+    await api("/api/chat/sessions", { method: "DELETE" });
     sessions = [];
     currentSessionId = null;
     currentSession = null;
@@ -1347,7 +1116,7 @@ clearDatabaseButton.addEventListener("click", async () => {
 
 startTaskButton.addEventListener("click", async () => {
   const task = input.value.trim();
-  if (busy || controlBusy || currentSession?.task || !activeProfile()?.onboarding_complete) return;
+  if (busy || controlBusy || currentSession?.task) return;
   if (!task) {
     status.textContent = "Опишите цель и требования задачи в поле сообщения";
     input.focus();
@@ -1443,4 +1212,4 @@ document.addEventListener("keydown", (event) => {
 renderMemory();
 renderQueue();
 loadInvariants().catch(() => { renderActiveInvariants(); });
-loadModels().then(loadProfiles);
+loadModels().then(loadSessions);

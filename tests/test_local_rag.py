@@ -62,7 +62,7 @@ def test_local_turn_uses_no_cloud_and_records_provenance(tmp_path, monkeypatch):
     registry = Registry(local, cloud)
     chat = service(tmp_path / "rag.sqlite3", registry)
     session = chat.create()
-    turn = chat.send(session.id, "Что делает Executor?")
+    turn = chat.send(session.id, "Что делает ChatSessionService?")
     assert turn.status == "done" and turn.grounding_status == "answered"
     assert turn.provider == "ollama" and turn.model == "qwen3.5:9b-q4_K_M"
     assert len(local.calls) == 2 and not cloud.calls
@@ -75,7 +75,7 @@ def test_retry_after_restart_keeps_original_model_and_provider(tmp_path, monkeyp
     cloud = Model()
     chat = service(path, Registry(Model(fail=True), cloud))
     session = chat.create()
-    failed = chat.send(session.id, "Что делает Executor?")
+    failed = chat.send(session.id, "Что делает ChatSessionService?")
     assert failed.status == "failed"
     chat.set_provider(session.id, "deepseek")
     monkeypatch.setenv("OLLAMA_MODEL", "another-local-model")
@@ -92,8 +92,8 @@ def test_explicit_turn_selection_preserves_chat_preference(tmp_path):
     registry = Registry(Model(), Model())
     chat = service(tmp_path / "rag.sqlite3", registry)
     session = chat.create("deepseek")
-    local = chat.send(session.id, "Что делает Executor?", "ollama")
-    cloud = chat.send(session.id, "Что делает Executor?")
+    local = chat.send(session.id, "Что делает ChatSessionService?", "ollama")
+    cloud = chat.send(session.id, "Что делает ChatSessionService?")
     assert local.provider == "ollama" and cloud.provider == "deepseek"
     assert chat.get(session.id).provider == "deepseek"
 
@@ -117,12 +117,12 @@ def test_embedding_and_reranker_never_download_missing_weights(tmp_path, monkeyp
     with pytest.raises(DocumentIndexError, match="Локальные веса"):
         DocumentIndex(tmp_path)._model()
     with pytest.raises(DocumentIndexError, match="Локальные веса"):
-        LocalCrossEncoderReranker().score("Executor", Index().search("", "structure", 1))
+        LocalCrossEncoderReranker().score("ChatSessionService", Index().search("", "structure", 1))
     assert len(calls) == 2 and all(c["local_files_only"] is True for c in calls)
 
 
 def test_index_rejects_a_different_embedding_model(tmp_path):
-    (tmp_path / "active.json").write_text(json.dumps({"model": "different-e5", "version": "old"}))
+    (tmp_path / "active.json").write_text(json.dumps({"model": "different-e5", "version": "old", "corpus": "project-docs-v1"}))
     with pytest.raises(DocumentIndexError, match="другой моделью"):
         DocumentIndex(tmp_path).status()
 
@@ -139,7 +139,7 @@ def test_model_switch_during_answer_affects_only_next_turn(tmp_path):
     chat = service(tmp_path / "rag.sqlite3", registry)
     session = chat.create()
     with ThreadPoolExecutor() as pool:
-        future = pool.submit(chat.send, session.id, "Что делает Executor?")
+        future = pool.submit(chat.send, session.id, "Что делает ChatSessionService?")
         assert started.wait(5)
         chat.set_provider(session.id, "deepseek")
         release.set()
@@ -152,7 +152,7 @@ def test_cloud_failure_does_not_fall_back_to_local(tmp_path):
     registry = Registry(Model(), Model(fail=True))
     chat = service(tmp_path / "rag.sqlite3", registry)
     session = chat.create("deepseek")
-    failed = chat.send(session.id, "Что делает Executor?")
+    failed = chat.send(session.id, "Что делает ChatSessionService?")
     assert failed.status == "failed" and failed.provider == "deepseek"
     assert not registry.models["ollama"].calls
 
@@ -171,12 +171,12 @@ def test_legacy_database_keeps_cloud_provenance(tmp_path):
     assert migrated.turns[0].model is None and migrated.turns[0].metrics == {}
 
 
-def test_quote_selection_attaches_exact_pdf_text():
-    hits = Index().search("Executor", "structure", 1)
+def test_quote_selection_attaches_exact_document_text():
+    hits = Index().search("ChatSessionService", "structure", 1)
     prompt, schema, lookup = prepare_citations(hits)
     key = next(iter(lookup))
     assert key in schema["$defs"]["CitedClaim"]["properties"]["evidence_ids"]["items"]["enum"]
-    raw = json.dumps({"status": "answered", "claims": [{"text": "Executor выполняет задачи.", "evidence_ids": [key]}]})
+    raw = json.dumps({"status": "answered", "claims": [{"text": "ChatSessionService выполняет задачи.", "evidence_ids": [key]}]})
     answer = validate_grounded_answer(resolve_citations(raw, lookup), hits)
     assert answer.citations[0]["quote"] == hits[0].metadata["text"]
     with pytest.raises(GroundingError):
@@ -187,7 +187,7 @@ def test_old_draft_cannot_bypass_exact_quote_validation():
     hits = Index().search("", "structure", 1)
     _, _, lookup = prepare_citations(hits)
     raw = json.dumps({"status": "answered", "claims": [{"text": "Выдумка", "evidence": [{
-        "chunk_id": hits[0].metadata["chunk_id"], "quote": "Invented sentence not present in the book.",
+        "chunk_id": hits[0].metadata["chunk_id"], "quote": "Invented sentence not present in the documentation.",
     }]}]})
     with pytest.raises(GroundingError):
         validate_grounded_answer(resolve_citations(raw, lookup), hits)

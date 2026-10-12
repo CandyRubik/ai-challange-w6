@@ -143,10 +143,10 @@ function sourceLink(source) {
       target?.scrollIntoView({ behavior: "smooth", block: "center" });
     });
   } else {
-    link.href = `/api/document-index/source#page=${source.page_start}`;
+    link.href = `/api/document-index/source?${new URLSearchParams({ path: source.source, ...(source.sha256 ? { sha256: source.sha256 } : {}) })}#L${source.line_start}`;
     link.target = "_blank";
     link.rel = "noopener noreferrer";
-    link.textContent = `${source.section} · стр. ${source.page_start} · ${source.chunk_id}`;
+    link.textContent = `${source.source} · ${source.section} · строки ${source.line_start}–${source.line_end}`;
   }
   return link;
 }
@@ -197,7 +197,7 @@ function renderRuntime(profile, stats = {}, seconds = null) {
   if (profile) {
     const actual = stats.actual_options || {};
     box.append(element("span", "settings-line", `temperature ${profile.temperature} · контекст ${actual.num_ctx || profile.num_ctx} · ответ до ${actual.num_predict || profile.max_tokens} токенов`));
-    box.append(element("span", "settings-line", `Prompt: ${profile.prompt_version === "baseline" ? "исходный" : "для конкурентного Java-кода"}`));
+    box.append(element("span", "settings-line", `Prompt: ${profile.prompt_version === "baseline" ? "исходный" : "для документации проекта"}`));
   }
   const values = [];
   if (seconds != null) values.push(`Ответ ${seconds.toFixed(2)} с`);
@@ -254,7 +254,7 @@ function renderMessages() {
   if (!currentSession?.turns.length) {
     const empty = element("div", "empty");
     empty.append(element("span", "empty-mark", "✦"));
-    empty.append(element("h2", "", "Спросите по книге"));
+    empty.append(element("h2", "", "Спросите о проекте"));
     empty.append(element("p", "", "Сформулируйте цель, уточните ограничения или сразу задайте вопрос. История, память задачи и источники сохраняются в этом чате."));
     messagesView.append(empty);
     return;

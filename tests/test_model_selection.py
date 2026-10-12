@@ -150,7 +150,7 @@ def local_api(tmp_path, monkeypatch):
     monkeypatch.setenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
     monkeypatch.setenv("OLLAMA_NUM_CTX", "32768")
     repositories = [main.get_chat_repository, main.get_memory_repository,
-                    main.get_profile_repository, main.get_invariant_repository]
+                    main.get_invariant_repository]
     for repository in repositories:
         repository.cache_clear()
     calls = []
@@ -198,13 +198,11 @@ def test_whole_application_works_without_cloud_key(local_api):
     assert catalog["default_provider"] == "ollama"
     assert catalog["providers"][0]["available"] is True
     assert catalog["providers"][1]["available"] is False
-    profile = client.post("/api/profiles/auto").json()
-    session = client.post("/api/chat/sessions", json={"profile_id": profile["id"]}).json()
+    session = client.post("/api/chat/sessions").json()
     url = f"/api/chat/sessions/{session['id']}"
     for content in ["Напиши приветствие", "Меня зовут Тест", "Кратко", "Нейтрально"]:
         result = client.post(url + "/messages", json={"content": content})
         assert result.status_code == 200, result.text
-    assert client.get("/api/profiles").json()[-1]["onboarding_complete"] is True
     assert client.get(url).json()["messages"][-1]["provider"] == "ollama"
     assert client.get(f"/api/memory?session_id={session['id']}").json()["long_term"]
     assert client.post(url + "/messages", json={"content": "Спасибо"}).status_code == 200

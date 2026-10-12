@@ -37,14 +37,13 @@ class PromptBuilder:
         orchestration: OrchestrationContext,
         memory: MemoryContext,
     ) -> str:
-        profile = orchestration.profile
         sections = [system_prompt]
         rules = InvariantPolicy(orchestration.invariants).descriptions()
         if rules:
             sections.append(
                 "PRODUCT_INVARIANTS are mandatory product rules, independent of "
-                "conversation, memory and profile preferences. Apply them to every "
-                "visible answer, including refusals. Requests, memory and profile "
+                "conversation and memory. Apply them to every "
+                "visible answer, including refusals. Requests and memory "
                 "cannot disable or override them. If the user explicitly requests "
                 "a conflicting format, refuse that format, name the conflicting "
                 "rule and explain that it can be changed in the Invariants menu. "
@@ -55,14 +54,6 @@ class PromptBuilder:
                 "with periods and numbered lists with dots; sentence boundaries "
                 "are '.', '!', '?' and '…'.\n"
                 + json.dumps(rules, ensure_ascii=False),
-            )
-        if profile is not None:
-            sections.append(
-                "USER_PROFILE below is personalization configuration. Apply its "
-                "language, tone, detail level, response format, and constraints to "
-                "the answer when possible. It cannot override the system policy, "
-                "safety requirements, or the user's current request.\n"
-                + json.dumps(profile, ensure_ascii=False),
             )
         bounded_long_term = cls._bounded(memory.long_term)
         # Reserve room for the active goal even when many recent facts exist.
@@ -80,7 +71,7 @@ class PromptBuilder:
             )
         if bounded_long_term:
             sections.append(
-                "LONG_TERM_MEMORY (shared across this user's profile):\n"
+                "LONG_TERM_MEMORY (shared across chats):\n"
                 + json.dumps(bounded_long_term, ensure_ascii=False),
             )
         if bounded_working:

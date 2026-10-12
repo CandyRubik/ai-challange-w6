@@ -13,7 +13,7 @@ from .updates import MemoryUpdateConflict, WorkingUpdate, apply_working_update
 from .messages import StoredMessage
 
 from ..schemas import MemoryCreateRequest, MemoryEntry, MemorySnapshot
-from ..orchestration.profiles import DEFAULT_PROFILE_ID, ProfileRepository, ensure_profile_schema
+from ..storage.migrations import archive_profile_scope
 
 
 MemoryLayer = Literal["working", "long_term"]
@@ -35,7 +35,6 @@ class StoredMemory:
     category: str
     content: str
     session_id: str | None
-    profile_id: str | None
     created_at: datetime
     updated_at: datetime
     memory_key: str | None = None
@@ -51,17 +50,13 @@ class MemoryRepository(Protocol):
         category: str,
         content: str,
         session_id: str | None,
-        profile_id: str | None = None,
         source_session_id: str | None = None,
         source_message_id: str | None = None,
     ) -> StoredMemory: ...
 
     def list_working(self, session_id: str) -> list[StoredMemory]: ...
 
-    def list_long_term(
-        self,
-        profile_id: str = DEFAULT_PROFILE_ID,
-    ) -> list[StoredMemory]: ...
+    def list_long_term(self) -> list[StoredMemory]: ...
 
     def delete(self, layer: MemoryLayer, memory_id: str) -> bool: ...
 
@@ -74,7 +69,6 @@ class MemoryRepository(Protocol):
 
 
 class SessionRecord(Protocol):
-    profile_id: str
     messages: tuple[StoredMessage, ...]
 
 
@@ -117,7 +111,6 @@ class SQLiteMemoryRepository:
 
     def _initialize(self) -> None:
         with self._connection() as connection:
-            ensure_profile_schema(connection)
             connection.executescript(
                 """
                 CREATE TABLE IF NOT EXISTS working_memory (
@@ -135,8 +128,6 @@ class SQLiteMemoryRepository:
 
                 CREATE TABLE IF NOT EXISTS long_term_memory (
                     id TEXT PRIMARY KEY,
-                    profile_id TEXT NOT NULL DEFAULT 'default'
-                        REFERENCES user_profiles(id),
                     category TEXT NOT NULL,
                     content TEXT NOT NULL,
                     created_at TEXT NOT NULL,
@@ -144,31 +135,7 @@ class SQLiteMemoryRepository:
                 );
                 """,
             )
-            columns = {
-                row["name"]
-                for row in connection.execute("PRAGMA table_info(long_term_memory)")
-            }
-            if "profile_id" not in columns:
-                connection.execute(
-                    """
-                    ALTER TABLE long_term_memory
-                    ADD COLUMN profile_id TEXT REFERENCES user_profiles(id)
-                    """,
-                )
-                connection.execute(
-                    """
-                    UPDATE long_term_memory
-                    SET profile_id = ?
-                    WHERE profile_id IS NULL
-                    """,
-                    (DEFAULT_PROFILE_ID,),
-                )
-            connection.execute(
-                """
-                CREATE INDEX IF NOT EXISTS idx_long_term_memory_profile
-                ON long_term_memory(profile_id, created_at)
-                """,
-            )
+            archive_profile_scope(connection, "long_term_memory")
             for table in self._tables.values():
                 present = {row["name"] for row in connection.execute(f"PRAGMA table_info({table})")}
                 for column in ("memory_key", "source_session_id", "source_message_id"):
@@ -190,7 +157,6 @@ class SQLiteMemoryRepository:
             category=row["category"],
             content=row["content"],
             session_id=row["session_id"] if layer == "working" else None,
-            profile_id=row["profile_id"] if layer == "long_term" else None,
             created_at=self._datetime(row["created_at"]),
             updated_at=self._datetime(row["updated_at"]),
             memory_key=row["memory_key"],
@@ -205,7 +171,6 @@ class SQLiteMemoryRepository:
         category: str,
         content: str,
         session_id: str | None,
-        profile_id: str | None = None,
         source_session_id: str | None = None,
         source_message_id: str | None = None,
     ) -> StoredMemory:
@@ -236,21 +201,9 @@ class SQLiteMemoryRepository:
                     (memory_id, session_id, category, content, timestamp, timestamp),
                 )
             else:
-                effective_profile_id = profile_id or DEFAULT_PROFILE_ID
                 connection.execute(
-                    f"""
-                    INSERT INTO {table}
-                        (id, profile_id, category, content, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        memory_id,
-                        effective_profile_id,
-                        category,
-                        content,
-                        timestamp,
-                        timestamp,
-                    ),
+                    f"INSERT INTO {table} (id, category, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+                    (memory_id, category, content, timestamp, timestamp),
                 )
             connection.execute(
                 f"UPDATE {table} SET memory_key = ?, source_session_id = ?, source_message_id = ? WHERE id = ?",
@@ -262,9 +215,6 @@ class SQLiteMemoryRepository:
             category=category,
             content=content,
             session_id=session_id if layer == "working" else None,
-            profile_id=(profile_id or DEFAULT_PROFILE_ID)
-            if layer == "long_term"
-            else None,
             created_at=now,
             updated_at=now,
             memory_key="goal" if category == "goal" else None,
@@ -315,21 +265,16 @@ class SQLiteMemoryRepository:
                 rows = connection.execute(
                     f"""
                     SELECT * FROM {table}
-                    WHERE profile_id = ?
                     ORDER BY created_at, id
                     """,
-                    (scope_id or DEFAULT_PROFILE_ID,),
                 ).fetchall()
         return [self._stored(row, layer) for row in rows]
 
     def list_working(self, session_id: str) -> list[StoredMemory]:
         return self._list("working", session_id)
 
-    def list_long_term(
-        self,
-        profile_id: str = DEFAULT_PROFILE_ID,
-    ) -> list[StoredMemory]:
-        return self._list("long_term", profile_id)
+    def list_long_term(self) -> list[StoredMemory]:
+        return self._list("long_term")
 
     def delete(self, layer: MemoryLayer, memory_id: str) -> bool:
         table = self._tables[layer]
@@ -342,116 +287,52 @@ class SQLiteMemoryRepository:
 
 
 class MemoryService:
-    """Validate explicit writes and expose memory snapshots to the API."""
+    """Explicit working-memory writes and a shared long-term memory bank."""
 
-    def __init__(
-        self,
-        repository: MemoryRepository,
-        sessions: SessionLookup,
-        profiles: ProfileRepository | None = None,
-    ) -> None:
+    def __init__(self, repository: MemoryRepository, sessions: SessionLookup) -> None:
         self._repository = repository
         self._sessions = sessions
-        self._profiles = profiles
 
     @staticmethod
     def _entry(memory: StoredMemory) -> MemoryEntry:
         return MemoryEntry(
-            id=memory.id,
-            layer=memory.layer,
-            category=memory.category,
-            content=memory.content,
-            session_id=memory.session_id,
-            profile_id=memory.profile_id,
-            created_at=memory.created_at,
-            updated_at=memory.updated_at,
-            source_session_id=memory.source_session_id,
-            source_message_id=memory.source_message_id,
+            id=memory.id, layer=memory.layer, category=memory.category, content=memory.content,
+            session_id=memory.session_id, created_at=memory.created_at, updated_at=memory.updated_at,
+            source_session_id=memory.source_session_id, source_message_id=memory.source_message_id,
         )
 
     def create(self, request: MemoryCreateRequest) -> MemoryEntry:
-        effective_profile_id: str | None = None
         if request.layer == "working":
             if request.session_id is None:
-                raise MemoryValidationError(
-                    "Для рабочей памяти нужно явно указать session_id",
-                )
+                raise MemoryValidationError("Для рабочей памяти нужно явно указать session_id")
             self._sessions.get(request.session_id)
-            if request.profile_id is not None:
-                raise MemoryValidationError(
-                    "Рабочая память определяется чат-сессией, а не profile_id",
-                )
         elif request.session_id is not None:
-            raise MemoryValidationError(
-                "Долговременная память не должна быть привязана к чат-сессии",
-            )
-        else:
-            effective_profile_id = request.profile_id or DEFAULT_PROFILE_ID
-
+            raise MemoryValidationError("Долговременная память не должна быть привязана к чат-сессии")
         if (request.source_session_id is None) != (request.source_text is None):
-            raise MemoryValidationError(
-                "source_session_id и source_text нужно передавать вместе",
-            )
+            raise MemoryValidationError("source_session_id и source_text нужно передавать вместе")
         if request.source_session_id is not None:
-            source_session = self._sessions.get(request.source_session_id)
-            if (
-                request.layer == "working"
-                and request.source_session_id != request.session_id
-            ):
-                raise MemoryValidationError(
-                    "Рабочую команду можно сохранить только в текущем чате",
-                )
-            if request.layer == "long_term":
-                if (
-                    request.profile_id is not None
-                    and request.profile_id != source_session.profile_id
-                ):
-                    raise MemoryValidationError(
-                        "Долговременную команду можно сохранить только в профиль чата",
-                    )
-                effective_profile_id = source_session.profile_id
-
-        if effective_profile_id is not None and self._profiles is not None:
-            self._profiles.get(effective_profile_id)
-
+            self._sessions.get(request.source_session_id)
+            if request.layer == "working" and request.source_session_id != request.session_id:
+                raise MemoryValidationError("Рабочую команду можно сохранить только в текущем чате")
         source_message_id = None
         if request.source_session_id is not None and request.source_text is not None:
             source_session = self._sessions.append_command(request.source_session_id, request.source_text)
             source_message_id = source_session.messages[-1].id
         stored = self._repository.add(
-            layer=request.layer,
-            category=request.category,
-            content=request.content,
-            session_id=request.session_id,
-            profile_id=effective_profile_id,
-            source_session_id=request.source_session_id,
+            layer=request.layer, category=request.category, content=request.content,
+            session_id=request.session_id, source_session_id=request.source_session_id,
             source_message_id=source_message_id,
         )
         return self._entry(stored)
 
-    def snapshot(
-        self,
-        session_id: str | None = None,
-        profile_id: str | None = None,
-    ) -> MemorySnapshot:
-        working: list[StoredMemory] = []
+    def snapshot(self, session_id: str | None = None) -> MemorySnapshot:
+        working = []
         if session_id is not None:
-            session = self._sessions.get(session_id)
-            if profile_id is not None and profile_id != session.profile_id:
-                raise MemoryValidationError(
-                    "Чат не принадлежит указанному профилю",
-                )
-            profile_id = session.profile_id
+            self._sessions.get(session_id)
             working = self._repository.list_working(session_id)
-        profile_id = profile_id or DEFAULT_PROFILE_ID
-        if self._profiles is not None:
-            self._profiles.get(profile_id)
         return MemorySnapshot(
             working=[self._entry(memory) for memory in working],
-            long_term=[
-                self._entry(memory)
-                for memory in self._repository.list_long_term(profile_id)
-            ],
+            long_term=[self._entry(memory) for memory in self._repository.list_long_term()],
         )
 
     def delete(self, layer: MemoryLayer, memory_id: str) -> None:

@@ -69,12 +69,12 @@ def test_pair_reuses_interpretation_evidence_and_memory(tmp_path):
     registry = NativeRegistry()
     index = Index()
     chat = service(tmp_path, registry, index)
-    turn = chat.send(chat.create().id, 'Что делает Executor?', compare_with='baseline')
+    turn = chat.send(chat.create().id, 'Что делает ChatSessionService?', compare_with='baseline')
 
     assert turn.status == 'done'
     assert turn.metrics['generation_attempts'] == 2
     assert len(turn.metrics['ollama_requests']) == 3
-    assert index.searches == ['What does Executor do?']
+    assert index.searches == ['What does ChatSessionService do?']
     assert [c['options']['num_predict'] for c in registry.calls] == [700, 3000, 1000]
     reference, candidate = (turn.metrics['comparison'][key] for key in ('reference', 'candidate'))
     assert reference['context_sha256'] == candidate['context_sha256']
@@ -93,11 +93,11 @@ def test_switch_during_pair_affects_only_following_turn(tmp_path):
     chat = service(tmp_path, registry)
     session = chat.create()
     registry.on_reference = lambda: chat.set_configuration(session.id, 'q8')
-    turn = chat.send(session.id, 'Что делает Executor?', compare_with='baseline')
+    turn = chat.send(session.id, 'Что делает ChatSessionService?', compare_with='baseline')
     assert turn.model == 'qwen3.5:9b-q4_K_M'
     assert turn.metrics['comparison']['candidate']['configuration_id'] == 'optimized'
     assert chat.get(session.id).configuration == 'q8'
-    following = chat.send(session.id, 'Что делает Executor?')
+    following = chat.send(session.id, 'Что делает ChatSessionService?')
     assert following.model == 'qwen3.5:9b-q8_0'
     assert following.metrics['configuration_id'] == 'q8'
 
@@ -105,7 +105,7 @@ def test_switch_during_pair_affects_only_following_turn(tmp_path):
 def test_failed_pair_retries_only_missing_leg_on_frozen_context(tmp_path, monkeypatch):
     original = service(tmp_path, NativeRegistry(fail_candidate=True))
     session = original.create()
-    failed = original.send(session.id, 'Что делает Executor?', compare_with='baseline')
+    failed = original.send(session.id, 'Что делает ChatSessionService?', compare_with='baseline')
     assert failed.status == 'failed'
     assert set(failed.metrics['comparison']) == {'reference'}
     digest = failed.metrics['comparison_context']['sha256']
@@ -135,7 +135,7 @@ def test_no_hits_reports_generation_skipped_for_both_variants(tmp_path):
             return []
     registry = NativeRegistry()
     chat = service(tmp_path, registry, EmptyIndex())
-    turn = chat.send(chat.create().id, 'Что делает Executor?', compare_with='baseline')
+    turn = chat.send(chat.create().id, 'Что делает ChatSessionService?', compare_with='baseline')
     assert turn.status == 'done'
     assert len(registry.calls) == 1
     for result in turn.metrics['comparison'].values():
@@ -159,8 +159,8 @@ def test_api_configuration_catalog_persistence_and_validation(tmp_path):
             assert client.put(url + '/configuration', json={'configuration': 'q8'}).json()['configuration'] == 'q8'
             assert client.get(url).json()['configuration'] == 'q8'
             assert client.put(url + '/configuration', json={'configuration': 'evil'}).status_code == 422
-            assert client.post(url + '/turns', json={'content': 'Executor', 'compare_with': 'evil'}).status_code == 422
-            result = client.post(url + '/turns', json={'content': 'Executor', 'compare_with': 'baseline'}).json()
+            assert client.post(url + '/turns', json={'content': 'ChatSessionService', 'compare_with': 'evil'}).status_code == 422
+            result = client.post(url + '/turns', json={'content': 'ChatSessionService', 'compare_with': 'baseline'}).json()
             assert result['model'] == 'qwen3.5:9b-q8_0'
             assert result['metrics']['comparison']['reference']['profile']['num_ctx'] == 32768
             assert client.get(url).json()['turns'][0] == result
@@ -172,7 +172,7 @@ def test_cloud_comparison_is_rejected_before_turn_creation(tmp_path):
     chat = service(tmp_path, NativeRegistry())
     session = chat.create('deepseek')
     with pytest.raises(ValueError, match='локальной'):
-        chat.send(session.id, 'Executor', compare_with='baseline')
+        chat.send(session.id, 'ChatSessionService', compare_with='baseline')
     assert chat.get(session.id).turns == []
 
 
@@ -192,7 +192,7 @@ def test_comparison_request_for_statement_preserves_normal_task_memory(tmp_path)
     chat = service(tmp_path, registry)
     session = chat.create()
     from tests.test_rag_chat import decision
-    payload = decision(kind='statement', goal_action='set', goal='Изучить Executor')
+    payload = decision(kind='statement', goal_action='set', goal='Изучить ChatSessionService')
     native_build = registry.build
     def build(selection, **kwargs):
         model = native_build(selection, **kwargs)
@@ -201,8 +201,8 @@ def test_comparison_request_for_statement_preserves_normal_task_memory(tmp_path)
                 return json.dumps(payload)
         return StatementModel()
     registry.build = build
-    result = chat.send(session.id, 'Хочу изучить Executor', compare_with='baseline')
+    result = chat.send(session.id, 'Хочу изучить ChatSessionService', compare_with='baseline')
     assert result.status == 'done' and result.kind == 'statement'
     assert result.metrics['comparison_note']
-    assert chat.get(session.id).state.goal.value == 'Изучить Executor'
+    assert chat.get(session.id).state.goal.value == 'Изучить ChatSessionService'
     assert not result.metrics.get('comparison')

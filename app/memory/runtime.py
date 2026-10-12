@@ -4,7 +4,6 @@ import logging
 
 from ..agents.agent import AgentMessage
 from ..memory.extractor import MemoryExtractionError, MemoryExtractor
-from ..orchestration.context import ProfileContext
 from .context import MemoryContext
 from .service import MemoryRepository
 
@@ -13,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class MemoryRuntime:
-    """Load and extract memory without managing profile or task transitions."""
+    """Load and extract memory without managing task transitions."""
 
     def __init__(
         self, repository: MemoryRepository | None = None,
@@ -25,7 +24,6 @@ class MemoryRuntime:
     def snapshot(
         self,
         session_id: str,
-        profile_id: str,
     ) -> MemoryContext:
         if self._repository is None:
             return MemoryContext()
@@ -36,7 +34,7 @@ class MemoryRuntime:
             ),
             tuple(
                 {"category": memory.category, "content": memory.content}
-                for memory in self._repository.list_long_term(profile_id)
+                for memory in self._repository.list_long_term()
             ),
         )
 
@@ -53,8 +51,6 @@ class MemoryRuntime:
         self,
         *,
         session_id: str,
-        profile_id: str,
-        profile: ProfileContext | None,
         context: list[AgentMessage],
         content: str,
         memory: MemoryContext,
@@ -68,7 +64,6 @@ class MemoryRuntime:
             candidates = self._extractor.extract(
                 context=context,
                 current_message=content,
-                profile=profile,
                 working_memory=memory.working,
                 long_term_memory=memory.long_term,
             )
@@ -103,7 +98,6 @@ class MemoryRuntime:
                     category=candidate.category,
                     content=candidate.content,
                     session_id=session_id if candidate.layer == "working" else None,
-                    profile_id=profile_id if candidate.layer == "long_term" else None,
                     source_session_id=session_id,
                     source_message_id=source_message_id,
                 )
