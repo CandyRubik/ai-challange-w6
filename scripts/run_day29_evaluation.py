@@ -24,7 +24,7 @@ sys.path.insert(0, str(ROOT))
 from app.agents.agent import Agent
 from app.indexing.store import SearchHit
 from app.providers.ollama import OllamaProvider
-from app.rag_chat.generation import GROUNDING_SYSTEM_PROMPT, generate_grounded_answer
+from app.indexing.generation import GROUNDING_SYSTEM_PROMPT, generate_grounded_answer
 from app.rag_chat.profiles import PROFILES
 
 
@@ -168,7 +168,7 @@ def run(args):
     config = {"cases_sha256": hashlib.sha256(case_bytes).hexdigest(), "split": args.split,
               "repeats": args.repeats, "profiles": definitions, "seed_policy": "1000 + repeat; same seed for paired profiles"}
     config["generation_code_sha256"] = {path: hashlib.sha256((ROOT / path).read_bytes()).hexdigest() for path in (
-        "app/providers/ollama.py", "app/rag_chat/citation_options.py", "app/rag_chat/generation.py",
+        "app/providers/ollama.py", "app/indexing/citation_options.py", "app/indexing/generation.py",
         "app/agents/agent.py", "app/orchestration/prompt.py",
     )}
     if args.question_ids:

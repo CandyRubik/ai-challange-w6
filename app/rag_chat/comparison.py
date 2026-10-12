@@ -9,7 +9,7 @@ from ..agents.agent import Agent
 from ..indexing.grounding import GroundedAnswer
 from ..indexing.store import SearchHit
 from ..memory.context import MemoryContext
-from .generation import GROUNDING_SYSTEM_PROMPT, generate_grounded_answer
+from ..indexing.generation import GROUNDING_SYSTEM_PROMPT, generate_grounded_answer
 from .profiles import RagGenerationProfile
 
 

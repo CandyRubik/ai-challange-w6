@@ -16,7 +16,7 @@ from app.rag_chat.profiles import PROFILES
 from app.rag_chat.service import RagChatService
 from app.rag_chat.state import TurnInterpreter
 from app.rag_chat.store import SQLiteRagChatRepository
-from tests.test_rag_chat import Index, Reranker, InterpretationModel, AnswerModel
+from tests.rag_fixtures import Index, Reranker, InterpretationModel, AnswerModel
 
 
 class NativeRegistry(ModelRegistry):
@@ -191,7 +191,7 @@ def test_comparison_request_for_statement_preserves_normal_task_memory(tmp_path)
     registry = NativeRegistry()
     chat = service(tmp_path, registry)
     session = chat.create()
-    from tests.test_rag_chat import decision
+    from tests.rag_fixtures import decision
     payload = decision(kind='statement', goal_action='set', goal='Изучить ChatSessionService')
     native_build = registry.build
     def build(selection, **kwargs):

@@ -16,9 +16,9 @@ from app.providers.registry import ModelRegistry
 from app.rag_chat.service import RagChatService
 from app.rag_chat.state import TurnInterpreter
 from app.rag_chat.store import SQLiteRagChatRepository, RagTurnConflict
-from app.rag_chat.citation_options import prepare_citations, resolve_citations
+from app.indexing.citation_options import prepare_citations, resolve_citations
 from app.indexing.grounding import GroundingError, validate_grounded_answer
-from tests.test_rag_chat import Index, Reranker, InterpretationModel, AnswerModel
+from tests.rag_fixtures import Index, Reranker, InterpretationModel, AnswerModel
 
 
 class Model:

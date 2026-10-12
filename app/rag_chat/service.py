@@ -15,7 +15,7 @@ from ..indexing.store import DocumentIndexError, SearchHit
 from ..memory.context import MemoryContext
 from ..providers.errors import LlmConfigurationError, LlmRequestError
 from ..providers.registry import ModelRegistry
-from .generation import GROUNDING_SYSTEM_PROMPT, generate_grounded_answer
+from ..indexing.generation import GROUNDING_SYSTEM_PROMPT, generate_grounded_answer
 from .models import RagSession, RagSessionSummary, RagTaskState, RagTurn, StateFact
 from .profiles import (RagGenerationProfile, PROFILES, CONFIGURATION_LABELS,
                        configuration_profile, configuration_model)

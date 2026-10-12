@@ -20,7 +20,7 @@ from app import main
 from app.agents.agent import Agent
 from app.indexing.store import SearchHit
 from app.providers.ollama import OllamaProvider
-from app.rag_chat.generation import GROUNDING_SYSTEM_PROMPT, generate_grounded_answer
+from app.indexing.generation import GROUNDING_SYSTEM_PROMPT, generate_grounded_answer
 from app.rag_chat.profiles import PROFILES
 from scripts.run_day29_evaluation import power_state
 

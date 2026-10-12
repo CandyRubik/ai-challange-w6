@@ -6,8 +6,8 @@ from typing import Literal
 
 from pydantic import Field, ValidationError
 
-from ..indexing.grounding import GroundingError, MAX_EXCERPT_CHARS
-from ..indexing.store import SearchHit
+from .grounding import GroundingError, MAX_EXCERPT_CHARS
+from .store import SearchHit
 from ..schemas import StrictModel
 
 

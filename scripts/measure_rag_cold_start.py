@@ -17,7 +17,7 @@ sys.path.insert(0, str(ROOT))
 from app.agents.agent import Agent
 from app.indexing.store import SearchHit
 from app.providers.registry import ModelRegistry
-from app.rag_chat.generation import GROUNDING_SYSTEM_PROMPT, generate_grounded_answer
+from app.indexing.generation import GROUNDING_SYSTEM_PROMPT, generate_grounded_answer
 
 
 def main():

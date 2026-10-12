@@ -22,8 +22,8 @@ from app.indexing.rag import DocumentRag, RetrievalSettings
 from app.indexing.rerank import LocalCrossEncoderReranker
 from app.indexing.store import DocumentIndex
 from app.providers.registry import ModelRegistry
-from app.rag_chat.generation import GROUNDING_SYSTEM_PROMPT, generate_grounded_answer
-from app.rag_chat.citation_options import prepare_citations
+from app.indexing.generation import GROUNDING_SYSTEM_PROMPT, generate_grounded_answer
+from app.indexing.citation_options import prepare_citations
 from app.rag_chat.models import RagTaskState
 from app.rag_chat.service import RagChatService
 from app.rag_chat.state import TurnInterpreter
