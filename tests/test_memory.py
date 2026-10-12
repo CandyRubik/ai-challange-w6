@@ -9,12 +9,12 @@ from fastapi.testclient import TestClient
 import pytest
 
 from app.agents.agent import Agent, AgentMessage
-from app.agents.memory_extractor import MemoryCandidate, MemoryExtractor
+from app.memory.extractor import MemoryCandidate, MemoryExtractor
 from app.main import app, get_memory_service
 from app.schemas import MemoryCreateRequest
 from app.services.chat_sessions import ChatSessionService
 from app.storage.chat_sessions import ChatSessionNotFound, SQLiteChatSessionRepository
-from app.services.memory import (
+from app.memory.service import (
     MemoryService,
     MemoryValidationError,
     SQLiteMemoryRepository,

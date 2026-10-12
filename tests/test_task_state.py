@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from app.agents.task_state import (
+from app.state.task import (
     TaskContext, TaskConflict, TaskState, approve_plan, complete_step,
     apply_validation, pause, propose_plan, replan, require_action, resume,
 )

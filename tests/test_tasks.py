@@ -8,13 +8,13 @@ from fastapi.testclient import TestClient
 import pytest
 
 from app.agents.agent import Agent, AgentOutputError
-from app.agents.task_state import TaskConflict
+from app.state.task import TaskConflict
 from app.main import app, get_chat_session_service
 from app.providers.deepseek import LlmRequestError, LlmTruncatedResponseError
 from app.schemas import TaskActionRequest
 from app.services.chat_sessions import ChatSessionService
 from app.storage.chat_sessions import SQLiteChatSessionRepository
-from app.services.memory import SQLiteMemoryRepository
+from app.memory.service import SQLiteMemoryRepository
 
 
 PLAN = json.dumps({
