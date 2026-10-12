@@ -6,8 +6,8 @@ from dataclasses import replace
 from time import monotonic
 
 from ..agents.agent import Agent, AgentOutputError
-from ..indexing.grounding import GroundedAnswer, GroundingError, validate_grounded_answer
-from ..indexing.store import SearchHit
+from .grounding import GroundedAnswer, GroundingError, validate_grounded_answer
+from .store import SearchHit
 from ..invariants import InvariantPolicy, InvariantViolation
 from ..memory.context import MemoryContext
 from ..orchestration.context import OrchestrationContext

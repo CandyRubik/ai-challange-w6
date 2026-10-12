@@ -4,24 +4,18 @@ from functools import lru_cache
 from html import escape
 import os
 from pathlib import Path
-from typing import Literal
+from typing import Callable, Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
-from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from .agents.agent import Agent, AgentInputError, AgentOutputError
+from .agents.agent import AgentInputError, AgentOutputError
 from .indexing.corpus import DEFAULT_PROJECT_ROOT, load_documents
 from .indexing.rag import DocumentRag, RetrievalSettings
 from .indexing.rerank import LocalCrossEncoderReranker
 from .indexing.store import DEFAULT_INDEX_DIR, DocumentIndex, DocumentIndexError
-from .rag_chat.models import (RagCreateRequest, RagSendRequest, RagSession, RagSessionSummary,
-                              RagTurn, RagConfigurationRequest)
-from .rag_chat.service import GROUNDING_SYSTEM_PROMPT, RagChatService
-from .rag_chat.state import TurnInterpreter
-from .rag_chat.profiles import generation_profile
-from .rag_chat.store import RagChatNotFound, RagTurnConflict, SQLiteRagChatRepository
 from .invariants import (
     InvariantSnapshot, InvariantUpdateRequest, InvariantSettingsConflict,
     SQLiteInvariantRepository,
@@ -40,6 +34,7 @@ from .private_service import PrivateServiceMiddleware, ServiceLimits
 from .schemas import (
     ChatSendRequest,
     ChatSendResponse,
+    ChatOperationStatus,
     ChatSession,
     ChatSessionCreateRequest,
     ChatSessionSummary,
@@ -65,7 +60,6 @@ from .memory.service import (
 )
 
 
-
 def _allowed_origins() -> list[str]:
     configured_origins = os.getenv("FRONTEND_ORIGINS")
     if not configured_origins:
@@ -85,8 +79,12 @@ app.add_middleware(PrivateServiceMiddleware)
 
 
 def _model_failure(error: Exception) -> HTTPException:
+    detail = str(error)
+    if getattr(error, "branch_session_id", None):
+        detail = {"message": detail, "session_id": error.branch_session_id,
+                  "message_id": error.branch_message_id}
     return HTTPException(status_code=422 if isinstance(error, LlmContextLimitError) else 502,
-                         detail=str(error))
+                         detail=detail)
 
 
 @app.exception_handler(LlmConfigurationError)
@@ -113,7 +111,7 @@ def get_chat_session_service() -> ChatSessionService:
         memory_repository=get_memory_repository(),
         invariant_repository=get_invariant_repository(),
         model_registry=get_model_registry(),
-        project_help=get_project_help_service(),
+        project_help=get_project_help_service,
     )
 
 
@@ -150,6 +148,11 @@ def get_memory_service() -> MemoryService:
         get_memory_repository(),
         get_chat_repository(),
     )
+
+
+def get_goal_coordinator() -> Callable[[], ChatSessionService]:
+    """Only goal routing needs a chat runtime; other memory writes stay independent."""
+    return get_chat_session_service
 
 
 @app.get("/api/health")
@@ -211,14 +214,17 @@ def get_memory(
 def create_memory(
     request: MemoryCreateRequest,
     service: MemoryService = Depends(get_memory_service),
+    chats: Callable[[], ChatSessionService] = Depends(get_goal_coordinator),
 ) -> MemoryEntry:
     try:
+        if request.layer == "working" and request.category == "goal":
+            return chats().set_goal(request)
         return service.create(request)
     except ChatSessionNotFound:
         raise HTTPException(status_code=404, detail="Чат не найден") from None
     except MemoryValidationError as error:
         raise HTTPException(status_code=422, detail=str(error)) from None
-    except ChatTurnConflict as error:
+    except (ChatTurnConflict, MemoryUpdateConflict) as error:
         raise HTTPException(status_code=409, detail=str(error)) from None
 
 
@@ -259,6 +265,17 @@ def update_chat_model(
         raise HTTPException(status_code=503, detail=str(error)) from None
 
 
+@app.get("/api/chat/sessions/{session_id}/operations/{operation_id}", response_model=ChatOperationStatus)
+def chat_operation_status(session_id: str, operation_id: str,
+                          service: ChatSessionService = Depends(get_chat_session_service)) -> ChatOperationStatus:
+    try:
+        return service.operation_status(session_id, operation_id)
+    except ChatSessionNotFound:
+        raise HTTPException(status_code=404, detail="Чат не найден") from None
+    except ChatTurnConflict as error:
+        raise HTTPException(status_code=404, detail=str(error)) from None
+
+
 @app.post(
     "/api/chat/sessions/{session_id}/messages",
     response_model=ChatSendResponse,
@@ -269,7 +286,7 @@ def send_chat_message(
     service: ChatSessionService = Depends(get_chat_session_service),
 ) -> ChatSendResponse:
     try:
-        return service.send(session_id, request.content, request.provider)
+        return service.send(session_id, request.content, request.provider, operation_id=request.operation_id)
     except ChatSessionNotFound:
         raise HTTPException(status_code=404, detail="Чат не найден") from None
     except (ChatTurnConflict, MemoryUpdateConflict) as error:
@@ -313,7 +330,7 @@ def start_task(
     service: ChatSessionService = Depends(get_chat_session_service),
 ) -> ChatSession:
     try:
-        session = service.start_task(session_id, request.task)
+        session = service.start_task(session_id, request.task, operation_id=request.operation_id)
         if session.task is None:
             response.status_code = 200
         return session
@@ -372,21 +389,6 @@ async def document_index_error(request: Request, error: DocumentIndexError):
     return JSONResponse({"detail": str(error)}, status_code=503)
 
 
-@lru_cache(maxsize=1)
-def get_rag_chat_service() -> RagChatService:
-    registry = get_model_registry()
-    model = registry.build(registry.resolve("ollama"))
-    return RagChatService(
-        SQLiteRagChatRepository(os.getenv("CHAT_DB_PATH") or str(DEFAULT_CHAT_DB_PATH)),
-        TurnInterpreter(model),
-        DocumentRag(get_document_index(), model, reranker=get_document_reranker(),
-                    settings=RetrievalSettings(rewrite=False)),
-        Agent(model, system_prompt=GROUNDING_SYSTEM_PROMPT, max_tokens=3_000),
-        model_registry=registry,
-        generation_profile=generation_profile(),
-    )
-
-
 @app.get("/api/document-index/status")
 def document_index_status() -> dict:
     try:
@@ -420,84 +422,6 @@ def document_source(path: str, sha256: str | None = None) -> HTMLResponse:
         f'<h1>{escape(path)}</h1><pre>{lines}</pre></html>',
         headers={"Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'"},
     )
-
-
-@app.post("/api/rag-chat/sessions", response_model=RagSession, status_code=201)
-def create_rag_chat(request: RagCreateRequest | None = None,
-                    service: RagChatService = Depends(get_rag_chat_service)) -> RagSession:
-    return service.create(request.provider if request else None, request.configuration if request else None)
-
-
-@app.get("/api/rag-chat/sessions", response_model=list[RagSessionSummary])
-def list_rag_chats(service: RagChatService = Depends(get_rag_chat_service)) -> list[RagSessionSummary]:
-    return service.list()
-
-
-@app.get("/api/rag-chat/sessions/{session_id}", response_model=RagSession)
-def get_rag_chat(session_id: str, service: RagChatService = Depends(get_rag_chat_service)) -> RagSession:
-    try:
-        return service.get(session_id)
-    except RagChatNotFound:
-        raise HTTPException(status_code=404, detail="RAG-чат не найден") from None
-
-
-@app.get("/api/rag-chat/configurations")
-def rag_configurations(service: RagChatService = Depends(get_rag_chat_service)) -> dict:
-    return service.configuration_catalog()
-
-
-@app.put("/api/rag-chat/sessions/{session_id}/configuration", response_model=RagSession)
-def set_rag_configuration(session_id: str, request: RagConfigurationRequest,
-                          service: RagChatService = Depends(get_rag_chat_service)) -> RagSession:
-    try:
-        return service.set_configuration(session_id, request.configuration)
-    except RagChatNotFound:
-        raise HTTPException(status_code=404, detail="RAG-чат не найден") from None
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from None
-
-
-@app.put("/api/rag-chat/sessions/{session_id}/model", response_model=RagSession)
-def set_rag_model(session_id: str, request: ChatModelUpdateRequest,
-                  service: RagChatService = Depends(get_rag_chat_service)) -> RagSession:
-    try:
-        return service.set_provider(session_id, request.provider)
-    except RagChatNotFound:
-        raise HTTPException(status_code=404, detail="RAG-чат не найден") from None
-
-
-@app.delete("/api/rag-chat/sessions/{session_id}", status_code=204)
-def delete_rag_chat(session_id: str, service: RagChatService = Depends(get_rag_chat_service)) -> Response:
-    try:
-        service.delete(session_id)
-    except RagChatNotFound:
-        raise HTTPException(status_code=404, detail="RAG-чат не найден") from None
-    return Response(status_code=204)
-
-
-@app.post("/api/rag-chat/sessions/{session_id}/turns", response_model=RagTurn)
-def send_rag_chat_turn(session_id: str, request: RagSendRequest,
-                       service: RagChatService = Depends(get_rag_chat_service)) -> RagTurn:
-    try:
-        return service.send(session_id, request.content, request.provider,
-                            configuration=request.configuration, compare_with=request.compare_with)
-    except RagChatNotFound:
-        raise HTTPException(status_code=404, detail="RAG-чат не найден") from None
-    except RagTurnConflict as error:
-        raise HTTPException(status_code=409, detail=str(error)) from None
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from None
-
-
-@app.post("/api/rag-chat/sessions/{session_id}/turns/{turn_id}/retry", response_model=RagTurn)
-def retry_rag_chat_turn(session_id: str, turn_id: str,
-                        service: RagChatService = Depends(get_rag_chat_service)) -> RagTurn:
-    try:
-        return service.retry(session_id, turn_id)
-    except RagChatNotFound:
-        raise HTTPException(status_code=404, detail="RAG-чат не найден") from None
-    except RagTurnConflict as error:
-        raise HTTPException(status_code=409, detail=str(error)) from None
 
 
 STATIC_ROOT = Path(__file__).resolve().parents[1] / "static"

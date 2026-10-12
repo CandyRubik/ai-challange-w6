@@ -8,7 +8,7 @@ from ..agents.agent import Agent
 from ..indexing.store import SearchHit
 from ..indexing.rag import DocumentRag
 from ..orchestration.context import OrchestrationContext
-from ..rag_chat.generation import generate_grounded_answer
+from ..indexing.generation import generate_grounded_answer
 from .mcp_client import ProjectMcpClient
 
 DEFAULT_QUESTION = "Как устроен проект?"

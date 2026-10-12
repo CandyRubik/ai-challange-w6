@@ -17,10 +17,46 @@ from app.indexing.store import DocumentIndex, SearchHit
 from app.main import app, get_chat_session_service, get_document_index
 from app.memory.service import SQLiteMemoryRepository
 from app.project_help.mcp_client import ProjectMcpClient
-from app.project_help.service import ProjectHelpService, help_question
+from app.project_help.service import ProjectHelpService, HelpResult, help_question
+from app.providers.registry import ModelRegistry
 from app.providers.errors import LlmRequestError
 from app.services.chat_sessions import ChatSessionService
 from app.storage.chat_sessions import SQLiteChatSessionRepository
+
+
+def test_help_retry_resolves_lazy_factory_in_a_fresh_http_runtime(tmp_path, monkeypatch):
+    monkeypatch.setenv("LLM_DEFAULT_PROVIDER", "ollama")
+
+    class Registry(ModelRegistry):
+        def build(self, selection, **kwargs):
+            return object()
+
+    class Helper:
+        calls = 0
+        def answer(self, *args):
+            self.calls += 1
+            if self.calls == 1:
+                raise LlmRequestError("temporary")
+            return HelpResult("Восстановленная справка", {})
+
+    helper = Helper()
+    repository = SQLiteChatSessionRepository(tmp_path / "chat.sqlite3")
+    app.dependency_overrides[get_chat_session_service] = lambda: ChatSessionService(
+        repository, model_registry=Registry(), project_help=lambda: helper,
+    )
+    try:
+        with TestClient(app) as client:
+            source = client.post("/api/chat/sessions", json={}).json()["id"]
+            url = f"/api/chat/sessions/{source}"
+            assert client.post(url + "/messages", json={"content": "/help Где память?"}).status_code == 502
+            message = client.get(url).json()["messages"][-1]
+            result = client.post(url + f"/messages/{message['id']}/retry")
+            assert result.status_code == 200
+            assert result.json()["assistant_message"]["content"] == "Восстановленная справка"
+            assert result.json()["user_message"]["id"] == message["id"]
+            assert helper.calls == 2
+    finally:
+        app.dependency_overrides.clear()
 
 
 class Tokens:

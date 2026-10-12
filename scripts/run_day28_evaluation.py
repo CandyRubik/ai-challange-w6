@@ -11,7 +11,6 @@ from pathlib import Path
 import platform
 import statistics
 import sys
-from tempfile import TemporaryDirectory
 from time import monotonic
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,12 +21,8 @@ from app.indexing.rag import DocumentRag, RetrievalSettings
 from app.indexing.rerank import LocalCrossEncoderReranker
 from app.indexing.store import DocumentIndex
 from app.providers.registry import ModelRegistry
-from app.rag_chat.generation import GROUNDING_SYSTEM_PROMPT, generate_grounded_answer
-from app.rag_chat.citation_options import prepare_citations
-from app.rag_chat.models import RagTaskState
-from app.rag_chat.service import RagChatService
-from app.rag_chat.state import TurnInterpreter
-from app.rag_chat.store import SQLiteRagChatRepository
+from app.indexing.generation import GROUNDING_SYSTEM_PROMPT, generate_grounded_answer
+from app.indexing.citation_options import prepare_citations
 
 
 def summarize(results: list[dict], providers: list[str]) -> dict:
@@ -62,14 +57,13 @@ def run(output: Path, repeats: int, providers: list[str], questions_path: Path) 
     index = DocumentIndex()
     manifest = index.ensure_built()
     local = registry.build(registry.resolve("ollama"), thinking_enabled=False)
-    interpreter = TurnInterpreter(local)
-    rag = DocumentRag(index, local, reranker=LocalCrossEncoderReranker(), settings=RetrievalSettings(rewrite=False))
+    rag = DocumentRag(index, local, reranker=LocalCrossEncoderReranker(), settings=RetrievalSettings(rewrite=True))
     report = {
         "created_at": datetime.now(timezone.utc).isoformat(), "repeats": repeats,
         "models": {p: registry.resolve(p).model for p in providers},
         "platform": platform.platform(), "architecture": platform.machine(),
         "index": manifest, "corpus_fingerprint": manifest["fingerprint"],
-        "method": "Local interpretation and retrieval once per question; identical document context and user question for each provider and repeat; no answer history or task memory. Ollama receives a native JSON Schema; DeepSeek receives the equivalent schema in its prompt with JSON mode.",
+        "method": "Shared documentation retrieval, including query rewrite, once per question; legacy interpretation_seconds is zero; identical document context and user question for each provider and repeat; no answer history or task memory. Ollama receives a native JSON Schema; DeepSeek receives the equivalent schema in its prompt with JSON mode.",
         "dependencies": {name: version(name) for name in (
             "sentence-transformers", "transformers", "torch", "faiss-cpu", "numpy", "httpx", "openai",
         )},
@@ -90,53 +84,49 @@ def run(output: Path, repeats: int, providers: list[str], questions_path: Path) 
     warm_hits = index.search("ChatSessionService", k=3)
     rag.reranker.score("ChatSessionService", warm_hits)
     report["retrieval_cold_start_seconds"] = monotonic() - started
-    with TemporaryDirectory(prefix="day28-evaluation-") as temporary:
-        chat = RagChatService(SQLiteRagChatRepository(Path(temporary) / "rag.sqlite3"),
-                              interpreter, rag, Agent(local))
-        for case in cases:
-            prepared = monotonic()
-            decision = interpreter.interpret(case["question"], RagTaskState(), [])
-            interpretation_seconds = monotonic() - prepared
-            searched = monotonic()
-            hits = chat.retrieve_context(decision)
-            retrieval_seconds = monotonic() - searched
-            prompt, _, _ = prepare_citations(hits)
-            result = {**case, "search_question": decision.search_question,
-                      "interpretation_seconds": interpretation_seconds, "retrieval_seconds": retrieval_seconds,
-                      "context_sha256": hashlib.sha256(prompt.encode()).hexdigest(),
-                      "selected": [{"score": hit.score, **hit.metadata} for hit in hits], "runs": []}
-            report["results"].append(result)
-            for repeat in range(1, repeats + 1):
-                order = providers if (case["id"] + repeat) % 2 == 0 else list(reversed(providers))
-                for provider in order:
-                    selection = registry.resolve(provider)
-                    model = registry.build(selection, thinking_enabled=False)
-                    metrics = {"generation_attempts": 0}
-                    started = monotonic()
-                    try:
-                        answer = generate_grounded_answer(
-                            Agent(model, system_prompt=GROUNDING_SYSTEM_PROMPT, max_tokens=3_000),
-                            case["question"], decision.search_question, hits, metrics=metrics,
-                        )
-                        data = asdict(answer)
-                    except Exception as error:
-                        data = {"content": "", "sources": [], "citations": [], "status": "provider_error",
-                                "error": type(error).__name__}
-                    elapsed = monotonic() - started
-                    positive = case["expected_status"] == "answered"
-                    automatic_pass = (
-                        data["status"] == "answered" and any(
-                            source["source"] == "README.md" or source["source"].startswith("docs/") for source in data["sources"]
-                        ) if positive else data["status"] == "insufficient_context" and not data["sources"]
+    for case in cases:
+        traces = []
+        searched = monotonic()
+        hits = rag.retrieve(case["question"], [], "structure", force=True, capture_trace=traces.append)
+        retrieval_seconds = monotonic() - searched
+        search_question = traces[-1].search_query if traces else case["question"]
+        prompt, _, _ = prepare_citations(hits)
+        result = {**case, "search_question": search_question,
+                  "interpretation_seconds": 0, "retrieval_seconds": retrieval_seconds,
+                  "context_sha256": hashlib.sha256(prompt.encode()).hexdigest(),
+                  "selected": [{"score": hit.score, **hit.metadata} for hit in hits], "runs": []}
+        report["results"].append(result)
+        for repeat in range(1, repeats + 1):
+            order = providers if (case["id"] + repeat) % 2 == 0 else list(reversed(providers))
+            for provider in order:
+                selection = registry.resolve(provider)
+                model = registry.build(selection, thinking_enabled=False)
+                metrics = {"generation_attempts": 0}
+                started = monotonic()
+                try:
+                    answer = generate_grounded_answer(
+                        Agent(model, system_prompt=GROUNDING_SYSTEM_PROMPT, max_tokens=3_000),
+                        case["question"], search_question, hits, metrics=metrics,
                     )
-                    result["runs"].append({
-                        "provider": provider, "model": selection.model, "repeat": repeat,
-                        "context_sha256": result["context_sha256"], "elapsed_seconds": elapsed,
-                        "metrics": {**metrics, "ollama_requests": getattr(model, "request_metrics", [])},
-                        "automatic_pass": automatic_pass, **data,
-                    })
-                    save()
-                    print(f"Q{case['id']} {provider} #{repeat}: {data['status']} {elapsed:.2f}s auto={automatic_pass}", flush=True)
+                    data = asdict(answer)
+                except Exception as error:
+                    data = {"content": "", "sources": [], "citations": [], "status": "provider_error",
+                            "error": type(error).__name__}
+                elapsed = monotonic() - started
+                positive = case["expected_status"] == "answered"
+                automatic_pass = (
+                    data["status"] == "answered" and any(
+                        source["source"] == "README.md" or source["source"].startswith("docs/") for source in data["sources"]
+                    ) if positive else data["status"] == "insufficient_context" and not data["sources"]
+                )
+                result["runs"].append({
+                    "provider": provider, "model": selection.model, "repeat": repeat,
+                    "context_sha256": result["context_sha256"], "elapsed_seconds": elapsed,
+                    "metrics": {**metrics, "ollama_requests": getattr(model, "request_metrics", [])},
+                    "automatic_pass": automatic_pass, **data,
+                })
+                save()
+                print(f"Q{case['id']} {provider} #{repeat}: {data['status']} {elapsed:.2f}s auto={automatic_pass}", flush=True)
     report["complete"] = True
     save()
     return report

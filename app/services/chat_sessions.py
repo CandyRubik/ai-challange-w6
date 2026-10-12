@@ -1,30 +1,32 @@
 from __future__ import annotations
 
-import logging
+import re
+from uuid import uuid4
+from typing import Callable
 
 from ..agents.agent import Agent, AgentInputError, AgentMessage
 from ..invariants import InvariantPolicy, InvariantViolation, SQLiteInvariantRepository
 from ..memory.extractor import MemoryExtractor
-from ..memory.runtime import MemoryRuntime
+from ..memory.service import MemoryService
+from ..storage.turns import ChatTurnWriter
 from ..memory.context import MemoryContext
-from ..memory.updates import WorkingMemoryInterpreter, WorkingUpdate, apply_working_update
+from ..memory.prepared import PreparedMemory
+from ..memory.goals import same_goal
+from ..memory.updates import WorkingMemoryInterpreter, WorkingUpdate
 from ..orchestration.context import OrchestrationContext
-from ..orchestration.tasks import TaskOrchestrator
+from .tasks import TaskService
 from ..project_help.service import ProjectHelpService, help_question
 from ..providers.registry import ModelRegistry, ModelSelection
 from ..schemas import (
-    ChatMessage, ChatSendResponse, ChatSession, ChatSessionSummary,
-    TaskActionRequest, TaskSummary, TaskView,
+    ChatMessage, ChatSendResponse, ChatSession, ChatSessionSummary, ChatOperationStatus,
+    TaskActionRequest, TaskSummary, TaskView, MemoryCreateRequest, MemoryEntry,
 )
-from ..state.task import TaskContext, TaskConflict, TaskState, approve_plan, pause, replan, require_action, resume
+from ..state.task import TaskConflict, TaskState
 from ..memory.service import MemoryRepository
 from ..storage.chat_sessions import (
-    ChatSessionNotFound, ChatTurnConflict, ChatSessionRepository, DEFAULT_CHAT_DB_PATH,
-    DEFAULT_DB_PATH, SQLiteChatSessionRepository, StoredMessage, StoredSession, StoredTask,
+    ChatTurnConflict, ChatSessionRepository, StoredMessage, StoredSession,
 )
 
-
-logger = logging.getLogger(__name__)
 
 
 class ChatSessionService:
@@ -40,7 +42,7 @@ class ChatSessionService:
         memory_interpreter: WorkingMemoryInterpreter | None = None,
         model_registry: ModelRegistry | None = None,
         model_selection: ModelSelection | None = None,
-        project_help: ProjectHelpService | None = None,
+        project_help: ProjectHelpService | Callable[[], ProjectHelpService] | None = None,
     ) -> None:
         if agent is None and model_registry is None:
             raise ValueError("Укажите агента или реестр моделей")
@@ -50,10 +52,10 @@ class ChatSessionService:
         self._models = model_registry
         self._selection = model_selection
         self._help = project_help
-        self._memory = MemoryRuntime(memory_repository, memory_extractor)
+        self._memory = MemoryService(memory_repository, repository, extractor=memory_extractor, interpreter=memory_interpreter)
+        self._turn_writer = ChatTurnWriter(repository, memory_repository)
         self._memory_repository = memory_repository
-        self._memory_interpreter = memory_interpreter
-        self._tasks = TaskOrchestrator(agent) if agent is not None else None
+        self._tasks = TaskService(agent)
 
     def _runtime(self, provider: str, model: str | None = None, *, for_help: bool = False) -> "ChatSessionService":
         if self._models is None:
@@ -94,7 +96,7 @@ class ChatSessionService:
             title=session.title,
             created_at=session.created_at,
             updated_at=session.updated_at,
-            provider=session.provider,
+            provider=session.provider, parent_session_id=session.parent_session_id,
             task=None if session.task is None else TaskSummary(
                 state=session.task.context.state,
                 step=session.task.context.step,
@@ -119,11 +121,13 @@ class ChatSessionService:
         )
 
     @classmethod
-    def _response(cls, updated: StoredSession) -> ChatSendResponse:
+    def _response(cls, updated: StoredSession, message_id: str | None = None) -> ChatSendResponse:
+        index = next((i for i, message in enumerate(updated.messages) if message.id == message_id),
+                     len(updated.messages) - 2)
         return ChatSendResponse(
             session=cls._summary(updated),
-            user_message=cls._message(updated.messages[-2]),
-            assistant_message=cls._message(updated.messages[-1]),
+            user_message=cls._message(updated.messages[index]),
+            assistant_message=cls._message(updated.messages[index + 1]),
         )
 
     def create(self, provider: str | None = None) -> ChatSession:
@@ -149,38 +153,114 @@ class ChatSessionService:
     def clear(self) -> None:
         self._repository.clear()
 
-    def send(self, session_id: str, content: str, provider: str | None = None) -> ChatSendResponse:
+    @staticmethod
+    def _history(session: StoredSession) -> list[AgentMessage]:
+        return [{"role": message.role, "content": message.content} for message in session.messages
+                if message.kind == "message" and not message.refusal and message.status == "done"
+                and message.project_help is None]
+
+    def send(
+        self, session_id: str, content: str, provider: str | None = None, *, operation_id: str | None = None,
+    ) -> ChatSendResponse:
         if not content.strip():
             raise AgentInputError("Сообщение не должно быть пустым")
-        policy = self._policy()
-        with self._repository.task_operation(session_id):
+        operation_id = operation_id or str(uuid4())
+        with self._repository.operation_guard(operation_id):
+            if operation_id is not None:
+                existing = self._repository.operation(session_id, operation_id)
+                if existing is not None:
+                    target, turn = existing
+                    if turn.content != content.strip():
+                        raise ChatTurnConflict("Идентификатор операции уже использован для другого сообщения")
+                    if turn.status == "done":
+                        return self._response(target, turn.id)
+                    return self.retry(target.id, turn.id)
+            session = self._repository.get(session_id)
+            policy = self._policy()
             try:
-                session = self._repository.get(session_id)
-                return self._runtime(provider or session.provider, for_help=help_question(content) is not None)._send(session_id, content, policy)
+                return self._runtime(provider or session.provider, for_help=help_question(content) is not None)._send(
+                    session_id, content.strip(), policy, operation_id,
+                )
             except InvariantViolation as error:
                 return self._refuse(session_id, content, error)
 
-    def _send(self, session_id: str, content: str, policy: InvariantPolicy) -> ChatSendResponse:
+    def _project_help(self) -> ProjectHelpService:
+        if callable(self._help):
+            self._help = self._help()
+        if self._help is None:
+            raise AgentInputError("Ассистент проекта не настроен")
+        return self._help
+
+    def _send(self, session_id: str, content: str, policy: InvariantPolicy, operation_id: str) -> ChatSendResponse:
         session = self._repository.get(session_id)
         if session.messages and session.messages[-1].status != "done":
             raise ChatTurnConflict("Сначала повторите последний незавершённый ответ")
-        question = help_question(content)
-        if question is not None:
-            policy.check_request(content)
-            if self._help is None:
-                raise AgentInputError("Ассистент проекта не настроен")
-            turn = self._repository.start_turn(session_id, content, **self._model_metadata(),
-                                               project_help={"question": question})
-            return self._respond_turn(session, turn, policy)
-        if session.task is not None and session.task.context.state != TaskState.DONE:
-            ctx = session.task.context
-            raise TaskConflict(
-                f"Используйте действия задачи. Следующее действие: {ctx.current}", ctx=ctx,
-                code="task_action_forbidden",
-            )
         policy.check_request(content)
-        turn = self._repository.start_turn(session_id, content, **self._model_metadata())
-        return self._respond_turn(session, turn, policy)
+        message_id = str(uuid4())
+        question = help_question(content)
+        prepared = None
+        branch = False
+        if question is not None:
+            self._project_help()
+        else:
+            explicit_goal = re.fullmatch(r"/goal\s+(.+)", content, flags=re.DOTALL)
+            if content == "/goal" or (explicit_goal and len(explicit_goal[1].strip()) > 4000):
+                raise AgentInputError("После /goal нужна цель длиной от 1 до 4000 символов")
+            saved = WorkingUpdate(goal_action="set", goal=explicit_goal[1].strip()).model_dump_json() if explicit_goal else None
+            current_goal = session.task.context.task if session.task else self._memory.goal(session_id)
+            prepared = self._memory.prepare(session_id, message_id, content, self._history(session),
+                                             saved_update=saved, active_goal=current_goal)
+            update = prepared.update
+            branch = bool(update and update.goal_action == "set" and current_goal
+                          and not same_goal(current_goal, update.goal))
+            if session.task is not None and session.task.context.state != TaskState.DONE and not branch and not explicit_goal and not (update and update.clarification):
+                ctx = session.task.context
+                raise TaskConflict(f"Используйте действия задачи. Следующее действие: {ctx.current}",
+                                   ctx=ctx, code="task_action_forbidden")
+        def begin():
+            return self._repository.begin_turn(
+                session_id, content, operation_id=operation_id, message_id=message_id,
+                branch=branch, memory_update=prepared.update.model_dump_json() if prepared and prepared.update else None,
+                project_help={"question": question} if question is not None else None, **self._model_metadata(),
+            )
+        if branch:
+            target, turn = begin()
+            prepared = self._memory.prepare(target.id, turn.id, content, [], saved_update=turn.memory_update)
+            lock_id = target.id
+        else:
+            target, turn = None, None
+            lock_id = session_id
+        with self._repository.task_operation(lock_id):
+            if target is None:
+                target, turn = begin()
+            else:
+                target = self._repository.get(target.id)
+                turn = next(message for message in target.messages if message.id == turn.id)
+            if turn.status == "done":
+                return self._response(target, turn.id)
+            try:
+                return self._respond_turn(target, turn, policy, prepared=prepared)
+            except Exception as error:
+                if target.parent_session_id is not None:
+                    error.branch_session_id = target.id
+                    error.branch_message_id = turn.id
+                raise
+
+    def set_goal(self, request: MemoryCreateRequest) -> MemoryEntry:
+        self._memory.validate(request)
+        result = self.send(request.session_id, "/goal " + request.content, operation_id=request.operation_id)
+        if result.user_message.refusal:
+            from ..memory.service import MemoryValidationError
+            raise MemoryValidationError(result.assistant_message.content)
+        return next(entry for entry in self._memory.snapshot(result.session.id).working if entry.category == "goal")
+
+    def operation_status(self, session_id: str, operation_id: str) -> ChatOperationStatus:
+        self._repository.get(session_id)
+        operation = self._repository.operation(session_id, operation_id)
+        if operation is None:
+            raise ChatTurnConflict("Операция ещё не сохранена")
+        target, turn = operation
+        return ChatOperationStatus(session=self._summary(target), user_message=self._message(turn))
 
     def retry(self, session_id: str, message_id: str) -> ChatSendResponse:
         with self._repository.task_operation(session_id):
@@ -194,11 +274,12 @@ class ChatSessionService:
 
     def _respond_turn(
         self, session: StoredSession, turn: StoredMessage, policy: InvariantPolicy,
+        *, prepared: PreparedMemory | None = None,
     ) -> ChatSendResponse:
         if turn.project_help is not None:
             try:
                 policy.check_request(turn.content)
-                result = self._help.answer(
+                result = self._project_help().answer(
                     turn.project_help["question"], self._agent,
                     OrchestrationContext(invariants=policy.settings),
                 )
@@ -216,77 +297,60 @@ class ChatSessionService:
             for message in session.messages
             if message.kind == "message" and not message.refusal and message.status == "done" and message.project_help is None
         ]
-        memory = self._memory.snapshot(
-            session.id,
-        )
-        decision = None
-        on_commit = None
         try:
             policy.check_request(turn.content)
-            if self._memory_interpreter is not None and self._memory_repository is not None:
-                rows = self._memory_repository.working_rows(session.id)
-                if turn.memory_update is None:
-                    try:
-                        decision = self._memory_interpreter.interpret(turn.content, rows, context)
-                    except Exception:
-                        logger.warning("Working-memory interpretation failed; answering without changes", exc_info=True)
-                        decision = WorkingUpdate()
-                    self._repository.save_memory_update(session.id, turn.id, decision.model_dump_json())
-                else:
-                    decision = WorkingUpdate.model_validate_json(turn.memory_update)
-                preview = apply_working_update(rows, decision, session.id, turn.id)
-                memory = MemoryContext(
-                    tuple({"category": row["category"], "content": row["content"]} for row in preview),
-                    memory.long_term,
-                )
-                goal = next((row for row in preview if row["category"] == "goal"), None)
-                if goal is not None and goal["source_message_id"]:
-                    anchor = next((i for i, message in enumerate(session.messages)
-                                   if message.id == goal["source_message_id"]), len(session.messages))
-                    context = [{"role": message.role, "content": message.content}
-                               for message in session.messages[anchor:]
-                               if message.kind == "message" and not message.refusal and message.status == "done" and message.project_help is None]
-                on_commit = lambda connection: self._memory_repository.commit_update(connection, session.id, turn.id, decision, rows)
-            answer = decision.clarification if decision and decision.clarification else self._agent.respond(
+            prepared = prepared or self._memory.prepare(session.id, turn.id, turn.content, context,
+                                                         saved_update=turn.memory_update)
+            decision = prepared.update
+            memory = prepared.context
+            if decision is not None and turn.memory_update is None:
+                self._repository.save_memory_update(session.id, turn.id, decision.model_dump_json())
+            if prepared.goal_source_message_id:
+                anchor = next((i for i, message in enumerate(session.messages)
+                               if message.id == prepared.goal_source_message_id), len(session.messages))
+                context = [{"role": message.role, "content": message.content}
+                           for message in session.messages[anchor:]
+                           if message.kind == "message" and not message.refusal and message.status == "done" and message.project_help is None]
+            answer = "Цель сохранена" if turn.content.startswith("/goal ") else decision.clarification if decision and decision.clarification else self._agent.respond(
                 context, turn.content,
                 orchestration=OrchestrationContext(invariants=policy.settings), memory=memory,
             )
-            updated = self._repository.finish_turn(session.id, turn.id, policy.apply(answer), on_commit=on_commit)
+            updated = self._turn_writer.finish(session.id, turn.id, policy.apply(answer), prepared=prepared,
+                                               generated=not turn.content.startswith("/goal "))
         except InvariantViolation as error:
             updated = self._repository.finish_turn(session.id, turn.id, error.refusal(), refusal=True)
             return self._response(updated)
         except Exception:
             self._repository.fail_turn(session.id, turn.id)
             raise
-        self._memory.remember(
-            session_id=session.id,
-            context=context,
-            content=turn.content,
-            memory=memory,
-            source_message_id=turn.id,
-            working_enabled=self._memory_interpreter is None,
-        )
+        if not turn.content.startswith("/goal "):
+            self._memory.remember(
+                session_id=session.id,
+                context=context,
+                content=turn.content,
+                memory=memory,
+                source_message_id=turn.id,
+            )
         return self._response(updated)
 
 
-    def start_task(self, session_id: str, task: str) -> ChatSession:
+    def start_task(self, session_id: str, task: str, *, operation_id: str | None = None) -> ChatSession:
         policy = self._policy()
         try:
-            return self._start_task(session_id, task, policy)
+            return self._start_task(session_id, task, policy, operation_id=operation_id)
         except InvariantViolation as error:
             self._refuse(session_id, "Задача: " + task, error)
             return self.get(session_id)
 
-    def _start_task(self, session_id: str, task: str, policy: InvariantPolicy) -> ChatSession:
-        session = self._repository.get(session_id)
+    def _start_task(self, session_id: str, task: str, policy: InvariantPolicy, *, operation_id: str | None = None) -> ChatSession:
         policy.check_request(task)
-        self._repository.create_task(
-            session_id, TaskContext(task=task.strip()),
-            assistant_content=policy.apply(
-                "Задача создана — нажмите «Сформировать план», затем утвердите его",
-            ),
-        )
-        return self.get(session_id)
+        session = self._repository.get(session_id)
+        current_goal = session.task.context.task if session.task else self._memory.goal(session_id)
+        branch = bool(current_goal and not same_goal(current_goal, task))
+        change = self._tasks.start(task, OrchestrationContext(invariants=policy.settings))
+        created = self._repository.create_task(session_id, change.context, assistant_content=change.answer,
+                                                branch=branch, operation_id=operation_id or str(uuid4()))
+        return self.get(created.id)
 
     def task_action(self, session_id: str, request: TaskActionRequest) -> ChatSession:
         policy = self._policy()
@@ -306,43 +370,19 @@ class ChatSessionService:
         stored = session.task
         if stored is None:
             raise TaskConflict("В чате нет задачи")
-        if request.revision != stored.revision:
-            raise TaskConflict(
-                "Состояние изменилось. Обновите чат и повторите действие",
-                ctx=stored.context, code="task_stale_revision",
-            )
-        ctx = stored.context
-        action = require_action(ctx, request.action)
-        if action not in {"pause", "resume"}:
-            policy.check_request(request.content if action == "replan" else ctx.task + "\n" + "\n".join(ctx.notes))
-        if action == "pause":
-            updated, answer = pause(ctx), "Задача на паузе — этап, шаг и результаты сохранены"
-        elif action == "resume":
-            updated = resume(ctx)
-            answer = "Продолжаем с сохранённого состояния — выполните ожидаемое действие"
-        elif action == "approve":
-            updated = approve_plan(ctx)
-            answer = "План утверждён — можно выполнить следующий шаг"
-        elif action == "replan":
-            updated = replan(ctx, request.content)
-            answer = "Требования сохранены — сформируйте новый план, готовые результаты доступны агенту"
-        else:
-            memory = self._memory.snapshot(session_id)
-            runtime = self._runtime(session.provider)
-            assert runtime._tasks is not None
-            updated, answer = runtime._tasks.advance(
-                ctx, orchestration=OrchestrationContext(invariants=policy.settings), memory=memory,
-            )
-        is_generation = action in {"generate_plan", "execute_step", "validate"}
+        action = self._tasks.resolve_action(stored, request.action, request.revision)
+        generated = action in {"generate_plan", "execute_step", "validate"}
+        runtime = self._runtime(session.provider) if generated else self
+        memory = self._memory.context(session_id) if generated else MemoryContext()
+        change = runtime._tasks.act(
+            stored, action, revision=request.revision, content=request.content,
+            orchestration=OrchestrationContext(invariants=policy.settings), memory=memory,
+        )
         self._repository.update_task(
-            session_id, updated,
-            {"generate_plan": ctx.current, "execute_step": ctx.current, "validate": ctx.current,
-             "approve": "Утвердить план", "pause": "Пауза",
-             "resume": "Продолжить", "replan": "Пересмотреть план: " + request.content}[action],
-            policy.apply(answer),
-            expected_revision=None if is_generation else request.revision,
-            expected_progress_revision=stored.progress_revision if is_generation else None,
-            pause_only=action in {"pause", "resume"},
-            **(runtime._model_metadata() if is_generation else {}),
+            session_id, change.context, change.user_content, change.answer,
+            expected_revision=change.expected_revision,
+            expected_progress_revision=change.expected_progress_revision,
+            pause_only=change.pause_only,
+            **(runtime._model_metadata() if change.generated else {}),
         )
         return self.get(session_id)

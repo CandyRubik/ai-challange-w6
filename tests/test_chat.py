@@ -9,7 +9,8 @@ import pytest
 
 from app.agents.agent import Agent, AgentInputError, AgentMessage, AgentOutputError
 from app.main import app, get_chat_session_service
-from app.services.chat_sessions import ChatSessionService, SQLiteChatSessionRepository
+from app.services.chat_sessions import ChatSessionService
+from app.storage.chat_sessions import SQLiteChatSessionRepository
 
 
 class FakeLanguageModel:

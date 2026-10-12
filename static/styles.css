@@ -436,11 +436,11 @@ dialog { border-color: #30323b; background: #131419; box-shadow: 0 28px 90px #00
   #model-status { width: 100%; }
 }
 
-.rag-link { display: block; padding: 11px 8px; color: #82d9bd; text-decoration: none; font-size: 12px; }
-
 .project-help { display: grid; gap: 8px; margin-top: 14px; font-size: 13px; }
 .project-help > a { color: var(--accent, #818cf8); overflow-wrap: anywhere; }
 .project-help details { border-top: 1px solid #64748b55; padding-top: 10px; }
 .project-help summary { cursor: pointer; color: #94a3b8; }
 .project-help p { white-space: pre-wrap; font-size: 12px; }
 .project-help blockquote { margin: 8px 0; padding-left: 12px; border-left: 2px solid #64748b; font-size: 12px; }
+
+.parent-chat { border: 0; padding: 2px 0; background: transparent; color: #b9bed5; font: inherit; cursor: pointer; text-align: left; }

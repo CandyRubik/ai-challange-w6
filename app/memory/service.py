@@ -11,6 +11,15 @@ from uuid import uuid4
 
 from .updates import MemoryUpdateConflict, WorkingUpdate, apply_working_update
 from .messages import StoredMessage
+from .context import MemoryContext
+from .goals import same_goal
+from .prepared import PreparedMemory
+from .extractor import MemoryExtractionError, MemoryExtractor
+from .updates import WorkingMemoryInterpreter
+from ..agents.agent import AgentMessage
+import logging
+
+logger = logging.getLogger(__name__)
 
 from ..schemas import MemoryCreateRequest, MemoryEntry, MemorySnapshot
 from ..storage.migrations import archive_profile_scope
@@ -183,10 +192,12 @@ class SQLiteMemoryRepository:
             if layer == "working":
                 if category == "goal":
                     previous = connection.execute(
-                        "SELECT content FROM working_memory WHERE session_id = ? AND category = 'goal'",
+                        "SELECT * FROM working_memory WHERE session_id = ? AND category = 'goal'",
                         (session_id,),
                     ).fetchone()
-                    if previous is not None and previous["content"] != content:
+                    if previous is not None and same_goal(previous["content"], content):
+                        return self._stored(previous, layer)
+                    if previous is not None:
                         connection.execute("DELETE FROM working_memory WHERE session_id = ?", (session_id,))
                     else:
                         connection.execute(
@@ -287,11 +298,16 @@ class SQLiteMemoryRepository:
 
 
 class MemoryService:
-    """Explicit working-memory writes and a shared long-term memory bank."""
+    """Manual and automatic memory behind one application interface."""
 
-    def __init__(self, repository: MemoryRepository, sessions: SessionLookup) -> None:
+    def __init__(
+        self, repository: MemoryRepository | None, sessions: SessionLookup | None = None,
+        *, extractor: MemoryExtractor | None = None, interpreter: WorkingMemoryInterpreter | None = None,
+    ) -> None:
         self._repository = repository
         self._sessions = sessions
+        self._extractor = extractor
+        self._interpreter = interpreter
 
     @staticmethod
     def _entry(memory: StoredMemory) -> MemoryEntry:
@@ -301,7 +317,9 @@ class MemoryService:
             source_session_id=memory.source_session_id, source_message_id=memory.source_message_id,
         )
 
-    def create(self, request: MemoryCreateRequest) -> MemoryEntry:
+    def validate(self, request: MemoryCreateRequest) -> None:
+        if self._repository is None or self._sessions is None:
+            raise MemoryValidationError("Память не настроена")
         if request.layer == "working":
             if request.session_id is None:
                 raise MemoryValidationError("Для рабочей памяти нужно явно указать session_id")
@@ -314,6 +332,12 @@ class MemoryService:
             self._sessions.get(request.source_session_id)
             if request.layer == "working" and request.source_session_id != request.session_id:
                 raise MemoryValidationError("Рабочую команду можно сохранить только в текущем чате")
+    def create(self, request: MemoryCreateRequest) -> MemoryEntry:
+        self.validate(request)
+        if request.layer == "working" and request.category == "goal":
+            previous = self.goal(request.session_id)
+            if previous and not same_goal(previous, request.content):
+                raise MemoryValidationError("Новая цель требует отдельного чата")
         source_message_id = None
         if request.source_session_id is not None and request.source_text is not None:
             source_session = self._sessions.append_command(request.source_session_id, request.source_text)
@@ -338,3 +362,133 @@ class MemoryService:
     def delete(self, layer: MemoryLayer, memory_id: str) -> None:
         if not self._repository.delete(layer, memory_id):
             raise MemoryNotFound(memory_id)
+
+
+    def context(
+        self,
+        session_id: str,
+    ) -> MemoryContext:
+        if self._repository is None:
+            return MemoryContext()
+        return MemoryContext(
+            tuple(
+                {"category": memory.category, "content": memory.content}
+                for memory in self._repository.list_working(session_id)
+            ),
+            tuple(
+                {"category": memory.category, "content": memory.content}
+                for memory in self._repository.list_long_term()
+            ),
+        )
+
+
+    @staticmethod
+    def _memory_key(
+        layer: str,
+        category: str,
+        content: str,
+    ) -> tuple[str, str, str]:
+        normalized_content = " ".join(content.split()).casefold()
+        return layer, category, normalized_content
+
+
+    def remember(
+        self,
+        *,
+        session_id: str,
+        context: list[AgentMessage],
+        content: str,
+        memory: MemoryContext,
+        source_message_id: str | None = None,
+        working_enabled: bool | None = None,
+    ) -> None:
+        if self._repository is None or self._extractor is None:
+            return
+
+        if working_enabled is None:
+            working_enabled = self._interpreter is None
+        try:
+            candidates = self._extractor.extract(
+                context=context,
+                current_message=content,
+                working_memory=memory.working,
+                long_term_memory=memory.long_term,
+            )
+            known = {
+                self._memory_key(
+                    "working",
+                    entry["category"],
+                    entry["content"],
+                )
+                for entry in memory.working
+            }
+            known.update(
+                self._memory_key(
+                    "long_term",
+                    entry["category"],
+                    entry["content"],
+                )
+                for entry in memory.long_term
+            )
+            for candidate in candidates:
+                if candidate.layer == "working" and not working_enabled:
+                    continue
+                if candidate.layer == "working" and candidate.category == "goal" and any(
+                    entry["category"] == "goal" and entry["content"] != candidate.content for entry in memory.working
+                ):
+                    continue
+                key = self._memory_key(
+                    candidate.layer,
+                    candidate.category,
+                    candidate.content,
+                )
+                if key in known:
+                    continue
+                self._repository.add(
+                    layer=candidate.layer,
+                    category=candidate.category,
+                    content=candidate.content,
+                    session_id=session_id if candidate.layer == "working" else None,
+                    source_session_id=session_id,
+                    source_message_id=source_message_id,
+                )
+                known.add(key)
+        except MemoryExtractionError:
+            logger.warning("Automatic memory extraction failed", exc_info=True)
+        except Exception:
+            logger.exception("Automatic memory persistence failed")
+
+
+    def prepare(
+        self, session_id: str, message_id: str, content: str, history: list[AgentMessage],
+        *, saved_update: str | None = None, active_goal: str | None = None,
+    ) -> PreparedMemory:
+        memory = self.context(session_id)
+        if self._repository is None or (self._interpreter is None and saved_update is None):
+            return PreparedMemory(memory)
+        rows = self._repository.working_rows(session_id)
+        if saved_update is not None:
+            update = WorkingUpdate.model_validate_json(saved_update)
+        else:
+            try:
+                interpretation_rows = rows
+                if active_goal and not any(row["category"] == "goal" for row in rows):
+                    interpretation_rows = [*rows, {"id": "active-task-goal", "memory_key": "goal",
+                                                  "category": "goal", "content": active_goal}]
+                update = self._interpreter.interpret(content, interpretation_rows, history)
+            except Exception:
+                logger.warning("Working-memory interpretation failed; answering without changes", exc_info=True)
+                update = WorkingUpdate()
+        preview = apply_working_update(rows, update, session_id, message_id)
+        goal = next((row for row in preview if row["category"] == "goal"), None)
+        return PreparedMemory(
+            MemoryContext(tuple({"category": row["category"], "content": row["content"]} for row in preview),
+                          memory.long_term),
+            update, tuple(rows), goal["source_message_id"] if goal else None,
+        )
+
+    def goal(self, session_id: str) -> str | None:
+        if self._repository is None:
+            return None
+        return next((row.content for row in self._repository.list_working(session_id)
+                     if row.category == "goal"), None)

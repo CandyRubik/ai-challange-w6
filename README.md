@@ -16,6 +16,7 @@ calling, доступа к файлам, репозиторию, shell или о
   со строгими переходами, паузой и продолжением;
 - редактируемые инварианты ответов: эмодзи, верхний регистр и лимит предложений;
 - отдельные чат-сессии с независимой краткосрочной памятью;
+- автоматический отдельный чат для новой цели со ссылкой на исходный чат;
 - рабочая память для цели, ограничений и решений текущей задачи;
 - долговременная память для сведений о пользователе, предпочтений и общих знаний;
 - автоматическое извлечение важных фактов и ручные slash-команды;
@@ -25,7 +26,7 @@ calling, доступа к файлам, репозиторию, shell или о
 - input/output policy для ограничения пользовательского ввода и ответа;
 - выбор локальной Qwen через Ollama или облачного DeepSeek в каждом чате;
 - выбранная модель обслуживает ответы, память и этапы задач;
-- ассистент /help и RAG-чат по README и docs: E5, FAISS, reranker и Qwen через Ollama;
+- ассистент /help по README и docs: E5, FAISS, reranker и Qwen через Ollama;
 - проверенные дословные цитаты, ссылки на файлы и строки и время каждого ответа;
 - сохранение провайдера и модели хода для восстановления после ошибки;
 - тесты backend, provider и frontend syntax check в CI.
@@ -202,11 +203,6 @@ MCP-клиент backend запускает `python -m app.project_help.mcp_serv
 активной задаче, сохраняется в истории, но не обновляет память и прогресс задачи.
 Сохраняются продуктовые инварианты и выбранная для хода модель.
 
-[Отдельный RAG-чат](http://127.0.0.1:8000/rag-chat/) использует тот же корпус
-для диалогов с памятью цели и сравнения локальных конфигураций.
-`RAG_LLM_PROFILE` выбирает `baseline`, `compact` или `optimized`; профиль `q8`
-доступен в интерфейсе при наличии соответствующих весов.
-
 ```bash
 python scripts/smoke_project_help.py --base-url http://127.0.0.1:8000
 ```
@@ -215,19 +211,36 @@ python scripts/smoke_project_help.py --base-url http://127.0.0.1:8000
 [индексация и источники](docs/day28-local-rag.md),
 [конфигурации LLM](docs/day29-local-llm.md).
 
+## Новая цель и отдельный чат
+
+Первая цель фиксируется в текущем чате. Другая цель в сообщении или /goal
+автоматически создаёт отдельный чат, включая ввод при активной задаче.
+Явное создание задачи с другой целью также открывает отдельный чат.
+Новая ветка не получает историю, рабочие ограничения или план прежней задачи;
+долговременная память остаётся общей. Кнопка «Исходный чат» возвращает к родителю.
+Неоднозначное изменение цели вызывает уточнение.
+
+`parent_session_id` хранит происхождение чата. `operation_id` в messages,
+создании задачи и ручной записи цели позволяет повторить одну операцию после
+ошибки без создания второй ветки. Повтор использует сохранённые модель и разбор
+намерения. UI открывает целевой чат и при ошибке генерации; потерянный HTTP-ответ
+восстанавливается через состояние операции.
+
+Действие задачи использует снимок памяти на начало действия. Новые ограничения
+учитываются со следующего действия; начатый результат сохраняется по своим
+параметрам. В обычном чате конфликт изменения рабочей памяти по-прежнему
+требует повтора ответа.
+
+Отдельный RAG-чат удалён. При открытии базы повторяемая миграция удаляет только
+`rag_chat_turns`, `rag_chat_state` и `rag_chat_sessions`; эти данные не архивируются.
+Основной /help продолжает использовать общий индекс, генерацию и проверку цитат.
+
 ## API
 
 - `GET /api/health` — состояние backend и наличие ключа DeepSeek;
 - `GET /api/models` — настроенные модели и доступность локальных весов/ключа;
 - `GET /api/document-index/status` — состояние локального индекса;
 - `GET /api/document-index/source?path=README.md&sha256=...` — документ с номерами строк;
-- `/api/rag-chat/sessions` — создание и список RAG-чатов;
-- `/api/rag-chat/sessions/{id}` — чтение и удаление RAG-чата;
-- `GET /api/rag-chat/configurations` — локальные конфигурации и доступность весов;
-- `PUT /api/rag-chat/sessions/{id}/configuration` — конфигурация следующих ходов;
-- `PUT /api/rag-chat/sessions/{id}/model` — модель следующих сообщений;
-- `POST /api/rag-chat/sessions/{id}/turns` — новый ход с необязательными `provider`, `configuration` и `compare_with`;
-- `POST /api/rag-chat/sessions/{id}/turns/{turn_id}/retry` — повтор исходной моделью;
 - `GET /api/invariants` — общие правила ответов;
 - `PUT /api/invariants` — сохранить правила с актуальной `revision`;
 - `POST /api/chat/sessions` — создать чат;
@@ -235,7 +248,8 @@ python scripts/smoke_project_help.py --base-url http://127.0.0.1:8000
 - `DELETE /api/chat/sessions` — удалить чаты;
 - `GET /api/chat/sessions/{id}` — получить историю чата;
 - `PUT /api/chat/sessions/{id}/model` с `provider` — выбрать `ollama` или `deepseek`;
-- `POST /api/chat/sessions/{id}/messages` — отправить сообщение агенту;
+- `POST /api/chat/sessions/{id}/messages` — отправить сообщение; необязательный `operation_id` защищает повтор запроса от дубликатов;
+- `GET /api/chat/sessions/{id}/operations/{operation_id}` — найти чат и сообщение операции после потери HTTP-ответа;
 - `POST /api/chat/sessions/{id}/task` — создать задачу;
 - `POST /api/chat/sessions/{id}/task/actions` — выполнить действие с `action` и `revision`;
 - `GET /api/memory?session_id={id}` — получить working и long-term memory;
@@ -243,21 +257,21 @@ python scripts/smoke_project_help.py --base-url http://127.0.0.1:8000
 - `DELETE /api/memory/{layer}/{id}` — удалить отдельную запись.
 
 ```text
-HTTP API → ChatSessionService → TaskOrchestrator
-                    │                       │
-                    │       OrchestrationContext + MemoryContext + TaskContext
-                    │                       ↓
-                    │               Agent → PromptBuilder → Ollama / DeepSeek
-                    ├──→ MemoryRuntime → MemoryExtractor → MemoryRepository
-                    └──→ ChatSessionRepository → SQLite
+HTTP API → ChatSessionService
+            ├── MemoryService → интерпретация и извлечение памяти
+            ├── TaskService → StateService (чистый автомат)
+            │       └── Agent → PromptBuilder → Ollama / DeepSeek
+            ├── /help → документация + MCP
+            └── ChatTurnWriter + repositories → SQLite
 ```
 
 ## Разделение кода
 
-- `app/orchestration/` — продуктовые правила, управление этапами задачи и сборка prompt;
+- `app/orchestration/` — продуктовые правила и сборка prompt;
 - `app/memory/` — сообщения диалога, отдельный `MemoryContext` для working и
   long-term memory, извлечение, дедупликация, API и хранилище памяти;
-- `app/state/` — состояния задачи, результаты шагов и правила переходов;
+- `app/state/` — чистый `StateService`, состояния, события и правила переходов;
+- `app/services/tasks.py` — `TaskService`: создание и управление этапами задачи;
 - `app/storage/` — SQLite-хранилище чат-сессий, атомарная запись сообщений и
   состояния задачи, блокировки и проверка версий;
 - `app/services/chat_sessions.py` — координация этих частей и адаптация к HTTP-моделям;
@@ -388,5 +402,4 @@ SQLite автоматически получает новую таблицу `ch
 python -m pytest -q
 python -m compileall -q app tests
 node --check static/app.js
-node --check static/rag-chat/app.js
 ```
