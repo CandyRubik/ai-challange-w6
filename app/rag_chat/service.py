@@ -352,7 +352,7 @@ class RagChatService:
     ) -> tuple[str, list[dict], list[dict], str]:
         metrics = metrics if metrics is not None else {}
         if metrics.get("comparison_request") and (decision.kind != "question" or decision.question_scope != "document"):
-            metrics["comparison_note"] = "Сравнение доступно для вопросов по книге; это сообщение обработано как обычный ход."
+            metrics["comparison_note"] = "Сравнение доступно для вопросов по документации; это сообщение обработано как обычный ход."
         if decision.kind == "clarification_needed":
             return decision.clarification, [self._message_source(StateFact(
                 key="уточнение", value=turn.content, source_message_id=turn.id,

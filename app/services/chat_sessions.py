@@ -5,14 +5,12 @@ import logging
 from ..agents.agent import Agent, AgentInputError, AgentMessage
 from ..invariants import InvariantPolicy, InvariantViolation, SQLiteInvariantRepository
 from ..memory.extractor import MemoryExtractor
-from ..orchestration.profile_interviewer import ProfileInterviewer
 from ..memory.runtime import MemoryRuntime
 from ..memory.context import MemoryContext
 from ..memory.updates import WorkingMemoryInterpreter, WorkingUpdate, apply_working_update
-from ..orchestration.context import OrchestrationContext, ProfileContext, profile_context
-from ..orchestration.onboarding import ProfileOnboarding
-from ..orchestration.profiles import DEFAULT_PROFILE_ID, ProfileRepository, StoredProfile
+from ..orchestration.context import OrchestrationContext
 from ..orchestration.tasks import TaskOrchestrator
+from ..project_help.service import ProjectHelpService, help_question
 from ..providers.registry import ModelRegistry, ModelSelection
 from ..schemas import (
     ChatMessage, ChatSendResponse, ChatSession, ChatSessionSummary,
@@ -38,12 +36,11 @@ class ChatSessionService:
         agent: Agent | None = None,
         memory_repository: MemoryRepository | None = None,
         memory_extractor: MemoryExtractor | None = None,
-        profile_repository: ProfileRepository | None = None,
-        profile_interviewer: ProfileInterviewer | None = None,
         *, invariant_repository: SQLiteInvariantRepository | None = None,
         memory_interpreter: WorkingMemoryInterpreter | None = None,
         model_registry: ModelRegistry | None = None,
         model_selection: ModelSelection | None = None,
+        project_help: ProjectHelpService | None = None,
     ) -> None:
         if agent is None and model_registry is None:
             raise ValueError("Укажите агента или реестр моделей")
@@ -52,28 +49,23 @@ class ChatSessionService:
         self._agent = agent
         self._models = model_registry
         self._selection = model_selection
+        self._help = project_help
         self._memory = MemoryRuntime(memory_repository, memory_extractor)
         self._memory_repository = memory_repository
         self._memory_interpreter = memory_interpreter
         self._tasks = TaskOrchestrator(agent) if agent is not None else None
-        self._profile_repository = profile_repository
-        self._onboarding = (
-            ProfileOnboarding(profile_repository, profile_interviewer)
-            if profile_repository is not None and profile_interviewer is not None
-            else None
-        )
 
-    def _runtime(self, provider: str, model: str | None = None) -> "ChatSessionService":
+    def _runtime(self, provider: str, model: str | None = None, *, for_help: bool = False) -> "ChatSessionService":
         if self._models is None:
             return self
         selection = self._models.resolve(provider, model)
-        selected = self._models.build(selection)
+        selected = self._models.build(selection, **({"num_ctx": 8192, "max_num_ctx": 32768, "temperature": 0} if for_help else {}))
         return ChatSessionService(
-            self._repository, Agent(selected), self._memory_repository,
-            MemoryExtractor(selected), self._profile_repository, ProfileInterviewer(selected),
+            self._repository, Agent(selected, max_tokens=1000 if for_help else 2000), self._memory_repository,
+            MemoryExtractor(selected),
             invariant_repository=self._invariants,
             memory_interpreter=WorkingMemoryInterpreter(self._models.build(selection, thinking_enabled=False)),
-            model_selection=selection,
+            model_selection=selection, project_help=self._help,
         )
 
     def _model_metadata(self) -> dict:
@@ -99,7 +91,6 @@ class ChatSessionService:
     def _summary(session: StoredSession) -> ChatSessionSummary:
         return ChatSessionSummary(
             id=session.id,
-            profile_id=session.profile_id,
             title=session.title,
             created_at=session.created_at,
             updated_at=session.updated_at,
@@ -124,7 +115,7 @@ class ChatSessionService:
             content=message.content,
             created_at=message.created_at,
             status=message.status, error=message.error,
-            provider=message.provider, model=message.model,
+            provider=message.provider, model=message.model, project_help=message.project_help,
         )
 
     @classmethod
@@ -135,90 +126,15 @@ class ChatSessionService:
             assistant_message=cls._message(updated.messages[-1]),
         )
 
-    @staticmethod
-    def _pending_request(session: StoredSession) -> str | None:
-        return next(
-            (
-                message.content
-                for message in session.messages
-                if message.role == "user" and message.kind == "message" and not message.refusal
-            ),
-            None,
-        )
-
-    def _finish_onboarding(
-        self,
-        *,
-        session: StoredSession,
-        content: str,
-        profile: StoredProfile,
-        policy: InvariantPolicy,
-    ) -> ChatSendResponse:
-        pending_request = self._pending_request(session)
-        if pending_request is None:
-            answer = (
-                "Профиль готов — теперь напишите задачу, дальше я буду учитывать "
-                "эти настройки автоматически."
-            )
-            return self._response(
-                self._repository.append_exchange(session.id, content.strip(), policy.apply(answer)),
-            )
-
-        memory = self._memory.snapshot(
-            session.id,
-            session.profile_id,
-        )
-        policy.check_request(pending_request)
-        active_profile = profile_context(profile)
-        answer = self._agent.respond(
-            [],
-            pending_request,
-            orchestration=OrchestrationContext(profile=active_profile, invariants=policy.settings),
-            memory=memory,
-        )
-        updated = self._repository.append_exchange(session.id, content.strip(), policy.apply(answer), **self._model_metadata())
-        self._memory.remember(
-            session_id=session.id,
-            profile_id=session.profile_id,
-            profile=active_profile,
-            context=[],
-            content=pending_request,
-            memory=memory,
-            source_message_id=next(message.id for message in session.messages
-                                   if message.role == "user" and message.content == pending_request),
-        )
-        return self._response(updated)
-
-    def _onboard(
-        self, *, session: StoredSession, content: str, profile: StoredProfile, policy: InvariantPolicy,
-    ) -> ChatSendResponse:
-        assert self._onboarding is not None
-        result = self._onboarding.respond(profile, content)
-        if result.answer is None:
-            return self._finish_onboarding(
-                session=session, content=content, profile=result.profile, policy=policy,
-            )
-        return self._response(
-            self._repository.append_exchange(session.id, content.strip(), policy.apply(result.answer),
-                                             generated=False, **self._model_metadata()),
-        )
-
-    def create(self, profile_id: str = DEFAULT_PROFILE_ID, provider: str | None = None) -> ChatSession:
-        if self._profile_repository is not None:
-            self._profile_repository.get(profile_id)
+    def create(self, provider: str | None = None) -> ChatSession:
         selected_provider = provider or (self._models.default_provider if self._models else "deepseek")
         if self._models is not None:
             self._models.resolve(selected_provider)
-        session = self._repository.create(profile_id, provider=selected_provider)
+        session = self._repository.create(provider=selected_provider)
         return ChatSession(**self._summary(session).model_dump(), messages=[])
 
-    def list(self, profile_id: str | None = None) -> list[ChatSessionSummary]:
-        if profile_id is not None and self._profile_repository is not None:
-            self._profile_repository.get(profile_id)
-        return [
-            self._summary(session)
-            for session in self._repository.list(profile_id)
-        ]
+    def list(self) -> list[ChatSessionSummary]:
+        return [self._summary(session) for session in self._repository.list()]
 
     def get(self, session_id: str) -> ChatSession:
         session = self._repository.get(session_id)
@@ -230,10 +146,8 @@ class ChatSessionService:
             ),
         )
 
-    def clear(self, profile_id: str | None = None) -> None:
-        if profile_id is not None and self._profile_repository is not None:
-            self._profile_repository.get(profile_id)
-        self._repository.clear(profile_id)
+    def clear(self) -> None:
+        self._repository.clear()
 
     def send(self, session_id: str, content: str, provider: str | None = None) -> ChatSendResponse:
         if not content.strip():
@@ -242,7 +156,7 @@ class ChatSessionService:
         with self._repository.task_operation(session_id):
             try:
                 session = self._repository.get(session_id)
-                return self._runtime(provider or session.provider)._send(session_id, content, policy)
+                return self._runtime(provider or session.provider, for_help=help_question(content) is not None)._send(session_id, content, policy)
             except InvariantViolation as error:
                 return self._refuse(session_id, content, error)
 
@@ -250,6 +164,14 @@ class ChatSessionService:
         session = self._repository.get(session_id)
         if session.messages and session.messages[-1].status != "done":
             raise ChatTurnConflict("Сначала повторите последний незавершённый ответ")
+        question = help_question(content)
+        if question is not None:
+            policy.check_request(content)
+            if self._help is None:
+                raise AgentInputError("Ассистент проекта не настроен")
+            turn = self._repository.start_turn(session_id, content, **self._model_metadata(),
+                                               project_help={"question": question})
+            return self._respond_turn(session, turn, policy)
         if session.task is not None and session.task.context.state != TaskState.DONE:
             ctx = session.task.context
             raise TaskConflict(
@@ -257,22 +179,8 @@ class ChatSessionService:
                 code="task_action_forbidden",
             )
         policy.check_request(content)
-        profile = None
-        if self._profile_repository is not None:
-            stored_profile = self._profile_repository.get(session.profile_id)
-            if (
-                self._onboarding is not None
-                and not stored_profile.onboarding_complete
-            ):
-                return self._onboard(
-                    session=session,
-                    content=content,
-                    profile=stored_profile,
-                    policy=policy,
-                )
-            profile = profile_context(stored_profile)
         turn = self._repository.start_turn(session_id, content, **self._model_metadata())
-        return self._respond_turn(session, turn, profile, policy)
+        return self._respond_turn(session, turn, policy)
 
     def retry(self, session_id: str, message_id: str) -> ChatSendResponse:
         with self._repository.task_operation(session_id):
@@ -280,24 +188,36 @@ class ChatSessionService:
             if not session.messages or session.messages[-1].id != message_id or session.messages[-1].status == "done":
                 raise ChatTurnConflict("Повторить можно только последнее сообщение без ответа")
             turn = session.messages[-1]
-            profile = None
-            if self._profile_repository is not None:
-                profile = profile_context(self._profile_repository.get(session.profile_id))
-            return self._runtime(turn.provider or session.provider, turn.model)._respond_turn(
-                session, turn, profile, self._policy(),
+            return self._runtime(turn.provider or session.provider, turn.model, for_help=turn.project_help is not None)._respond_turn(
+                session, turn, self._policy(),
             )
 
     def _respond_turn(
-        self, session: StoredSession, turn: StoredMessage, profile: ProfileContext | None, policy: InvariantPolicy,
+        self, session: StoredSession, turn: StoredMessage, policy: InvariantPolicy,
     ) -> ChatSendResponse:
+        if turn.project_help is not None:
+            try:
+                policy.check_request(turn.content)
+                result = self._help.answer(
+                    turn.project_help["question"], self._agent,
+                    OrchestrationContext(invariants=policy.settings),
+                )
+                updated = self._repository.finish_turn(
+                    session.id, turn.id, policy.apply(result.answer), project_help=result.details,
+                )
+            except InvariantViolation as error:
+                updated = self._repository.finish_turn(session.id, turn.id, error.refusal(), refusal=True)
+            except Exception:
+                self._repository.fail_turn(session.id, turn.id)
+                raise
+            return self._response(updated)
         context: list[AgentMessage] = [
             {"role": message.role, "content": message.content}
             for message in session.messages
-            if message.kind == "message" and not message.refusal and message.status == "done"
+            if message.kind == "message" and not message.refusal and message.status == "done" and message.project_help is None
         ]
         memory = self._memory.snapshot(
             session.id,
-            session.profile_id,
         )
         decision = None
         on_commit = None
@@ -325,11 +245,11 @@ class ChatSessionService:
                                    if message.id == goal["source_message_id"]), len(session.messages))
                     context = [{"role": message.role, "content": message.content}
                                for message in session.messages[anchor:]
-                               if message.kind == "message" and not message.refusal and message.status == "done"]
+                               if message.kind == "message" and not message.refusal and message.status == "done" and message.project_help is None]
                 on_commit = lambda connection: self._memory_repository.commit_update(connection, session.id, turn.id, decision, rows)
             answer = decision.clarification if decision and decision.clarification else self._agent.respond(
                 context, turn.content,
-                orchestration=OrchestrationContext(profile=profile, invariants=policy.settings), memory=memory,
+                orchestration=OrchestrationContext(invariants=policy.settings), memory=memory,
             )
             updated = self._repository.finish_turn(session.id, turn.id, policy.apply(answer), on_commit=on_commit)
         except InvariantViolation as error:
@@ -340,8 +260,6 @@ class ChatSessionService:
             raise
         self._memory.remember(
             session_id=session.id,
-            profile_id=session.profile_id,
-            profile=profile,
             context=context,
             content=turn.content,
             memory=memory,
@@ -361,10 +279,6 @@ class ChatSessionService:
 
     def _start_task(self, session_id: str, task: str, policy: InvariantPolicy) -> ChatSession:
         session = self._repository.get(session_id)
-        if self._profile_repository is not None and (self._onboarding is not None or self._models is not None):
-            profile = self._profile_repository.get(session.profile_id)
-            if not profile.onboarding_complete:
-                raise TaskConflict("Сначала завершите интервью профиля или отправьте /skip в обычном чате")
         policy.check_request(task)
         self._repository.create_task(
             session_id, TaskContext(task=task.strip()),
@@ -413,14 +327,11 @@ class ChatSessionService:
             updated = replan(ctx, request.content)
             answer = "Требования сохранены — сформируйте новый план, готовые результаты доступны агенту"
         else:
-            profile = None if self._profile_repository is None else profile_context(
-                self._profile_repository.get(session.profile_id),
-            )
-            memory = self._memory.snapshot(session_id, session.profile_id)
+            memory = self._memory.snapshot(session_id)
             runtime = self._runtime(session.provider)
             assert runtime._tasks is not None
             updated, answer = runtime._tasks.advance(
-                ctx, orchestration=OrchestrationContext(profile=profile, invariants=policy.settings), memory=memory,
+                ctx, orchestration=OrchestrationContext(invariants=policy.settings), memory=memory,
             )
         is_generation = action in {"generate_plan", "execute_step", "validate"}
         self._repository.update_task(

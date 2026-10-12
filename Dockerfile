@@ -2,7 +2,7 @@ FROM python:3.13-slim-bookworm@sha256:a1165e272e578941b84abc79e4ab38a0305cd12803
 
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
 WORKDIR /app
-RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 \
+RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 git \
     && rm -rf /var/lib/apt/lists/*
 COPY requirements.txt requirements-indexing.txt ./
 # The VDS has no GPU: avoid downloading CUDA into the chat image.
@@ -12,6 +12,8 @@ RUN useradd --uid 10001 --create-home app \
     && mkdir -p /app/data && chown app:app /app/data
 COPY app ./app
 COPY static ./static
+COPY README.md ./
+COPY docs ./docs
 USER app
 EXPOSE 8000
 HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=5 \

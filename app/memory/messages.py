@@ -15,3 +15,4 @@ class StoredMessage:
     memory_update: str | None = None
     provider: str | None = None
     model: str | None = None
+    project_help: dict | None = None

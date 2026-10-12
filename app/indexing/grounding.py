@@ -61,7 +61,7 @@ class GroundedAnswer:
 
 
 def _canonical_quote(quote: str, excerpt: str) -> str | None:
-    # PDF extraction inserts layout whitespace. Preserve the source's actual text.
+    # Preserve the source's original whitespace.
     pattern = r"\s+".join(re.escape(part) for part in quote.split())
     match = re.search(pattern, excerpt)
     return match.group(0) if match else None
@@ -98,12 +98,14 @@ def validate_grounded_answer(raw: str, hits: list[SearchHit]) -> GroundedAnswer:
             if evidence.chunk_id not in source_ids:
                 source_ids.add(evidence.chunk_id)
                 sources.append({
+                    "kind": hit.metadata.get("kind", "document"),
                     "chunk_id": evidence.chunk_id,
                     "source": hit.metadata["source"],
                     "title": hit.metadata["title"],
                     "section": hit.metadata["section"],
-                    "page_start": hit.metadata["page_start"],
-                    "page_end": hit.metadata["page_end"],
+                    "line_start": hit.metadata["line_start"],
+                    "line_end": hit.metadata["line_end"],
+                    "sha256": hit.metadata.get("sha256"),
                 })
             key = (evidence.chunk_id, quote)
             if key not in citation_keys:

@@ -1,13 +1,16 @@
-"""Copy the W5 index, PDF, and cached model snapshots without downloading anything."""
+"""Copy cached embedding/reranker weights, then build this project's documentation index."""
 
 import argparse
 import hashlib
 import json
 from pathlib import Path
 import shutil
+import os
+import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 EMBEDDER_ID = "intfloat/multilingual-e5-small"
 RERANKER_ID = "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"
 
@@ -52,30 +55,15 @@ def copy_model(source: Path, target: Path) -> dict:
 
 
 def prepare(source: Path, data: Path, embedding_snapshot: Path, reranker_snapshot: Path) -> dict:
-    index_root = source / "data/document_index"
-    manifest = json.loads((index_root / "active.json").read_text())
-    if manifest["model"] != EMBEDDER_ID:
-        raise ValueError("Ожидается индекс multilingual-e5-small из W5")
-    version = manifest["version"]
-    directory = (index_root / version).resolve()
-    if not directory.is_relative_to(index_root.resolve()):
-        raise ValueError("Некорректный путь версии индекса")
-    # Validate all inputs before starting the copy.
-    inputs = [(source / "data/documents/jcip-sample.pdf", data / "documents/jcip-sample.pdf")]
-    inputs += [(directory / f"{strategy}.{ext}", data / "document_index" / version / f"{strategy}.{ext}")
-               for strategy in ("fixed", "structure") for ext in ("faiss", "json")]
-    for path, _ in inputs:
-        if not path.is_file():
-            raise FileNotFoundError(path)
     models = {
         EMBEDDER_ID: copy_model(embedding_snapshot, data / "models/e5"),
         RERANKER_ID: copy_model(reranker_snapshot, data / "models/reranker"),
     }
-    for origin, destination in inputs:
-        copy_verified(origin, destination)
-    copy_verified(index_root / "active.json", data / "document_index/active.json")
-    report = {"index_version": version, "embedding_model": EMBEDDER_ID,
-              "models": models, "files_sha256": {str(target.relative_to(data)): digest(target) for _, target in inputs}}
+    os.environ["DOCUMENT_EMBEDDING_MODEL"] = str((data / "models/e5").resolve())
+    from app.indexing.store import DocumentIndex
+    index = DocumentIndex(root=data / "project_index", project_root=ROOT).build()
+    report = {"index_version": index["version"], "embedding_model": EMBEDDER_ID,
+              "models": models, "documents": index["files"]}
     (data / "local-rag-assets.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     return report
 

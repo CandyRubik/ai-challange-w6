@@ -20,9 +20,9 @@ def run(base_url: str, output: Path, resume_session: str | None = None) -> None:
             started = monotonic()
             response = client.request(method, path, json=body)
             response.raise_for_status()
-            if response.headers.get("content-type", "").startswith("application/pdf"):
+            if response.headers.get("content-type", "").startswith("text/html"):
                 data = {"bytes": len(response.content), "sha256": hashlib.sha256(response.content).hexdigest()}
-                assert response.content.startswith(b"%PDF")
+                assert "README.md" in response.text
             else:
                 data = response.json()
             report["records"].append({"method": method, "path": path,
@@ -46,10 +46,10 @@ def run(base_url: str, output: Path, resume_session: str | None = None) -> None:
             assert turn["status"] == "done" and turn["provider"] == "ollama", turn.get("error")
             return turn
         if not resume_session:
-            send("Моя цель — объяснить Executor новичку. Отвечай кратко.")
+            send("Моя цель — объяснить структуру проекта новичку. Отвечай кратко.")
             snapshot = call("GET", path)
             assert snapshot["state"]["goal"] and snapshot["state"]["constraints"]
-            document = send("Почему обработчик ThreadPerTaskWebServer должен быть потокобезопасным?")
+            document = send("Где хранятся чат-сессии и память?")
             assert document["grounding_status"] == "answered" and document["citations"]
             assert all(source["kind"] == "document" for source in document["sources"])
             send("Нет, отвечай подробно.")
@@ -59,11 +59,11 @@ def run(base_url: str, output: Path, resume_session: str | None = None) -> None:
         reminder = send("Какую цель мы зафиксировали?")
         assert reminder["grounding_status"] == "state" and reminder["sources"]
         assert all(source["kind"] == "message" for source in reminder["sources"])
-        negative = send("Как в этой главе работает Java StructuredTaskScope?")
+        negative = send("Как настроен Apache Spark в этом проекте?")
         assert negative["grounding_status"] == "insufficient_context"
         assert not negative["citations"] and not negative["sources"]
         assert negative["metrics"]["generation_attempts"] == 0
-        call("GET", "/api/document-index/source")
+        call("GET", "/api/document-index/source?path=README.md")
         report["final_session"] = call("GET", path)
         report["complete"] = True
         output.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")

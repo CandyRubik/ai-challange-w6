@@ -7,7 +7,6 @@ from typing import Any, Literal, Protocol
 
 from ..agents.agent import AgentMessage
 from .context import MemoryItem
-from ..orchestration.context import ProfileContext
 
 
 MemoryLayer = Literal["working", "long_term"]
@@ -48,7 +47,7 @@ class MemoryExtractor:
 
     _categories: dict[MemoryLayer, frozenset[str]] = {
         "working": frozenset({"goal", "constraint", "decision"}),
-        "long_term": frozenset({"profile", "preference", "knowledge"}),
+        "long_term": frozenset({"fact", "preference", "knowledge"}),
     }
 
     system_prompt = """You extract memory from a chat into strict JSON.
@@ -61,13 +60,12 @@ Use these layers and categories only:
 - working/goal: the objective of the current task or chat;
 - working/constraint: a requirement or limitation of the current task;
 - working/decision: a concrete decision made for the current task;
-- long_term/profile: a stable fact about the user;
+- long_term/fact: a stable fact about the user;
 - long_term/preference: a stable user preference for future chats;
 - long_term/knowledge: durable user-provided context useful across chats.
 
 Do not save ordinary questions, greetings, transient details, tentative ideas,
-model answers, data already present in existing_memory, or facts already
-represented in active_profile. Never save passwords, API keys, authentication
+model answers, data already present in existing_memory. Never save passwords, API keys, authentication
 tokens, payment data, or government identifiers. An explicit safe request such
 as "remember that ..." should normally be saved.
 
@@ -117,14 +115,12 @@ When nothing is worth remembering, return {"memories":[]}.
         *,
         context: Sequence[AgentMessage],
         current_message: str,
-        profile: ProfileContext | None = None,
         working_memory: Sequence[MemoryItem] = (),
         long_term_memory: Sequence[MemoryItem] = (),
     ) -> list[MemoryCandidate]:
         payload = {
             "recent_conversation": self._bounded_context(context),
             "current_user_message": current_message.strip(),
-            "active_profile": profile,
             "existing_memory": {
                 "working": self._bounded_memory(working_memory),
                 "long_term": self._bounded_memory(long_term_memory),

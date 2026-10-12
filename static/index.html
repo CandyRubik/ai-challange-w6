@@ -6,7 +6,7 @@
     <meta name="description" content="Чат с агентом и автоматической трёхслойной памятью" />
     <title>AI Challenge W6</title>
     <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="/styles.css?v=local-models-1" />
+    <link rel="stylesheet" href="/styles.css?v=project-assistant-2" />
   </head>
   <body>
     <main class="chat-shell">
@@ -15,19 +15,11 @@
           <a class="brand" href="/"><span>◇</span><span>AI Challenge W6</span></a>
           <button id="close-navigation" class="icon-button mobile-only" type="button" aria-label="Закрыть список чатов">×</button>
         </div>
-        <section class="profile-switcher" aria-labelledby="profile-switcher-label">
-          <label id="profile-switcher-label" for="profile-select">Профиль</label>
-          <div>
-            <select id="profile-select" aria-label="Активный профиль"></select>
-            <button id="edit-profile" class="icon-button" type="button" title="Проверить или скорректировать профиль" aria-label="Проверить или скорректировать профиль">⚙</button>
-          </div>
-          <button id="new-profile" class="quiet-button" type="button">＋ Добавить профиль</button>
-        </section>
         <button id="new-session" class="primary" type="button">＋ Новый чат</button>
         <button id="open-invariants" class="quiet-button invariants-menu" type="button">Правила ответа <span id="invariant-count">…</span></button>
         <a class="rag-link" href="/rag-chat/">✦ RAG-чат · локальная база знаний</a>
         <nav id="sessions" aria-label="Сессии чата"></nav>
-        <button id="clear-database" class="danger" type="button">Очистить чаты профиля</button>
+        <button id="clear-database" class="danger" type="button">Очистить чаты</button>
 
       </aside>
 
@@ -62,7 +54,7 @@
           <div class="empty">
             <span>✦</span>
             <h2>Чем помочь?</h2>
-            <p>Напишите первую задачу. Перед работой агент коротко познакомится с вами.</p>
+            <p>Задайте вопрос, опишите задачу или введите /help для справки о проекте.</p>
           </div>
         </div>
 
@@ -150,15 +142,6 @@
           </header>
 
           <div class="memory-layers">
-            <section class="active-profile-card" aria-labelledby="active-profile-name">
-              <div>
-                <span id="active-profile-status">INTERVIEW</span>
-                <strong id="active-profile-name">Основной</strong>
-              </div>
-              <p id="active-profile-summary">Нейтральный · обычная подробность</p>
-              <div id="active-profile-constraints" class="profile-constraints"></div>
-            </section>
-
             <section class="memory-layer short-term">
               <div class="layer-heading">
                 <div><span class="layer-dot"></span><strong>Краткосрочная</strong></div>
@@ -189,7 +172,7 @@
 
           <section class="command-help">
             <strong>Slash-команды</strong>
-            <p>Профиль строится из короткого интервью. Дальше агент сохраняет важное сам; <kbd>/</kbd> остаётся для ручного контроля памяти.</p>
+            <p>Агент сохраняет важные факты, знания и предпочтения; <kbd>/</kbd> остаётся для ручного контроля памяти.</p>
           </section>
         </section>
       </aside>
@@ -201,7 +184,7 @@
           <div><p class="eyebrow">ПРАВИЛА ОТВЕТОВ</p><h2 id="invariants-title">Инварианты</h2></div>
           <button id="close-invariants" class="icon-button" type="button" aria-label="Закрыть инварианты">×</button>
         </header>
-        <p class="invariant-intro">Общие правила для всех профилей. Просьба в диалоге не может их отменить.</p>
+        <p class="invariant-intro">Общие правила для всех чатов. Просьба в диалоге не может их отменить.</p>
         <fieldset id="invariants-fields">
           <section class="invariant-card emoji-rule">
             <div class="invariant-card-heading">
@@ -237,69 +220,6 @@
       </form>
     </dialog>
 
-    <dialog id="profile-dialog">
-      <form id="profile-form">
-        <header>
-          <div>
-            <p class="eyebrow">PERSONALIZATION</p>
-            <h2 id="profile-dialog-title">Проверка профиля</h2>
-          </div>
-          <button id="close-profile-dialog" class="icon-button" type="button" aria-label="Закрыть">×</button>
-        </header>
-        <input id="profile-id" type="hidden" />
-        <label>
-          Имя профиля
-          <input id="profile-name" maxlength="80" required />
-        </label>
-        <label>
-          Описание пользователя
-          <textarea id="profile-description" rows="2" maxlength="1000" placeholder="Роль, контекст, уровень опыта"></textarea>
-        </label>
-        <div class="profile-form-grid">
-          <label>
-            Язык
-            <select id="profile-language">
-              <option value="ru">Русский</option>
-              <option value="en">English</option>
-            </select>
-          </label>
-          <label>
-            Тон
-            <select id="profile-tone">
-              <option value="neutral">Нейтральный</option>
-              <option value="friendly">Дружелюбный</option>
-              <option value="formal">Формальный</option>
-              <option value="technical">Технический</option>
-            </select>
-          </label>
-          <label>
-            Подробность
-            <select id="profile-detail-level">
-              <option value="brief">Кратко</option>
-              <option value="balanced" selected>Сбалансированно</option>
-              <option value="detailed">Подробно</option>
-            </select>
-          </label>
-          <label>
-            Формат
-            <select id="profile-response-format">
-              <option value="plain">Обычный текст</option>
-              <option value="bullets">Списки</option>
-              <option value="steps">Пошагово</option>
-            </select>
-          </label>
-        </div>
-        <label>
-          Ограничения, по одному на строку
-          <textarea id="profile-constraints-input" rows="3" maxlength="2000" placeholder="Без эмодзи&#10;Сначала краткий вывод"></textarea>
-        </label>
-        <footer>
-          <button id="delete-profile" class="danger" type="button">Удалить профиль</button>
-          <button id="cancel-profile" class="secondary" type="button">Отмена</button>
-          <button class="primary" type="submit">Сохранить профиль</button>
-        </footer>
-      </form>
-    </dialog>
-    <script src="/app.js?v=local-models-1" defer></script>
+    <script src="/app.js?v=project-assistant-2" defer></script>
   </body>
 </html>

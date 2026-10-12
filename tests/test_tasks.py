@@ -11,10 +11,9 @@ from app.agents.agent import Agent, AgentOutputError
 from app.agents.task_state import TaskConflict
 from app.main import app, get_chat_session_service
 from app.providers.deepseek import LlmRequestError, LlmTruncatedResponseError
-from app.schemas import TaskActionRequest, UserProfileCreateRequest
+from app.schemas import TaskActionRequest
 from app.services.chat_sessions import ChatSessionService, SQLiteChatSessionRepository
 from app.services.memory import SQLiteMemoryRepository
-from app.services.profiles import SQLiteProfileRepository
 
 
 PLAN = json.dumps({
@@ -448,51 +447,28 @@ def test_task_api_validation_isolation_and_clear(tmp_path: Path) -> None:
         app.dependency_overrides.clear()
 
 
-def test_all_task_stages_use_selected_profile_and_isolated_memory(tmp_path: Path) -> None:
-    path = tmp_path / "profiles-and-tasks.sqlite3"
-    profile_repository = SQLiteProfileRepository(path)
-    first = profile_repository.create(UserProfileCreateRequest(
-        name="English engineer", language="en", tone="technical",
-        detail_level="brief", response_format="steps", constraints=["No emojis"],
-    ))
-    second = profile_repository.create(UserProfileCreateRequest(name="Другой пользователь"))
-    repository = SQLiteChatSessionRepository(path)
-    memory_repository = SQLiteMemoryRepository(path)
-    memory_repository.add(layer="long_term", category="preference", content="Use numbered lists", session_id=None, profile_id=first.id)
-    memory_repository.add(layer="long_term", category="knowledge", content="OTHER_PROFILE_ONLY", session_id=None, profile_id=second.id)
-    model = TaskModel([PLAN, "Topics", "Exercises", SUCCESS])
-    service = ChatSessionService(repository, Agent(model), memory_repository=memory_repository, profile_repository=profile_repository)
-    session = service.start_task(service.create(first.id).id, "Prepare two lessons")
-    other = service.start_task(service.create(second.id).id, "Другая задача")
-    memory_repository.add(layer="working", category="constraint", content="Use fictitious examples", session_id=session.id)
-    prepare(service, session.id, 4)
-    act(service, session.id)
-    assert len(model.prompts) == 4
+def test_task_stages_use_current_working_and_shared_long_term_memory(tmp_path: Path) -> None:
+    repository = SQLiteChatSessionRepository(tmp_path / "chat.sqlite3")
+    memory = SQLiteMemoryRepository(tmp_path / "chat.sqlite3")
+    model = TaskModel([json.dumps({"summary": "План", "plan": ["Написать материал"], "criteria": ["Есть текст"]}), "Готово", SUCCESS])
+    service = ChatSessionService(repository, Agent(model), memory_repository=memory)
+    session = service.create()
+    other = service.create()
+    memory.add(layer="working", category="constraint", content="CURRENT_CHAT_ONLY", session_id=session.id)
+    memory.add(layer="working", category="constraint", content="OTHER_CHAT_ONLY", session_id=other.id)
+    memory.add(layer="long_term", category="knowledge", content="SHARED_KNOWLEDGE", session_id=None)
+    service.start_task(session.id, "Написать материал")
+    for action in ["generate_plan", "approve", "execute_step", "validate"]:
+        task = service.get(session.id).task
+        service.task_action(session.id, TaskActionRequest(action=action, revision=task.revision))
     for prompt in model.prompts:
-        assert "English engineer" in prompt and '"language": "en"' in prompt
-        assert "No emojis" in prompt and "Use numbered lists" in prompt
-        assert "Use fictitious examples" in prompt
-        assert "OTHER_PROFILE_ONLY" not in prompt
-    assert [item.id for item in service.list(first.id)] == [session.id]
-    service.clear(first.id)
-    assert service.get(other.id).task.task == "Другая задача"
-    with sqlite3.connect(path) as connection:
-        assert connection.execute("SELECT COUNT(*) FROM chat_tasks").fetchone()[0] == 1
+        assert "CURRENT_CHAT_ONLY" in prompt and "SHARED_KNOWLEDGE" in prompt
+        assert "OTHER_CHAT_ONLY" not in prompt and "USER_PROFILE" not in prompt
 
 
-def test_task_creation_waits_for_profile_interview(tmp_path: Path) -> None:
-    from app.agents.profile_interviewer import ProfileInterviewer
-
-    path = tmp_path / "interview.sqlite3"
-    profiles = SQLiteProfileRepository(path)
-    profile = profiles.create_auto()
+def test_task_creation_is_available_immediately(tmp_path: Path) -> None:
     model = TaskModel([])
-    service = ChatSessionService(
-        SQLiteChatSessionRepository(path), Agent(model),
-        profile_repository=profiles, profile_interviewer=ProfileInterviewer(model),
-    )
-    session = service.create(profile.id)
-    with pytest.raises(TaskConflict, match="интервью"):
-        service.start_task(session.id, "Подготовить курс")
-    assert service.get(session.id).task is None
-    assert model.snapshots == []
+    service = ChatSessionService(SQLiteChatSessionRepository(tmp_path / "chat.sqlite3"), Agent(model))
+    session = service.create()
+    task = service.start_task(session.id, "Написать материал").task
+    assert task.state == "planning" and not model.prompts

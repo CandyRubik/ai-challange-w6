@@ -17,14 +17,14 @@ from app.rag_chat.state import TurnInterpreter
 from app.rag_chat.store import SQLiteRagChatRepository
 
 
-def hit(text: str = "Executor manages submitted tasks.") -> SearchHit:
+def hit(text: str = "ChatSessionService coordinates chat sessions.") -> SearchHit:
     return SearchHit({
         "chunk_id": "structure-0001",
-        "source": "https://example.test/book.pdf",
-        "title": "Test book",
-        "section": "6.2 Executor",
-        "page_start": 6,
-        "page_end": 6,
+        "source": "README.md",
+        "title": "Test project docs",
+        "section": "Architecture → ChatSessionService",
+        "line_start": 6,
+        "line_end": 6,
         "text": text,
     }, 0.9)
 
@@ -51,7 +51,7 @@ class InterpretationModel:
         return json.dumps({
             "kind": "question",
             "question_scope": "document",
-            "search_question": "What does Executor do?",
+            "search_question": "What does ChatSessionService do?",
             "goal_action": "keep",
             "goal": "",
             "changes": [],
@@ -76,7 +76,7 @@ def decision(
 ) -> dict:
     return {
         "kind": kind, "question_scope": scope,
-        "search_question": "What does Executor do?" if kind == "question" else "",
+        "search_question": "What does ChatSessionService do?" if kind == "question" else "",
         "goal_action": goal_action, "goal": goal,
         "changes": changes or [], "clarification": clarification,
     }
@@ -85,10 +85,10 @@ def decision(
 class AnswerModel:
     def generate_json(self, *, messages: list[dict], max_tokens: int = 2000, schema: dict | None = None) -> str:
         return json.dumps({"status": "answered", "claims": [{
-            "text": "Executor выполняет отправленные задачи.",
+            "text": "ChatSessionService выполняет отправленные задачи.",
             "evidence": [{
                 "chunk_id": "structure-0001",
-                "quote": "Executor manages submitted tasks.",
+                "quote": "ChatSessionService coordinates chat sessions.",
             }],
         }]})
 
@@ -106,18 +106,18 @@ def test_question_searches_and_persists_verified_source(tmp_path: Path) -> None:
     )
     session = chat.create()
 
-    turn = chat.send(session.id, "Что делает Executor?")
+    turn = chat.send(session.id, "Что делает ChatSessionService?")
 
-    assert index.searches == ["What does Executor do?"]
+    assert index.searches == ["What does ChatSessionService do?"]
     assert turn.status == "done"
     assert turn.grounding_status == "answered"
     assert turn.sources == [{
         "kind": "document", "chunk_id": "structure-0001",
-        "source": "https://example.test/book.pdf", "title": "Test book",
-        "section": "6.2 Executor", "page_start": 6, "page_end": 6,
+        "source": "README.md", "title": "Test project docs",
+        "section": "Architecture → ChatSessionService", "line_start": 6, "line_end": 6, "sha256": None,
     }]
     assert turn.citations == [{
-        "chunk_id": "structure-0001", "quote": "Executor manages submitted tasks.",
+        "chunk_id": "structure-0001", "quote": "ChatSessionService coordinates chat sessions.",
     }]
     assert SQLiteRagChatRepository(database).get(session.id).turns[0] == turn
 
@@ -125,7 +125,7 @@ def test_question_searches_and_persists_verified_source(tmp_path: Path) -> None:
 def test_goal_survives_short_history_and_correction_replaces_constraint(tmp_path: Path) -> None:
     database = tmp_path / "rag.sqlite3"
     interpreter_model = QueueInterpretationModel(
-        decision(kind="statement", goal_action="set", goal="Объяснить Executor новичку"),
+        decision(kind="statement", goal_action="set", goal="Объяснить ChatSessionService новичку"),
         decision(kind="statement", changes=[{
             "group": "constraint", "action": "set", "key": "length", "value": "Кратко",
         }]),
@@ -144,19 +144,19 @@ def test_goal_survives_short_history_and_correction_replaces_constraint(tmp_path
     )
     session = chat.create()
 
-    goal_turn = chat.send(session.id, "Моя цель — объяснить Executor новичку.")
+    goal_turn = chat.send(session.id, "Моя цель — объяснить ChatSessionService новичку.")
     chat.send(session.id, "Пиши кратко.")
     correction = chat.send(session.id, "Нет, пиши подробно.")
     for _ in range(10):
-        chat.send(session.id, "Что делает Executor?")
+        chat.send(session.id, "Что делает ChatSessionService?")
     reminder = chat.send(session.id, "Какую цель мы зафиксировали?")
 
     persisted = SQLiteRagChatRepository(database).get(session.id)
-    assert persisted.state.goal.value == "Объяснить Executor новичку"
+    assert persisted.state.goal.value == "Объяснить ChatSessionService новичку"
     assert persisted.state.goal.source_message_id == goal_turn.id
     assert [(item.key, item.value, item.source_message_id)
             for item in persisted.state.constraints] == [("length", "Подробно", correction.id)]
-    assert reminder.answer == "Цель: Объяснить Executor новичку"
+    assert reminder.answer == "Цель: Объяснить ChatSessionService новичку"
     assert reminder.sources == [{
         "kind": "message", "message_id": goal_turn.id,
         "title": "Сообщение пользователя · goal",
@@ -176,7 +176,7 @@ def test_failed_answer_can_retry_without_reapplying_state(tmp_path: Path) -> Non
             return super().generate_json(messages=messages, max_tokens=max_tokens)
 
     interpreter_model = QueueInterpretationModel(decision(
-        goal_action="set", goal="Объяснить Executor новичку",
+        goal_action="set", goal="Объяснить ChatSessionService новичку",
     ))
     rag = DocumentRag(
         Index(), InterpretationModel(), reranker=Reranker(),
@@ -188,7 +188,7 @@ def test_failed_answer_can_retry_without_reapplying_state(tmp_path: Path) -> Non
     )
     session = chat.create()
 
-    failed = chat.send(session.id, "Хочу объяснить Executor новичку. Что это?")
+    failed = chat.send(session.id, "Хочу объяснить ChatSessionService новичку. Что это?")
     assert failed.status == "failed"
     assert chat.get(session.id).state.revision == 1
     assert len(chat.get(session.id).turns) == 1
@@ -209,7 +209,7 @@ def test_failed_answer_can_retry_without_reapplying_state(tmp_path: Path) -> Non
 
 def test_new_chat_has_no_other_chats_goal_and_ambiguous_change_is_ignored(tmp_path: Path) -> None:
     interpreter_model = QueueInterpretationModel(
-        decision(kind="statement", goal_action="set", goal="Изучить Executor"),
+        decision(kind="statement", goal_action="set", goal="Изучить ChatSessionService"),
         decision(kind="clarification_needed", clarification="Что именно больше не нужно?"),
     )
     rag = DocumentRag(
@@ -221,12 +221,12 @@ def test_new_chat_has_no_other_chats_goal_and_ambiguous_change_is_ignored(tmp_pa
         TurnInterpreter(interpreter_model), rag, Agent(AnswerModel()),
     )
     first = chat.create()
-    chat.send(first.id, "Моя цель — изучить Executor.")
+    chat.send(first.id, "Моя цель — изучить ChatSessionService.")
     second = chat.create()
     clarification = chat.send(first.id, "Это больше не нужно.")
 
     assert chat.get(second.id).state.goal is None
-    assert chat.get(first.id).state.goal.value == "Изучить Executor"
+    assert chat.get(first.id).state.goal.value == "Изучить ChatSessionService"
     assert clarification.answer == "Что именно больше не нужно?"
     assert chat.get(first.id).state.revision == 1
 
@@ -251,7 +251,7 @@ def test_dedicated_rag_chat_screen_and_api(tmp_path: Path) -> None:
         session_id = created["id"]
         turn = client.post(
             f"/api/rag-chat/sessions/{session_id}/turns",
-            json={"content": "Что делает Executor?"},
+            json={"content": "Что делает ChatSessionService?"},
         ).json()
         assert turn["sources"][0]["kind"] == "document"
         assert client.get(f"/api/rag-chat/sessions/{session_id}").json()["turns"] == [turn]
@@ -280,21 +280,21 @@ def test_no_relevant_excerpt_abstains_and_still_displays_source_status(tmp_path:
     )
     session = chat.create()
 
-    turn = chat.send(session.id, "Что делает Executor?")
+    turn = chat.send(session.id, "Что делает ChatSessionService?")
 
     assert turn.status == "done"
     assert turn.grounding_status == "insufficient_context"
     assert turn.sources == turn.citations == []
     assert "Не знаю" in turn.answer
-    assert index.searches == ["What does Executor do?"]
+    assert index.searches == ["What does ChatSessionService do?"]
 
 
 def test_explicit_new_goal_clears_previous_task_scope(tmp_path: Path) -> None:
     interpreter_model = QueueInterpretationModel(
-        decision(kind="statement", goal_action="set", goal="Объяснить Executor",
+        decision(kind="statement", goal_action="set", goal="Объяснить ChatSessionService",
                  changes=[{"group": "constraint", "action": "set",
                            "key": "audience", "value": "Новички"}]),
-        decision(kind="statement", goal_action="set", goal="Изучить Timer"),
+        decision(kind="statement", goal_action="set", goal="Изучить TurnInterpreter"),
     )
     chat = RagChatService(
         SQLiteRagChatRepository(tmp_path / "rag.sqlite3"),
@@ -304,17 +304,17 @@ def test_explicit_new_goal_clears_previous_task_scope(tmp_path: Path) -> None:
         Agent(AnswerModel()),
     )
     session = chat.create()
-    chat.send(session.id, "Хочу объяснить Executor новичкам.")
-    changed = chat.send(session.id, "Теперь вместо этого изучаю Timer.")
+    chat.send(session.id, "Хочу объяснить ChatSessionService новичкам.")
+    changed = chat.send(session.id, "Теперь вместо этого изучаю TurnInterpreter.")
 
-    assert chat.get(session.id).state.goal.value == "Изучить Timer"
+    assert chat.get(session.id).state.goal.value == "Изучить TurnInterpreter"
     assert chat.get(session.id).state.goal.source_message_id == changed.id
     assert chat.get(session.id).state.constraints == []
 
 
 def test_statement_acknowledges_only_actual_state_change(tmp_path: Path) -> None:
     interpreter_model = QueueInterpretationModel(
-        decision(kind="statement", goal_action="set", goal="Объяснить Executor"),
+        decision(kind="statement", goal_action="set", goal="Объяснить ChatSessionService"),
         decision(kind="statement"),
     )
     chat = RagChatService(
@@ -325,7 +325,7 @@ def test_statement_acknowledges_only_actual_state_change(tmp_path: Path) -> None
         Agent(AnswerModel()),
     )
     session = chat.create()
-    chat.send(session.id, "Моя цель — объяснить Executor.")
+    chat.send(session.id, "Моя цель — объяснить ChatSessionService.")
 
     acknowledgement = chat.send(session.id, "Понял.")
 
@@ -336,16 +336,16 @@ def test_comparison_uses_separate_retrieval_when_joint_terms_filter_out(tmp_path
     class SplitIndex(Index):
         def search(self, query: str, strategy: str, k: int) -> list[SearchHit]:
             self.searches.append(query)
-            if query == "FutureRenderer CompletionService comparison":
+            if query == "ProfileOnboarding MemoryRuntime comparison":
                 return []
-            if query in {"FutureRenderer", "CompletionService"}:
-                return [hit("Executor manages submitted tasks. FutureRenderer CompletionService")]
+            if query in {"ProfileOnboarding", "MemoryRuntime"}:
+                return [hit("ChatSessionService coordinates chat sessions. ProfileOnboarding MemoryRuntime")]
             return []
 
     class ComparisonModel(InterpretationModel):
         def generate_json(self, *, messages: list[dict], max_tokens: int = 2000, schema: dict | None = None) -> str:
             payload = decision()
-            payload["search_question"] = "FutureRenderer CompletionService comparison"
+            payload["search_question"] = "ProfileOnboarding MemoryRuntime comparison"
             return json.dumps(payload)
 
     index = SplitIndex()
@@ -357,23 +357,23 @@ def test_comparison_uses_separate_retrieval_when_joint_terms_filter_out(tmp_path
         Agent(AnswerModel()),
     )
 
-    turn = chat.send(chat.create().id, "Сравни FutureRenderer и CompletionService")
+    turn = chat.send(chat.create().id, "Сравни ProfileOnboarding и MemoryRuntime")
 
     assert turn.grounding_status == "answered"
-    assert index.searches == ["FutureRenderer CompletionService comparison",
-                              "FutureRenderer", "CompletionService"]
+    assert index.searches == ["ProfileOnboarding MemoryRuntime comparison",
+                              "ProfileOnboarding", "MemoryRuntime"]
 
 
 def test_mixed_question_identifies_unsupported_topic(tmp_path: Path) -> None:
     class MixedIndex(Index):
         def search(self, query: str, strategy: str, k: int) -> list[SearchHit]:
             self.searches.append(query)
-            return [hit()] if query == "Executor" else []
+            return [hit()] if query == "ChatSessionService" else []
 
     class MixedModel(InterpretationModel):
         def generate_json(self, *, messages: list[dict], max_tokens: int = 2000, schema: dict | None = None) -> str:
             payload = decision()
-            payload["search_question"] = "Executor Tokio comparison"
+            payload["search_question"] = "ChatSessionService Tokio comparison"
             return json.dumps(payload)
 
     chat = RagChatService(
@@ -384,7 +384,7 @@ def test_mixed_question_identifies_unsupported_topic(tmp_path: Path) -> None:
         Agent(AnswerModel()),
     )
 
-    turn = chat.send(chat.create().id, "Что книга говорит об Executor и Tokio?")
+    turn = chat.send(chat.create().id, "Что документация говорит об ChatSessionService и Tokio?")
 
     assert turn.grounding_status == "answered"
     assert turn.sources[0]["kind"] == "document"
@@ -412,12 +412,12 @@ def test_cost_question_expands_search_after_unsupported_first_excerpts(tmp_path:
                 result = hit("Creating threads has resource overhead.")
                 result.metadata["chunk_id"] = "structure-0002"
                 return [result]
-            return [hit("ThreadPerTaskWebServer creates a thread for each task.")]
+            return [hit("ChatSessionService creates a thread for each task.")]
 
     class CostInterpreter(InterpretationModel):
         def generate_json(self, *, messages: list[dict], max_tokens: int = 2000, schema: dict | None = None) -> str:
             payload = decision()
-            payload["search_question"] = "What are costs in ThreadPerTaskWebServer?"
+            payload["search_question"] = "What are costs in ChatSessionService?"
             return json.dumps(payload)
 
     class CostAnswerModel:
@@ -439,7 +439,7 @@ def test_cost_question_expands_search_after_unsupported_first_excerpts(tmp_path:
         Agent(CostAnswerModel()),
     )
 
-    turn = chat.send(chat.create().id, "Каковы издержки ThreadPerTaskWebServer?")
+    turn = chat.send(chat.create().id, "Каковы издержки ChatSessionService?")
 
     assert turn.grounding_status == "answered"
     assert turn.sources[0]["chunk_id"] == "structure-0002"
@@ -462,7 +462,7 @@ def test_document_answer_uses_standalone_question_without_prior_assistant_text(
     chat = RagChatService(
         SQLiteRagChatRepository(tmp_path / "rag.sqlite3"),
         TurnInterpreter(QueueInterpretationModel(
-            decision(kind="statement", goal_action="set", goal="Изучить Executor"),
+            decision(kind="statement", goal_action="set", goal="Изучить ChatSessionService"),
             decision(),
         )),
         DocumentRag(Index(), InterpretationModel(), reranker=Reranker(),
@@ -470,7 +470,7 @@ def test_document_answer_uses_standalone_question_without_prior_assistant_text(
         Agent(model),
     )
     session = chat.create()
-    chat.send(session.id, "Хочу изучить Executor.")
+    chat.send(session.id, "Хочу изучить ChatSessionService.")
 
     answered = chat.send(session.id, "Как он работает?")
 
@@ -478,9 +478,9 @@ def test_document_answer_uses_standalone_question_without_prior_assistant_text(
     assert [message["role"] for message in model.messages] == ["system", "user"]
     assert json.loads(model.messages[1]["content"]) == {
         "user_question": "Как он работает?",
-        "standalone_search_question": "What does Executor do?",
+        "standalone_search_question": "What does ChatSessionService do?",
     }
-    assert "Изучить Executor" in model.messages[0]["content"]
+    assert "Изучить ChatSessionService" in model.messages[0]["content"]
 
 
 def test_invalid_quote_retry_receives_validation_feedback(tmp_path: Path) -> None:
@@ -491,9 +491,9 @@ def test_invalid_quote_retry_receives_validation_feedback(tmp_path: Path) -> Non
         def generate_json(self, *, messages: list[dict], max_tokens: int = 2000, schema: dict | None = None) -> str:
             self.calls.append(messages[0]["content"])
             quote = ("Invented excerpt without source support."
-                     if len(self.calls) < 4 else "Executor manages submitted tasks.")
+                     if len(self.calls) < 4 else "ChatSessionService coordinates chat sessions.")
             return json.dumps({"status": "answered", "claims": [{
-                "text": "Executor выполняет задачи.",
+                "text": "ChatSessionService выполняет задачи.",
                 "evidence": [{"chunk_id": "structure-0001", "quote": quote}],
             }]})
 
@@ -506,7 +506,7 @@ def test_invalid_quote_retry_receives_validation_feedback(tmp_path: Path) -> Non
         Agent(model),
     )
 
-    turn = chat.send(chat.create().id, "Что делает Executor?")
+    turn = chat.send(chat.create().id, "Что делает ChatSessionService?")
 
     assert turn.grounding_status == "answered"
     assert len(model.calls) == 4
@@ -551,7 +551,7 @@ def test_retry_pins_local_generation_profile_across_restart(tmp_path: Path):
 
     original = service(RecordingRegistry(fail=True), PROFILES["optimized"])
     session = original.create()
-    failed = original.send(session.id, "Что делает Executor?")
+    failed = original.send(session.id, "Что делает ChatSessionService?")
     assert failed.status == "failed"
     assert failed.metrics["generation_profile"]["name"] == "optimized"
     assert failed.metrics["validation_errors"]
@@ -574,7 +574,7 @@ def test_legacy_pending_turn_uses_baseline_after_optimized_profile_enabled(tmp_p
             if kwargs["max_tokens"] == 700:
                 return super().generate_json(**kwargs)
             assert kwargs["max_tokens"] == 3000
-            assert "Explain Java concurrency" not in kwargs["messages"][0]["content"]
+            assert "You are a developer assistant" not in kwargs["messages"][0]["content"]
             return AnswerModel().generate_json(**kwargs)
     class Registry(ModelRegistry):
         def build(self, selection, **kwargs):
@@ -583,7 +583,7 @@ def test_legacy_pending_turn_uses_baseline_after_optimized_profile_enabled(tmp_p
 
     repository = SQLiteRagChatRepository(tmp_path / "legacy-profile.sqlite3")
     session = repository.create()
-    pending = repository.start_turn(session.id, "Что делает Executor?", model="local")
+    pending = repository.start_turn(session.id, "Что делает ChatSessionService?", model="local")
     chat = RagChatService(repository, TurnInterpreter(InterpretationModel()),
                           DocumentRag(Index(), InterpretationModel(), reranker=Reranker(),
                                       settings=RetrievalSettings(rewrite=False, candidate_k=1, final_k=1)),

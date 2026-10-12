@@ -6,16 +6,14 @@ from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
 import sqlite3
+import json
 from threading import Lock
 from typing import Callable, Protocol
 from uuid import uuid4
 
 from ..memory.messages import StoredMessage
 from ..state.task import StoredTask, TaskContext, TaskConflict, TaskState
-from ..orchestration.profiles import (
-    DEFAULT_PROFILE_ID,
-    ensure_profile_schema,
-)
+from .migrations import archive_profile_scope
 
 
 DEFAULT_CHAT_DB_PATH = Path(__file__).resolve().parents[2] / "data" / "chat.sqlite3"
@@ -33,7 +31,6 @@ class ChatTurnConflict(ValueError):
 @dataclass(frozen=True, slots=True)
 class StoredSession:
     id: str
-    profile_id: str
     title: str
     created_at: datetime
     updated_at: datetime
@@ -43,15 +40,15 @@ class StoredSession:
 
 
 class ChatSessionRepository(Protocol):
-    def create(self, profile_id: str = DEFAULT_PROFILE_ID, *, provider: str = "deepseek") -> StoredSession: ...
+    def create(self, *, provider: str = "deepseek") -> StoredSession: ...
 
     def set_provider(self, session_id: str, provider: str) -> StoredSession: ...
 
-    def list(self, profile_id: str | None = None) -> list[StoredSession]: ...
+    def list(self) -> list[StoredSession]: ...
 
     def get(self, session_id: str) -> StoredSession: ...
 
-    def clear(self, profile_id: str | None = None) -> None: ...
+    def clear(self) -> None: ...
 
     def append_exchange(
         self,
@@ -67,7 +64,7 @@ class ChatSessionRepository(Protocol):
         self, session_id: str, user_content: str, assistant_content: str,
     ) -> StoredSession: ...
 
-    def start_turn(self, session_id: str, content: str, *, provider: str | None = None, model: str | None = None) -> StoredMessage: ...
+    def start_turn(self, session_id: str, content: str, *, provider: str | None = None, model: str | None = None, project_help: dict | None = None) -> StoredMessage: ...
 
     def save_memory_update(self, session_id: str, message_id: str, update: str) -> None: ...
 
@@ -76,6 +73,7 @@ class ChatSessionRepository(Protocol):
     def finish_turn(
         self, session_id: str, message_id: str, answer: str, *, refusal: bool = False,
         on_commit: Callable[[sqlite3.Connection], None] | None = None,
+        project_help: dict | None = None,
     ) -> StoredSession: ...
 
 
@@ -125,13 +123,10 @@ class SQLiteChatSessionRepository:
 
     def _initialize(self) -> None:
         with self._connection() as connection:
-            ensure_profile_schema(connection)
             connection.executescript(
                 """
                 CREATE TABLE IF NOT EXISTS chat_sessions (
                     id TEXT PRIMARY KEY,
-                    profile_id TEXT NOT NULL DEFAULT 'default'
-                        REFERENCES user_profiles(id),
                     title TEXT NOT NULL,
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL
@@ -165,26 +160,9 @@ class SQLiteChatSessionRepository:
                 row["name"]
                 for row in connection.execute("PRAGMA table_info(chat_sessions)")
             }
-            if "profile_id" not in session_columns:
-                connection.execute(
-                    """
-                    ALTER TABLE chat_sessions
-                    ADD COLUMN profile_id TEXT REFERENCES user_profiles(id)
-                    """,
-                )
-                connection.execute(
-                    "UPDATE chat_sessions SET profile_id = ? WHERE profile_id IS NULL",
-                    (DEFAULT_PROFILE_ID,),
-                )
+            archive_profile_scope(connection, "chat_sessions")
             if "provider" not in session_columns:
                 connection.execute("ALTER TABLE chat_sessions ADD COLUMN provider TEXT NOT NULL DEFAULT 'deepseek'")
-            connection.execute(
-                """
-                CREATE INDEX IF NOT EXISTS idx_chat_sessions_profile
-                ON chat_sessions(profile_id, updated_at)
-                """,
-            )
-
             message_columns = {
                 row["name"]
                 for row in connection.execute("PRAGMA table_info(chat_messages)")
@@ -203,7 +181,7 @@ class SQLiteChatSessionRepository:
                 )
             for column, declaration in (
                 ("status", "TEXT NOT NULL DEFAULT 'done'"), ("error", "TEXT"), ("memory_update", "TEXT"),
-                ("provider", "TEXT"), ("model", "TEXT"),
+                ("provider", "TEXT"), ("model", "TEXT"), ("project_help", "TEXT"),
             ):
                 if column not in message_columns:
                     connection.execute(f"ALTER TABLE chat_messages ADD COLUMN {column} {declaration}")
@@ -223,7 +201,7 @@ class SQLiteChatSessionRepository:
     ) -> StoredSession:
         row = connection.execute(
             """
-            SELECT id, profile_id, title, created_at, updated_at, provider
+            SELECT id, title, created_at, updated_at, provider
             FROM chat_sessions
             WHERE id = ?
             """,
@@ -234,7 +212,7 @@ class SQLiteChatSessionRepository:
 
         message_rows = connection.execute(
             """
-            SELECT id, role, kind, content, created_at, is_refusal, status, error, memory_update, provider, model
+            SELECT id, role, kind, content, created_at, is_refusal, status, error, memory_update, provider, model, project_help
             FROM chat_messages
             WHERE session_id = ?
             ORDER BY position
@@ -251,6 +229,7 @@ class SQLiteChatSessionRepository:
                 refusal=bool(message["is_refusal"]),
                 status=message["status"], error=message["error"], memory_update=message["memory_update"],
                 provider=message["provider"], model=message["model"],
+                project_help=json.loads(message["project_help"]) if message["project_help"] else None,
             )
             for message in message_rows
         )
@@ -265,7 +244,6 @@ class SQLiteChatSessionRepository:
         )
         return StoredSession(
             id=row["id"],
-            profile_id=row["profile_id"] or DEFAULT_PROFILE_ID,
             title=row["title"],
             created_at=self._datetime(row["created_at"]),
             updated_at=self._datetime(row["updated_at"]),
@@ -274,26 +252,25 @@ class SQLiteChatSessionRepository:
             provider=row["provider"],
         )
 
-    def create(self, profile_id: str = DEFAULT_PROFILE_ID, *, provider: str = "deepseek") -> StoredSession:
+    def create(self, *, provider: str = "deepseek") -> StoredSession:
         session_id = str(uuid4())
         now = datetime.now(timezone.utc)
         with self._connection() as connection:
             connection.execute(
                 """
                 INSERT INTO chat_sessions
-                    (id, profile_id, title, created_at, updated_at, provider)
-                VALUES (?, ?, ?, ?, ?, ?)
+                    (id, title, created_at, updated_at, provider)
+                VALUES (?, ?, ?, ?, ?)
                 """,
                 (
                     session_id,
-                    profile_id,
                     "Новый чат",
                     self._timestamp(now),
                     self._timestamp(now),
                     provider,
                 ),
             )
-        return StoredSession(session_id, profile_id, "Новый чат", now, now, provider=provider)
+        return StoredSession(session_id, "Новый чат", now, now, provider=provider)
 
     def set_provider(self, session_id: str, provider: str) -> StoredSession:
         with self._connection() as connection:
@@ -302,27 +279,12 @@ class SQLiteChatSessionRepository:
             connection.execute("UPDATE chat_sessions SET provider = ? WHERE id = ?", (provider, session_id))
         return self.get(session_id)
 
-    def list(self, profile_id: str | None = None) -> list[StoredSession]:
+    def list(self) -> list[StoredSession]:
         with self._connection() as connection:
             connection.execute("BEGIN")
-            if profile_id is None:
-                rows = connection.execute(
-                    """
-                    SELECT id FROM chat_sessions
-                    ORDER BY updated_at DESC
-                    LIMIT 100
-                    """,
-                ).fetchall()
-            else:
-                rows = connection.execute(
-                    """
-                    SELECT id FROM chat_sessions
-                    WHERE profile_id = ?
-                    ORDER BY updated_at DESC
-                    LIMIT 100
-                    """,
-                    (profile_id,),
-                ).fetchall()
+            rows = connection.execute(
+                "SELECT id FROM chat_sessions ORDER BY updated_at DESC LIMIT 100",
+            ).fetchall()
             return [self._load_session(connection, row["id"]) for row in rows]
 
     def get(self, session_id: str) -> StoredSession:
@@ -330,15 +292,9 @@ class SQLiteChatSessionRepository:
             connection.execute("BEGIN")
             return self._load_session(connection, session_id)
 
-    def clear(self, profile_id: str | None = None) -> None:
+    def clear(self) -> None:
         with self._connection() as connection:
-            if profile_id is None:
-                connection.execute("DELETE FROM chat_sessions")
-            else:
-                connection.execute(
-                    "DELETE FROM chat_sessions WHERE profile_id = ?",
-                    (profile_id,),
-                )
+            connection.execute("DELETE FROM chat_sessions")
 
     def append_exchange(
         self,
@@ -388,7 +344,7 @@ class SQLiteChatSessionRepository:
         if session.messages and session.messages[-1].status != "done":
             raise ChatTurnConflict("Сначала повторите последний незавершённый ответ")
 
-    def start_turn(self, session_id: str, content: str, *, provider: str | None = None, model: str | None = None) -> StoredMessage:
+    def start_turn(self, session_id: str, content: str, *, provider: str | None = None, model: str | None = None, project_help: dict | None = None) -> StoredMessage:
         message_id = str(uuid4())
         timestamp = self._timestamp(datetime.now(timezone.utc))
         with self._connection() as connection:
@@ -396,9 +352,10 @@ class SQLiteChatSessionRepository:
             session = self._load_session(connection, session_id)
             self._require_resolved(session)
             connection.execute(
-                """INSERT INTO chat_messages (id, session_id, position, role, kind, content, created_at, status, provider, model)
-                   VALUES (?, ?, ?, 'user', 'message', ?, ?, 'pending', ?, ?)""",
-                (message_id, session_id, len(session.messages), content.strip(), timestamp, provider, model),
+                """INSERT INTO chat_messages (id, session_id, position, role, kind, content, created_at, status, provider, model, project_help)
+                   VALUES (?, ?, ?, 'user', 'message', ?, ?, 'pending', ?, ?, ?)""",
+                (message_id, session_id, len(session.messages), content.strip(), timestamp, provider, model,
+                 json.dumps(project_help, ensure_ascii=False) if project_help is not None else None),
             )
             connection.execute(
                 "UPDATE chat_sessions SET title = ?, updated_at = ? WHERE id = ?",
@@ -427,6 +384,7 @@ class SQLiteChatSessionRepository:
     def finish_turn(
         self, session_id: str, message_id: str, answer: str, *, refusal: bool = False,
         on_commit: Callable[[sqlite3.Connection], None] | None = None,
+        project_help: dict | None = None,
     ) -> StoredSession:
         with self._connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
@@ -441,11 +399,12 @@ class SQLiteChatSessionRepository:
                 (int(refusal), message_id),
             )
             connection.execute(
-                """INSERT INTO chat_messages (id, session_id, position, role, content, created_at, is_refusal, provider, model)
-                   VALUES (?, ?, ?, 'assistant', ?, ?, ?, ?, ?)""",
+                """INSERT INTO chat_messages (id, session_id, position, role, content, created_at, is_refusal, provider, model, project_help)
+                   VALUES (?, ?, ?, 'assistant', ?, ?, ?, ?, ?, ?)""",
                 (str(uuid4()), session_id, len(session.messages), answer, timestamp, int(refusal),
                  None if refusal else session.messages[-1].provider,
-                 None if refusal else session.messages[-1].model),
+                 None if refusal else session.messages[-1].model,
+                 json.dumps(project_help, ensure_ascii=False) if project_help is not None else None),
             )
             connection.execute("UPDATE chat_sessions SET updated_at = ? WHERE id = ?", (timestamp, session_id))
         return self.get(session_id)

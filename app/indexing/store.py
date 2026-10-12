@@ -10,11 +10,11 @@ from typing import Any, Protocol
 from uuid import uuid4
 
 from .chunking import fixed_chunks, structured_chunks
-from .corpus import DEFAULT_PDF, SOURCE_URL, TITLE, extract_pages
+from .corpus import DEFAULT_PROJECT_ROOT, TITLE, load_documents, corpus_fingerprint
 
 
 MODEL_NAME = "intfloat/multilingual-e5-small"
-DEFAULT_INDEX_DIR = Path(__file__).resolve().parents[2] / "data/document_index"
+DEFAULT_INDEX_DIR = Path(__file__).resolve().parents[2] / "data/project_index"
 STRATEGIES = ("fixed", "structure")
 
 
@@ -34,10 +34,10 @@ class DocumentIndexError(RuntimeError):
 
 
 class DocumentIndex:
-    def __init__(self, root: Path = DEFAULT_INDEX_DIR, pdf_path: Path = DEFAULT_PDF,
+    def __init__(self, root: Path = DEFAULT_INDEX_DIR, project_root: Path = DEFAULT_PROJECT_ROOT,
                  embedder: Embedder | None = None) -> None:
         self.root = Path(root)
-        self.pdf_path = Path(pdf_path)
+        self.project_root = Path(project_root).resolve()
         self._embedder = embedder
         self.model_name = MODEL_NAME
         local_model = Path(__file__).resolve().parents[2] / "data/models/e5"
@@ -74,6 +74,8 @@ class DocumentIndex:
             raise DocumentIndexError("Не удалось прочитать манифест локального индекса") from error
         if not isinstance(active, dict) or not isinstance(active.get("version"), str):
             raise DocumentIndexError("Некорректный манифест локального индекса")
+        if active.get("corpus") != "project-docs-v1":
+            return None
         if active.get("model") != self.model_name:
             raise DocumentIndexError("Индекс построен другой моделью эмбеддингов")
         directory = (self.root / active["version"]).resolve()
@@ -90,21 +92,28 @@ class DocumentIndex:
             building, error = self._building, self._error
         return {
             "state": "building" if building else "error" if error else "ready" if active else "missing",
-            "error": error, "pdf_present": self.pdf_path.is_file(),
-            "source": str(self.pdf_path), "model": self.model_name,
+            "error": error, "documents_present": (self.project_root / "README.md").is_file(),
+            "source": str(self.project_root), "model": self.model_name,
             "index": active,
+            "stale": bool(active and active.get("fingerprint") != self._fingerprint()),
         }
+
+    def _fingerprint(self) -> str:
+        try:
+            return corpus_fingerprint(load_documents(self.project_root))
+        except (OSError, ValueError) as error:
+            raise DocumentIndexError("Не удалось прочитать README и docs проекта") from error
 
     def ensure_built(self) -> dict:
         """Build once on the first retrieval request; concurrent callers share the result."""
         with self._condition:
             active = self._active()
-            if active is not None:
+            if active is not None and active.get("fingerprint") == self._fingerprint():
                 return active
             if self._building:
                 self._condition.wait_for(lambda: not self._building)
                 active = self._active()
-                if active is not None:
+                if active is not None and active.get("fingerprint") == self._fingerprint():
                     return active
                 raise DocumentIndexError(self._error or "Не удалось построить индекс")
             self._building = True
@@ -126,12 +135,12 @@ class DocumentIndex:
         import faiss
         import numpy as np
 
-        pages = extract_pages(self.pdf_path)
+        documents = load_documents(self.project_root)
         model = self._model()
         tokenizer = model.tokenizer
         strategies = {
-            "fixed": fixed_chunks(pages, tokenizer),
-            "structure": structured_chunks(pages, tokenizer),
+            "fixed": fixed_chunks(documents, tokenizer),
+            "structure": structured_chunks(documents, tokenizer),
         }
         version = uuid4().hex
         directory = self.root / version
@@ -160,9 +169,11 @@ class DocumentIndex:
                 "index_bytes": (directory / f"{strategy}.faiss").stat().st_size,
             }
         manifest = {
-            "version": version, "source": SOURCE_URL,
+            "version": version, "corpus": "project-docs-v1",
+            "fingerprint": corpus_fingerprint(documents),
+            "files": {doc.path: doc.sha256 for doc in documents},
             "title": TITLE,
-            "pages": len(pages), "model": self.model_name,
+            "documents": len(documents), "model": self.model_name,
             "created_at": datetime.now(timezone.utc).isoformat(), "strategies": stats,
         }
         self.root.mkdir(parents=True, exist_ok=True)
@@ -188,42 +199,3 @@ class DocumentIndex:
         ), dtype="float32")
         scores, ids = index.search(vector, min(k, index.ntotal))
         return [SearchHit(metadata[int(i)], float(score)) for i, score in zip(ids[0], scores[0]) if i >= 0]
-
-
-EVALUATION_QUERIES = (
-    ("What is the Executor framework?", "executor"),
-    ("Why use a thread pool?", "thread pool"),
-    ("How does ExecutorService shut down?", "shutdown"),
-    ("What is a Callable task?", "callable"),
-    ("How do Future objects represent results?", "future"),
-    ("How does a CompletionService work?", "completionservice"),
-    ("What is a bounded task queue?", "queue"),
-    ("How do scheduled executors run delayed tasks?", "scheduled"),
-    ("How does task cancellation work?", "cancel"),
-    ("What is the difference between a task and a thread?", "task"),
-)
-
-
-def evaluate(index: DocumentIndex) -> dict:
-    if index._active() is None:
-        raise ValueError("Сначала постройте индекс")
-    results = {}
-    for strategy in STRATEGIES:
-        rows = []
-        for query, expected_term in EVALUATION_QUERIES:
-            hits = index.search(query, strategy, k=3)
-            passed = any(expected_term in hit.metadata["text"].lower().replace(" ", "")
-                         if expected_term == "completionservice" else
-                         expected_term in hit.metadata["text"].lower() for hit in hits)
-            rows.append({
-                "query": query, "expected_term": expected_term, "hit_at_3": passed,
-                "top_matches": [
-                    {"chunk_id": hit.metadata["chunk_id"], "section": hit.metadata["section"],
-                     "page": hit.metadata["page_start"], "score": round(hit.score, 3),
-                     "excerpt": hit.metadata["text"][:240]}
-                    for hit in hits
-                ],
-            })
-        results[strategy] = {"hit_at_3": sum(row["hit_at_3"] for row in rows),
-                             "total": len(rows), "queries": rows}
-    return results

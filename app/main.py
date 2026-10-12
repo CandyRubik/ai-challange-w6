@@ -1,17 +1,18 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from html import escape
 import os
 from pathlib import Path
 from typing import Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from .agents.agent import Agent, AgentInputError, AgentOutputError
-from .indexing.corpus import DEFAULT_PDF
+from .indexing.corpus import DEFAULT_PROJECT_ROOT, load_documents
 from .indexing.rag import DocumentRag, RetrievalSettings
 from .indexing.rerank import LocalCrossEncoderReranker
 from .indexing.store import DEFAULT_INDEX_DIR, DocumentIndex, DocumentIndexError
@@ -33,6 +34,8 @@ from .providers.errors import (
     LlmRequestError,
 )
 from .providers.registry import ModelRegistry
+from .project_help.mcp_client import ProjectMcpClient
+from .project_help.service import ProjectHelpService
 from .private_service import PrivateServiceMiddleware, ServiceLimits
 from .schemas import (
     ChatSendRequest,
@@ -44,9 +47,6 @@ from .schemas import (
     MemoryCreateRequest,
     MemoryEntry,
     MemorySnapshot,
-    UserProfile,
-    UserProfileCreateRequest,
-    UserProfileUpdateRequest,
     TaskActionRequest, TaskStartRequest,
 )
 from .services.chat_sessions import (
@@ -63,13 +63,7 @@ from .memory.service import (
     MemoryValidationError,
     SQLiteMemoryRepository,
 )
-from .orchestration.profiles import (
-    DEFAULT_PROFILE_ID,
-    ProfileDeletionError,
-    ProfileNotFound,
-    ProfileService,
-    SQLiteProfileRepository,
-)
+
 
 
 def _allowed_origins() -> list[str]:
@@ -101,15 +95,8 @@ async def model_configuration_error(request: Request, error: LlmConfigurationErr
 
 
 @lru_cache(maxsize=1)
-def get_profile_repository() -> SQLiteProfileRepository:
-    database_path = os.getenv("CHAT_DB_PATH") or str(DEFAULT_CHAT_DB_PATH)
-    return SQLiteProfileRepository(database_path)
-
-
-@lru_cache(maxsize=1)
 def get_chat_repository() -> SQLiteChatSessionRepository:
     database_path = os.getenv("CHAT_DB_PATH") or str(DEFAULT_CHAT_DB_PATH)
-    get_profile_repository()
     return SQLiteChatSessionRepository(database_path)
 
 
@@ -124,9 +111,9 @@ def get_chat_session_service() -> ChatSessionService:
     return ChatSessionService(
         get_chat_repository(),
         memory_repository=get_memory_repository(),
-        profile_repository=get_profile_repository(),
         invariant_repository=get_invariant_repository(),
         model_registry=get_model_registry(),
+        project_help=get_project_help_service(),
     )
 
 
@@ -162,12 +149,7 @@ def get_memory_service() -> MemoryService:
     return MemoryService(
         get_memory_repository(),
         get_chat_repository(),
-        get_profile_repository(),
     )
-
-
-def get_profile_service() -> ProfileService:
-    return ProfileService(get_profile_repository())
 
 
 @app.get("/api/health")
@@ -196,100 +178,31 @@ def service_limits() -> dict:
 
 
 @app.post("/api/chat/sessions", response_model=ChatSession, status_code=201)
-def create_chat_session(
-    request: ChatSessionCreateRequest | None = None,
-    service: ChatSessionService = Depends(get_chat_session_service),
-) -> ChatSession:
-    try:
-        return service.create(request.profile_id if request else DEFAULT_PROFILE_ID,
-                              request.provider if request else None)
-    except ProfileNotFound:
-        raise HTTPException(status_code=404, detail="Профиль не найден") from None
+def create_chat_session(request: ChatSessionCreateRequest | None = None,
+                        service: ChatSessionService = Depends(get_chat_session_service)) -> ChatSession:
+    return service.create(request.provider if request else None)
 
 
 @app.get("/api/chat/sessions", response_model=list[ChatSessionSummary])
-def list_chat_sessions(
-    profile_id: str | None = None,
-    service: ChatSessionService = Depends(get_chat_session_service),
-) -> list[ChatSessionSummary]:
-    try:
-        return service.list(profile_id)
-    except ProfileNotFound:
-        raise HTTPException(status_code=404, detail="Профиль не найден") from None
-
-
-@app.delete("/api/chat/sessions", status_code=204)
-def clear_chat_sessions(
-    profile_id: str | None = None,
-    service: ChatSessionService = Depends(get_chat_session_service),
-) -> Response:
-    try:
-        service.clear(profile_id)
-    except ProfileNotFound:
-        raise HTTPException(status_code=404, detail="Профиль не найден") from None
-    return Response(status_code=204)
-
-
-@app.get("/api/profiles", response_model=list[UserProfile])
-def list_profiles(
-    service: ProfileService = Depends(get_profile_service),
-) -> list[UserProfile]:
+def list_chat_sessions(service: ChatSessionService = Depends(get_chat_session_service)) -> list[ChatSessionSummary]:
     return service.list()
 
 
-@app.post("/api/profiles", response_model=UserProfile, status_code=201)
-def create_profile(
-    request: UserProfileCreateRequest,
-    service: ProfileService = Depends(get_profile_service),
-) -> UserProfile:
-    return service.create(request)
-
-
-@app.post("/api/profiles/auto", response_model=UserProfile, status_code=201)
-def create_automatic_profile(
-    service: ProfileService = Depends(get_profile_service),
-) -> UserProfile:
-    return service.create_auto()
-
-
-@app.put("/api/profiles/{profile_id}", response_model=UserProfile)
-def update_profile(
-    profile_id: str,
-    request: UserProfileUpdateRequest,
-    service: ProfileService = Depends(get_profile_service),
-) -> UserProfile:
-    try:
-        return service.update(profile_id, request)
-    except ProfileNotFound:
-        raise HTTPException(status_code=404, detail="Профиль не найден") from None
-
-
-@app.delete("/api/profiles/{profile_id}", status_code=204)
-def delete_profile(
-    profile_id: str,
-    service: ProfileService = Depends(get_profile_service),
-) -> Response:
-    try:
-        service.delete(profile_id)
-    except ProfileNotFound:
-        raise HTTPException(status_code=404, detail="Профиль не найден") from None
-    except ProfileDeletionError as error:
-        raise HTTPException(status_code=409, detail=str(error)) from None
+@app.delete("/api/chat/sessions", status_code=204)
+def clear_chat_sessions(service: ChatSessionService = Depends(get_chat_session_service)) -> Response:
+    service.clear()
     return Response(status_code=204)
 
 
 @app.get("/api/memory", response_model=MemorySnapshot)
 def get_memory(
     session_id: str | None = None,
-    profile_id: str | None = None,
     service: MemoryService = Depends(get_memory_service),
 ) -> MemorySnapshot:
     try:
-        return service.snapshot(session_id, profile_id)
+        return service.snapshot(session_id)
     except ChatSessionNotFound:
         raise HTTPException(status_code=404, detail="Чат не найден") from None
-    except ProfileNotFound:
-        raise HTTPException(status_code=404, detail="Профиль не найден") from None
     except MemoryValidationError as error:
         raise HTTPException(status_code=422, detail=str(error)) from None
 
@@ -303,8 +216,6 @@ def create_memory(
         return service.create(request)
     except ChatSessionNotFound:
         raise HTTPException(status_code=404, detail="Чат не найден") from None
-    except ProfileNotFound:
-        raise HTTPException(status_code=404, detail="Профиль не найден") from None
     except MemoryValidationError as error:
         raise HTTPException(status_code=422, detail=str(error)) from None
     except ChatTurnConflict as error:
@@ -333,8 +244,6 @@ def get_chat_session(
         return service.get(session_id)
     except ChatSessionNotFound:
         raise HTTPException(status_code=404, detail="Чат не найден") from None
-    except ProfileNotFound:
-        raise HTTPException(status_code=404, detail="Профиль не найден") from None
 
 
 @app.put("/api/chat/sessions/{session_id}/model", response_model=ChatSession)
@@ -363,8 +272,6 @@ def send_chat_message(
         return service.send(session_id, request.content, request.provider)
     except ChatSessionNotFound:
         raise HTTPException(status_code=404, detail="Чат не найден") from None
-    except ProfileNotFound:
-        raise HTTPException(status_code=404, detail="Профиль не найден") from None
     except (ChatTurnConflict, MemoryUpdateConflict) as error:
         raise HTTPException(status_code=409, detail=str(error)) from None
     except TaskConflict as error:
@@ -384,8 +291,8 @@ def retry_chat_message(
 ) -> ChatSendResponse:
     try:
         return service.retry(session_id, message_id)
-    except (ChatSessionNotFound, ProfileNotFound):
-        raise HTTPException(status_code=404, detail="Чат или профиль не найден") from None
+    except ChatSessionNotFound:
+        raise HTTPException(status_code=404, detail="Чат не найден") from None
     except (ChatTurnConflict, MemoryUpdateConflict) as error:
         raise HTTPException(status_code=409, detail=str(error)) from None
     except TaskConflict as error:
@@ -440,13 +347,29 @@ def task_action(
 def get_document_index() -> DocumentIndex:
     return DocumentIndex(
         root=Path(os.getenv("DOCUMENT_INDEX_DIR", str(DEFAULT_INDEX_DIR))),
-        pdf_path=Path(os.getenv("DOCUMENT_PDF_PATH", str(DEFAULT_PDF))),
+        project_root=Path(os.getenv("PROJECT_ROOT", str(DEFAULT_PROJECT_ROOT))),
     )
 
 
 @lru_cache(maxsize=1)
 def get_document_reranker() -> LocalCrossEncoderReranker:
     return LocalCrossEncoderReranker()
+
+
+@lru_cache(maxsize=1)
+def get_project_help_service() -> ProjectHelpService:
+    index = get_document_index()
+    model = get_model_registry().build(get_model_registry().resolve("ollama"))
+    return ProjectHelpService(
+        DocumentRag(index, model, reranker=get_document_reranker(),
+                    settings=RetrievalSettings(rewrite=False, final_k=3)),
+        ProjectMcpClient(index.project_root),
+    )
+
+
+@app.exception_handler(DocumentIndexError)
+async def document_index_error(request: Request, error: DocumentIndexError):
+    return JSONResponse({"detail": str(error)}, status_code=503)
 
 
 @lru_cache(maxsize=1)
@@ -472,12 +395,31 @@ def document_index_status() -> dict:
         raise HTTPException(status_code=503, detail=str(error)) from None
 
 
-@app.get("/api/document-index/source")
-def document_source() -> FileResponse:
-    path = get_document_index().pdf_path
-    if not path.is_file():
-        raise HTTPException(status_code=404, detail="Локальная копия PDF не найдена")
-    return FileResponse(path, media_type="application/pdf")
+@app.get("/api/document-index/source", response_class=HTMLResponse)
+def document_source(path: str, sha256: str | None = None) -> HTMLResponse:
+    # Only members of the corpus can be opened; arbitrary filesystem paths are rejected.
+    try:
+        document = next((doc for doc in load_documents(get_document_index().project_root)
+                         if doc.path == path), None)
+    except (OSError, ValueError) as error:
+        raise HTTPException(status_code=503, detail="Документация недоступна") from error
+    if document is None:
+        raise HTTPException(status_code=404, detail="Документ не найден в корпусе проекта")
+    if sha256 is not None and sha256 != document.sha256:
+        raise HTTPException(status_code=409, detail="Документ изменился после ответа; задайте вопрос заново")
+    lines = "\n".join(
+        f'<span id="L{number}"><a href="#L{number}">{number:4}</a> {escape(line)}</span>'
+        for number, line in enumerate(document.text.splitlines(), 1)
+    )
+    return HTMLResponse(
+        '<!doctype html><html lang="ru"><meta charset="utf-8">'
+        '<meta name="viewport" content="width=device-width, initial-scale=1">'
+        f'<title>{escape(path)}</title><style>body{{margin:24px;background:#111827;color:#e5e7eb}}'
+        'pre{white-space:pre-wrap;line-height:1.6}span{display:block;scroll-margin:24px}'
+        'span:target{background:#334155}a{color:#94a3b8;text-decoration:none}</style>'
+        f'<h1>{escape(path)}</h1><pre>{lines}</pre></html>',
+        headers={"Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'"},
+    )
 
 
 @app.post("/api/rag-chat/sessions", response_model=RagSession, status_code=201)

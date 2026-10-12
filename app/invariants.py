@@ -47,7 +47,7 @@ class InvariantViolation(ValueError):
 
 
 class SQLiteInvariantRepository:
-    """Product settings independent of profiles, memory and chat history."""
+    """Product settings independent of memory and chat history."""
 
     def __init__(self, database_path: str | Path) -> None:
         self._database_path = Path(database_path)
@@ -120,6 +120,11 @@ def emoji_count(text: str) -> int:
 def sentence_count(text: str) -> int:
     # Decimal points and list numbering are not sentence boundaries. Emoji-only
     # tails do not become an extra sentence after the final punctuation.
+    # A file extension inside a project path is not the end of a sentence.
+    text = re.sub(
+        r"[\w./-]+\.(?:py|js|ts|tsx|jsx|html|css|md|json|ya?ml|toml|sqlite3?|sh|txt)\b",
+        lambda match: match[0].replace(".", ""), text, flags=re.IGNORECASE,
+    )
     text = re.sub(r"(?<=\d)\.(?=\d)|(?m:^\s*\d+\.(?=\s))", "", text)
     return sum(
         any(char.isalnum() for char in part)

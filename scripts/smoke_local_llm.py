@@ -27,8 +27,7 @@ with httpx.Client(base_url=base, timeout=300, trust_env=False) as client:
     settings = call('GET', '/api/invariants')
     settings.update(emoji_enabled=False, uppercase_enabled=False, sentence_limit_enabled=False)
     call('PUT', '/api/invariants', settings)
-    profile = call('POST', '/api/profiles/auto')
-    session = call('POST', '/api/chat/sessions', {'profile_id': profile['id']})
+    session = call('POST', '/api/chat/sessions')
     url = '/api/chat/sessions/' + session['id']
     for message in ['Объясни, что такое локальная LLM, в двух предложениях.',
                     'Меня зовут Демо, я изучаю Python и пока новичок.',
@@ -36,8 +35,6 @@ with httpx.Client(base_url=base, timeout=300, trust_env=False) as client:
                     'Дружелюбный тон. Без сложного жаргона.']:
         result = call('POST', url+'/messages', {'content': message, 'provider': 'ollama'})
     assert result['assistant_message']['provider'] == 'ollama'
-    ready = call('GET', '/api/profiles')
-    assert next(p for p in ready if p['id'] == profile['id'])['onboarding_complete']
     call('POST', url+'/messages', {'content': 'Запомни: мой учебный проект называется Маяк.'})
     memory = call('GET', '/api/memory?session_id='+session['id'])
     assert any('Маяк' in e['content'] for e in memory['long_term']+memory['working'])

@@ -14,9 +14,7 @@ from app.invariants import (
 from app.main import app, get_chat_session_service, get_invariant_repository
 from app.memory.service import SQLiteMemoryRepository
 from app.orchestration.context import OrchestrationContext
-from app.orchestration.profile_interviewer import ProfileInterviewer
-from app.orchestration.profiles import SQLiteProfileRepository
-from app.schemas import TaskActionRequest, UserProfileCreateRequest
+from app.schemas import TaskActionRequest
 from app.services.chat_sessions import ChatSessionService
 from app.storage.chat_sessions import SQLiteChatSessionRepository
 
@@ -102,26 +100,15 @@ def test_rules_survive_restart_and_clearing_chats(tmp_path):
         restarted.update(InvariantUpdateRequest(**(updated.model_dump() | {"revision": 1})))
 
 
-def test_rules_are_shared_across_profiles_without_changing_memory(tmp_path):
-    path = tmp_path / "chat.sqlite3"
-    profiles = SQLiteProfileRepository(path)
-    first = profiles.create(UserProfileCreateRequest(name="Первый"))
-    second = profiles.create(UserProfileCreateRequest(name="Второй"))
-    memories = SQLiteMemoryRepository(path)
-    chat, _, rules = setup_chat(
-        tmp_path, Model(["Ответ A", "Ответ B"]),
-        profile_repository=profiles, memory_repository=memories,
-    )
-    entry = memories.add(
-        layer="long_term", category="preference", content="Без эмодзи, строчными буквами",
-        session_id=None, profile_id=first.id,
-    )
-    settings = edit(rules, min_emojis=6)
-    for user in [first, second]:
-        response = chat.send(chat.create(user.id).id, "Расскажи о небе")
-        assert_compliant(response.assistant_message.content, settings)
-    assert memories.list_long_term(first.id) == [entry]
-    assert memories.list_long_term(second.id) == []
+def test_rules_are_shared_across_chats_without_changing_memory(tmp_path):
+    model = Model()
+    service, _, settings = setup_chat(tmp_path, model)
+    first, second = service.create(), service.create()
+    before = service.get(first.id)
+    edit(settings, uppercase_enabled=False)
+    service.send(second.id, "Привет")
+    assert service.get(first.id) == before
+    assert "Только ВЕРХНИЙ РЕГИСТР" not in model.calls[-1][0]["content"]
 
 
 def test_disabling_rules_allows_same_previously_refused_request(tmp_path):
@@ -220,23 +207,6 @@ def test_invalid_structured_stage_does_not_change_state(tmp_path, stage):
     assert rejected.task == before
     assert rejected.messages[-1].refusal
     assert bad not in rejected.messages[-1].content
-
-
-def test_onboarding_skips_rejected_request_and_obeys_rules(tmp_path):
-    profiles = SQLiteProfileRepository(tmp_path / "chat.sqlite3")
-    model = Model()
-    chat, _, rules = setup_chat(
-        tmp_path, model, profile_repository=profiles, profile_interviewer=ProfileInterviewer(None),
-    )
-    edit(rules, max_sentences=1)
-    session = chat.create()
-    chat.send(session.id, "Ответь без эмодзи")
-    question = chat.send(session.id, "Почему небо голубое?")
-    assert_compliant(question.assistant_message.content, rules.get())
-    final = chat.send(session.id, "/skip")
-    assert not final.assistant_message.refusal
-    assert model.calls[0][-1]["content"] == "Почему небо голубое?"
-    assert_compliant(final.assistant_message.content, rules.get())
 
 
 def test_editing_during_generation_applies_to_next_request(tmp_path):
