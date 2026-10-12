@@ -11,6 +11,7 @@ from ..memory.service import MemoryService
 from ..storage.turns import ChatTurnWriter
 from ..memory.context import MemoryContext
 from ..memory.prepared import PreparedMemory
+from ..memory.goals import same_goal
 from ..memory.updates import WorkingMemoryInterpreter, WorkingUpdate
 from ..orchestration.context import OrchestrationContext
 from .tasks import TaskService
@@ -183,6 +184,13 @@ class ChatSessionService:
             except InvariantViolation as error:
                 return self._refuse(session_id, content, error)
 
+    def _project_help(self) -> ProjectHelpService:
+        if callable(self._help):
+            self._help = self._help()
+        if self._help is None:
+            raise AgentInputError("Ассистент проекта не настроен")
+        return self._help
+
     def _send(self, session_id: str, content: str, policy: InvariantPolicy, operation_id: str) -> ChatSendResponse:
         session = self._repository.get(session_id)
         if session.messages and session.messages[-1].status != "done":
@@ -193,10 +201,7 @@ class ChatSessionService:
         prepared = None
         branch = False
         if question is not None:
-            if callable(self._help):
-                self._help = self._help()
-            if self._help is None:
-                raise AgentInputError("Ассистент проекта не настроен")
+            self._project_help()
         else:
             explicit_goal = re.fullmatch(r"/goal\s+(.+)", content, flags=re.DOTALL)
             if content == "/goal" or (explicit_goal and len(explicit_goal[1].strip()) > 4000):
@@ -207,7 +212,7 @@ class ChatSessionService:
                                              saved_update=saved, active_goal=current_goal)
             update = prepared.update
             branch = bool(update and update.goal_action == "set" and current_goal
-                          and " ".join(update.goal.split()).casefold() != " ".join(current_goal.split()).casefold())
+                          and not same_goal(current_goal, update.goal))
             if session.task is not None and session.task.context.state != TaskState.DONE and not branch and not explicit_goal and not (update and update.clarification):
                 ctx = session.task.context
                 raise TaskConflict(f"Используйте действия задачи. Следующее действие: {ctx.current}",
@@ -274,7 +279,7 @@ class ChatSessionService:
         if turn.project_help is not None:
             try:
                 policy.check_request(turn.content)
-                result = self._help.answer(
+                result = self._project_help().answer(
                     turn.project_help["question"], self._agent,
                     OrchestrationContext(invariants=policy.settings),
                 )
@@ -341,7 +346,7 @@ class ChatSessionService:
         policy.check_request(task)
         session = self._repository.get(session_id)
         current_goal = session.task.context.task if session.task else self._memory.goal(session_id)
-        branch = bool(current_goal and " ".join(current_goal.split()).casefold() != " ".join(task.split()).casefold())
+        branch = bool(current_goal and not same_goal(current_goal, task))
         change = self._tasks.start(task, OrchestrationContext(invariants=policy.settings))
         created = self._repository.create_task(session_id, change.context, assistant_content=change.answer,
                                                 branch=branch, operation_id=operation_id or str(uuid4()))

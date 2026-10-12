@@ -215,6 +215,19 @@ def test_goal_command_does_not_generate_or_extract_memory(tmp_path):
     assert memories.list_working(source.id)[0].content == "Ц" * 4000
 
 
+def test_equivalent_goal_keeps_constraints_and_original_goal_anchor(tmp_path):
+    service, memories, _ = create_services(tmp_path)
+    source = service.create()
+    first = service.send(source.id, "/goal Написать письмо")
+    memories.add(layer="working", category="constraint", content="Кратко", session_id=source.id)
+    repeated = service.send(source.id, "/goal написать   письмо")
+    assert repeated.session.id == source.id and len(service.list()) == 1
+    rows = memories.list_working(source.id)
+    assert {row.content for row in rows} == {"Написать письмо", "Кратко"}
+    goal = next(row for row in rows if row.category == "goal")
+    assert goal.source_message_id == first.user_message.id
+
+
 def test_failed_answer_survives_restart_and_retry_interprets_only_once(tmp_path):
     decisions = JsonModel({"goal_action": "set", "goal": "Написать письмо", **constraint("коротко")})
     answers = AnswerModel(AgentOutputError("temporary"))

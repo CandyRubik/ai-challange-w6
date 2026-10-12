@@ -10,6 +10,7 @@ from uuid import uuid4
 from pydantic import Field
 
 from ..schemas import StrictModel
+from .goals import same_goal
 
 
 class MemoryUpdateConflict(ValueError):
@@ -104,7 +105,7 @@ def apply_working_update(
     result = list(rows)
     current_goal = next((row["content"] for row in reversed(rows) if row["category"] == "goal"), None)
     if update.goal_action == "clear" or (
-        update.goal_action == "set" and current_goal is not None and current_goal != update.goal
+        update.goal_action == "set" and current_goal is not None and not same_goal(current_goal, update.goal)
     ):
         result = []
 
@@ -125,7 +126,7 @@ def apply_working_update(
             "created_at": existing["created_at"] if existing else now, "updated_at": now,
         })
 
-    if update.goal_action == "set":
+    if update.goal_action == "set" and not same_goal(current_goal, update.goal):
         set_fact("goal", "goal", update.goal)
     for change in update.changes:
         if change.action == "remove":

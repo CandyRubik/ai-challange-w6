@@ -12,6 +12,7 @@ from uuid import uuid4
 from .updates import MemoryUpdateConflict, WorkingUpdate, apply_working_update
 from .messages import StoredMessage
 from .context import MemoryContext
+from .goals import same_goal
 from .prepared import PreparedMemory
 from .extractor import MemoryExtractionError, MemoryExtractor
 from .updates import WorkingMemoryInterpreter
@@ -191,10 +192,12 @@ class SQLiteMemoryRepository:
             if layer == "working":
                 if category == "goal":
                     previous = connection.execute(
-                        "SELECT content FROM working_memory WHERE session_id = ? AND category = 'goal'",
+                        "SELECT * FROM working_memory WHERE session_id = ? AND category = 'goal'",
                         (session_id,),
                     ).fetchone()
-                    if previous is not None and previous["content"] != content:
+                    if previous is not None and same_goal(previous["content"], content):
+                        return self._stored(previous, layer)
+                    if previous is not None:
                         connection.execute("DELETE FROM working_memory WHERE session_id = ?", (session_id,))
                     else:
                         connection.execute(
@@ -333,7 +336,7 @@ class MemoryService:
         self.validate(request)
         if request.layer == "working" and request.category == "goal":
             previous = self.goal(request.session_id)
-            if previous and " ".join(previous.split()).casefold() != " ".join(request.content.split()).casefold():
+            if previous and not same_goal(previous, request.content):
                 raise MemoryValidationError("Новая цель требует отдельного чата")
         source_message_id = None
         if request.source_session_id is not None and request.source_text is not None:

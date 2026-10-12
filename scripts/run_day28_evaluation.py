@@ -89,7 +89,7 @@ def run(output: Path, repeats: int, providers: list[str], questions_path: Path) 
         searched = monotonic()
         hits = rag.retrieve(case["question"], [], "structure", force=True, capture_trace=traces.append)
         retrieval_seconds = monotonic() - searched
-        search_question = traces[-1].query if traces else case["question"]
+        search_question = traces[-1].search_query if traces else case["question"]
         prompt, _, _ = prepare_citations(hits)
         result = {**case, "search_question": search_question,
                   "interpretation_seconds": 0, "retrieval_seconds": retrieval_seconds,
