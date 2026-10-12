@@ -35,7 +35,7 @@ def main_check():
               "power_state_start": power_state(),
               "method": "Real FastAPI routes with Qwen, local E5/FAISS/reranker and SQLite; cloud key absent. Model/context warmup excluded from HTTP timing; profile order alternates across three repeats.",
               "limitations": "Small descriptive timing sample; unloading weights leaves operating-system disk cache intact. External sockets are not blocked in this check."}
-    target = ROOT / "docs/day29-artifacts/application-check.json"
+    target = ROOT / "data/day29-application-check.json"
     def save():
         target.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
     with httpx.Client(timeout=30, trust_env=False) as control:

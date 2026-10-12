@@ -272,7 +272,7 @@ def run(args):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cases", type=Path, default=ROOT / "evaluation/day29-cases.json")
-    parser.add_argument("--output", type=Path, default=ROOT / "docs/day29-artifacts/evaluation.json")
+    parser.add_argument("--output", type=Path, default=ROOT / "data/day29-evaluation.json")
     parser.add_argument("--split", choices=["calibration", "validation", "all"], default="all")
     parser.add_argument("--profiles", nargs="+", choices=list(CANDIDATES), default=["baseline", "compact", "optimized", "q8"])
     parser.add_argument("--repeats", type=int, default=3)

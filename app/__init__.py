@@ -1,1 +1,1 @@
-"""AI Challenge W5 backend."""
+"""AI Challenge W6 backend."""

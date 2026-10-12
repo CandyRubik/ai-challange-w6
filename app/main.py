@@ -79,7 +79,7 @@ def _allowed_origins() -> list[str]:
     return [origin.strip() for origin in configured_origins.split(",") if origin.strip()]
 
 
-app = FastAPI(title="AI Challenge W5 API")
+app = FastAPI(title="AI Challenge W6 API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins(),

@@ -23,8 +23,8 @@ from app.rag_chat.generation import GROUNDING_SYSTEM_PROMPT, generate_grounded_a
 def main():
     load_dotenv(ROOT / ".env", override=False)
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--evaluation", type=Path, default=ROOT / "docs/day28-artifacts/evaluation.json")
-    parser.add_argument("--output", type=Path, default=ROOT / "docs/day28-artifacts/cold-start.json")
+    parser.add_argument("--evaluation", type=Path, default=ROOT / "data/day28-evaluation.json")
+    parser.add_argument("--output", type=Path, default=ROOT / "data/day28-cold-start.json")
     args = parser.parse_args()
     registry = ModelRegistry()
     selection = registry.resolve("ollama")

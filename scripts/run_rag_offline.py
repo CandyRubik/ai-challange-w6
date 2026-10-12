@@ -59,7 +59,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=8769)
     parser.add_argument("--db", type=Path, default=ROOT / "data/day28-offline.sqlite3")
-    parser.add_argument("--report", type=Path, default=ROOT / "docs/day28-artifacts/offline-network.json")
+    parser.add_argument("--report", type=Path, default=ROOT / "data/day28-offline-network.json")
     args = parser.parse_args()
     os.environ.update(HF_HUB_OFFLINE="1", TRANSFORMERS_OFFLINE="1",
                       HF_HUB_DISABLE_TELEMETRY="1", LLM_DEFAULT_PROVIDER="ollama",

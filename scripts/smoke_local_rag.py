@@ -73,7 +73,7 @@ def run(base_url: str, output: Path, resume_session: str | None = None) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base-url", default="http://127.0.0.1:8769")
-    parser.add_argument("--output", type=Path, default=ROOT / "docs/day28-artifacts/offline-smoke.json")
+    parser.add_argument("--output", type=Path, default=ROOT / "data/day28-offline-smoke.json")
     parser.add_argument("--resume-session")
     args = parser.parse_args()
     run(args.base_url, args.output, args.resume_session)

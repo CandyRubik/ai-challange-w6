@@ -1,6 +1,0 @@
-{
-  "mode": "loopback_only",
-  "allowed_connections": 7,
-  "blocked_attempts": [],
-  "guard_self_test_passed": true
-}

@@ -1,4 +1,4 @@
-name: ai-challenge-day30
+name: ai-challenge-w6
 
 x-logging: &logging
   driver: json-file
@@ -46,7 +46,7 @@ services:
     logging: *logging
 
   app:
-    image: ai-challenge-chat:day30
+    image: ai-challenge-chat:w6
     build: .
     restart: unless-stopped
     init: true

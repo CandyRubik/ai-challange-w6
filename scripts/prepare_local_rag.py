@@ -1,4 +1,4 @@
-"""Copy the W4 index, PDF, and cached model snapshots without downloading anything."""
+"""Copy the W5 index, PDF, and cached model snapshots without downloading anything."""
 
 import argparse
 import hashlib
@@ -55,7 +55,7 @@ def prepare(source: Path, data: Path, embedding_snapshot: Path, reranker_snapsho
     index_root = source / "data/document_index"
     manifest = json.loads((index_root / "active.json").read_text())
     if manifest["model"] != EMBEDDER_ID:
-        raise ValueError("Ожидается индекс multilingual-e5-small из W4")
+        raise ValueError("Ожидается индекс multilingual-e5-small из W5")
     version = manifest["version"]
     directory = (index_root / version).resolve()
     if not directory.is_relative_to(index_root.resolve()):
@@ -82,13 +82,21 @@ def prepare(source: Path, data: Path, embedding_snapshot: Path, reranker_snapsho
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--source", type=Path, default=ROOT.parent / "ai-challange-w4")
+    parser.add_argument("--source", type=Path, default=ROOT.parent / "ai-challange-w5")
     parser.add_argument("--data", type=Path, default=ROOT / "data")
     parser.add_argument("--embedding-snapshot", type=Path)
     parser.add_argument("--reranker-snapshot", type=Path)
     args = parser.parse_args()
-    embedding = args.embedding_snapshot or snapshot(Path.home() / ".cache/huggingface/hub", EMBEDDER_ID)
-    reranker = args.reranker_snapshot or snapshot(args.source / "data/model_cache", RERANKER_ID)
+    embedding = args.embedding_snapshot or (
+        args.source / "data/models/e5"
+        if (args.source / "data/models/e5/config.json").is_file()
+        else snapshot(Path.home() / ".cache/huggingface/hub", EMBEDDER_ID)
+    )
+    reranker = args.reranker_snapshot or (
+        args.source / "data/models/reranker"
+        if (args.source / "data/models/reranker/config.json").is_file()
+        else snapshot(args.source / "data/model_cache", RERANKER_ID)
+    )
     report = prepare(args.source, args.data, embedding, reranker)
     print(f"Готово: {args.data}; версия индекса {report['index_version']}; все веса локальные")
 

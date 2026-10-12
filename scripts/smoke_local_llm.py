@@ -8,7 +8,7 @@ import httpx
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--base-url', default='http://127.0.0.1:8765')
-parser.add_argument('--output', type=Path, default=Path('docs/day27-artifacts/local-smoke.json'))
+parser.add_argument('--output', type=Path, default=Path('data/day27-local-smoke.json'))
 args = parser.parse_args()
 base = args.base_url
 args.output.parent.mkdir(parents=True, exist_ok=True)

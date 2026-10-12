@@ -146,7 +146,7 @@ def main() -> None:
     from dotenv import load_dotenv
     load_dotenv(ROOT / ".env", override=False)
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", type=Path, default=ROOT / "docs/day28-artifacts/evaluation.json")
+    parser.add_argument("--output", type=Path, default=ROOT / "data/day28-evaluation.json")
     parser.add_argument("--questions", type=Path, default=ROOT / "evaluation/day28-questions.json")
     parser.add_argument("--repeats", type=int, default=3)
     parser.add_argument("--providers", nargs="+", choices=["ollama", "deepseek"], default=["ollama", "deepseek"])
