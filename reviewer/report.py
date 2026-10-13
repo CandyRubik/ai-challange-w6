@@ -7,6 +7,20 @@ def text(value: str) -> str:
     return re.sub(r"([\\`*_{}\[\]()<>#+.!|])", r"\\\1", value).replace("\n", " ")
 
 
+def finding_groups(findings):
+    groups = {}
+    for finding in findings:
+        ref = finding.evidence
+        key = ("change", finding.cause_id) if finding.cause_id else (ref.sha, ref.path, ref.line, ref.kind, ref.quote)
+        groups.setdefault(key, []).append(finding)
+    return list(groups.values())
+
+
+def evidence_text(ref):
+    location = 'metadata' if ref.kind == 'file_metadata' else str(ref.line)
+    return f"{text(ref.path)}:{location} @ `{ref.sha}` — {text(ref.quote)}"
+
+
 def markdown(result: ReviewResult, *, explain_policy: bool = False) -> str:
     lines = ["# Project review", f"Status: **{result.status}**; execution: **{result.execution}**."]
     if result.snapshot:
@@ -14,16 +28,19 @@ def markdown(result: ReviewResult, *, explain_policy: bool = False) -> str:
                   f"Diff base: `{result.snapshot.merge_base_sha}`"]
     lines += [f"Profile: `{result.profile_sha256}` ({result.profile_origin}).",
               "Only configured checks are assessed; this is not a full architectural review.", "", "## Findings"]
-    for finding in result.findings:
-        evidence, source = finding.evidence, finding.source
-        location = "metadata" if evidence.kind == "file_metadata" else str(evidence.line)
-        lines += [f"- **{text(finding.rule_id)}** ({'blocking' if finding.blocking else 'advisory'}): {text(finding.message)}",
-                  f"  Evidence: {text(evidence.path)}:{location} @ `{evidence.sha}` — {text(evidence.quote)}"]
-        if source:
-            lines.append(f"  Rule source: {text(source.path)}:{source.line} @ `{source.sha}` — {text(source.quote)}")
-        if finding.scenario:
-            lines += [f"  Scenario: {text(finding.scenario)}; impact: {text(finding.impact)}",
-                      f"  Recommendation: {text(finding.recommendation)}"]
+    for group in finding_groups(result.findings):
+        evidence = group[0].evidence
+        lines += [f"- **{text(', '.join(f.rule_id for f in group))}** ({'blocking' if any(f.blocking for f in group) else 'advisory'}): {text('; '.join(f.message for f in group))}",
+                  f"  Evidence: {evidence_text(evidence)}"]
+        for finding in group:
+            if finding.evidence != evidence:
+                lines.append(f"  {text(finding.rule_id)} evidence: {evidence_text(finding.evidence)}")
+            source = finding.source
+            if source:
+                lines.append(f"  Rule source: {evidence_text(source)}")
+            if finding.scenario:
+                lines += [f"  {text(finding.rule_id)} scenario: {text(finding.scenario)}; impact: {text(finding.impact)}",
+                          f"  Recommendation: {text(finding.recommendation)}"]
     if not result.findings:
         lines.append("No new violations found by the configured checks.")
     lines += ["", "## Coverage"]

@@ -72,6 +72,8 @@ class Evidence(Source):
 
 
 class Finding(Record):
+    cause_id: str = ""
+    paired_anchor_id: str = ""
     rule_id: str
     blocking: bool
     message: str

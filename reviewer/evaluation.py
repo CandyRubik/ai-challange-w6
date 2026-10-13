@@ -10,7 +10,7 @@ from .semantic_models import Limits
 
 
 def select_cases(corpus, split):
-    if corpus['version'] != 1 or split not in ('development', 'holdout', 'all'):
+    if corpus['version'] not in (1, 2, 3) or split not in ('development', 'holdout', 'all'):
         raise ValueError('Unknown case set version or split')
     cases = corpus['cases']
     if len({c['id'] for c in cases}) != len(cases):
@@ -21,14 +21,22 @@ def select_cases(corpus, split):
 def summarize(case, result):
     blockers = [f for f in result.findings if f.blocking]
     remaining = list(case['expected'])
-    tp = 0
+    tp, duplicates, unmatched = 0, 0, []
+    matched = []
     for finding in blockers:
         match = next((e for e in remaining if e['rule_id'] == finding.rule_id and e['path'] == finding.evidence.path and any(ref.path == e['path'] and any(quote in ref.quote for quote in [e['quote'], *e.get('alternatives', [])])
                           for ref in [finding.evidence, *finding.supporting_evidence])), None)
         if match is not None:
             remaining.remove(match)
             tp += 1
-    return {'id': case.get('id'), 'tp': tp, 'fp': len(blockers) - tp, 'fn': len(remaining),
+            matched.append((match, finding))
+        else:
+            unmatched.append(finding)
+    for finding in unmatched:
+        if any(finding.rule_id in expected.get('duplicate_rules', []) and (finding.evidence == original.evidence or finding.paired_anchor_id and finding.paired_anchor_id == original.paired_anchor_id)
+               for expected, original in matched):
+            duplicates += 1
+    return {'id': case.get('id'), 'tp': tp, 'fp': len(blockers) - tp - duplicates, 'fn': len(remaining), 'duplicates': duplicates,
             'clean': not case['expected'], 'blocked': bool(blockers), 'status': result.status,
             'incomplete': result.execution != 'complete' or result.status == 'error',
             'trace': result.trace, 'profile_sha256': result.profile_sha256,
@@ -37,13 +45,17 @@ def summarize(case, result):
 
 
 def metrics(rows):
-    counts = {key: sum(row[key] for row in rows) for key in ('tp', 'fp', 'fn', 'incomplete')}
+    inputs = [wire for row in rows for wire in row.get('trace', {}).get('wire_inputs', [])]
+    calls = sum(row.get('trace', {}).get('model_calls', 0) for row in rows)
+    counts = {key: sum(row.get(key, 0) for row in rows) for key in ('tp', 'fp', 'fn', 'incomplete', 'duplicates')}
     return {**counts, 'cases': len(rows),
             'precision': counts['tp'] / (counts['tp'] + counts['fp']) if counts['tp'] + counts['fp'] else None,
             'recall': counts['tp'] / (counts['tp'] + counts['fn']) if counts['tp'] + counts['fn'] else None,
             'clean_blocked': sum(r['clean'] and r['blocked'] for r in rows),
             'clean_passed': sum(r['clean'] and r['status'] == 'success' and not r['incomplete'] for r in rows),
-            'model_calls': sum(r.get('trace', {}).get('model_calls', 0) for r in rows),
+            'model_calls': calls,
+            'api_calls': sum(wire['request_sent'] for wire in inputs)
+                         if len(inputs) == calls and all(wire is not None for wire in inputs) else None,
             'elapsed_ms': sum(r.get('trace', {}).get('elapsed_ms', 0) for r in rows),
             'token_usage': [usage for r in rows for usage in r.get('trace', {}).get('token_usage', [])]}
 

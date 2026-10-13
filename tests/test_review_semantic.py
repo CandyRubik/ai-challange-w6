@@ -16,7 +16,7 @@ class Model:
     def __init__(self):
         self.calls = 0
 
-    def generate_json(self, *, messages, max_tokens, schema):
+    def generate_json(self, *, messages, max_tokens, schema, context_bytes=48_000):
         self.calls += 1
         self.payload = json.loads(messages[-1]["content"])
         if "candidates" in self.payload:
@@ -34,6 +34,30 @@ class Model:
                           "evidence": [{"fragment_id": evidence["id"], "quote": "return None"}]}],
             "recommendations": [],
         })
+
+
+def wire_response(raw, payload):
+    draft = json.loads(raw)
+    fragments = {f['id']: f for f in payload['fragments']}
+    def ranges(refs):
+        result = []
+        for ref in refs:
+            if ref.get('line') is not None:
+                result.append(dict(fragment_id=ref['fragment_id'], start_line=ref['line'], end_line=ref['end_line']))
+                continue
+            fragment = fragments[ref['fragment_id']]
+            start = fragment['line'] + fragment['text'][:fragment['text'].index(ref['quote'])].count('\n')
+            stop = start + ref['quote'].count('\n') - int(ref['quote'].endswith('\n'))
+            result.append(dict(fragment_id=ref['fragment_id'], start_line=start, end_line=stop))
+        return result
+    if 'decisions' in draft:
+        return json.dumps({'decisions': [{**d, 'evidence': ranges(d['evidence'])} for d in draft['decisions']]})
+    assessments = []
+    for c in draft['criteria']:
+        finding = next((f for f in draft['findings'] if (f['path'], f['rule_id']) == (c['path'], c['rule_id'])), None)
+        assessments.append({**c, 'evidence': ranges(c['evidence']),
+            'finding': {k:v for k,v in finding.items() if k not in ('path','rule_id','evidence')} if finding else None})
+    return json.dumps({'assessments': assessments, 'recommendations': draft['recommendations']})
 
 
 def semantic_repository(tmp_path):
@@ -184,7 +208,8 @@ def test_deepseek_adapter_has_bounded_http_calls(tmp_path, monkeypatch, status, 
         body = json.loads(request.content)
         if status != 200:
             return httpx.Response(status, json={"error": {"message": "test unavailable"}})
-        response = Model().generate_json(messages=body["messages"], max_tokens=body["max_tokens"], schema={})
+        response = wire_response(Model().generate_json(messages=body["messages"], max_tokens=body["max_tokens"], schema={}),
+                                 json.loads(body["messages"][-1]["content"]))
         return httpx.Response(200, json={"id": "test", "object": "chat.completion", "created": 1,
             "model": "configured-model", "usage": {"prompt_tokens": 50, "completion_tokens": 11, "total_tokens": 61}, "choices": [{"index": 0, "message": {"role": "assistant", "content": response}, "finish_reason": "stop"}]})
 
@@ -306,3 +331,22 @@ def test_causal_quote_can_include_a_trailing_newline(tmp_path, quote):
     root, base = semantic_repository(tmp_path)
     head = commit(root, {"app/state/service.py": "def apply(state):\n    return None\n"})
     assert review(root, base, head, model=Quoted()).status == "failure"
+
+
+def test_optional_runtime_context_excludes_policy_and_gold_labels(tmp_path):
+    root, _ = semantic_repository(tmp_path)
+    base = commit(root, {'.ai-review/eval/cases.json': json.dumps({'state': 'apply return None expected violation'})})
+    head = commit(root, {'app/state/service.py': 'def apply(state):\n    return None\n'})
+    model = Model()
+    result = review(root, base, head, model=model)
+    assert result.status == 'failure'
+    assert not any(f['path'].startswith('.ai-review/') for f in model.payload['fragments'])
+
+
+def test_original_generic_model_signature_remains_supported(tmp_path):
+    class OriginalModel(Model):
+        def generate_json(self, *, messages, max_tokens, schema):
+            return super().generate_json(messages=messages, max_tokens=max_tokens, schema=schema)
+    root, base = semantic_repository(tmp_path)
+    head = commit(root, {'app/state/service.py': 'def apply(state):\n    return None\n'})
+    assert review(root, base, head, model=OriginalModel()).status == 'failure'

@@ -17,6 +17,7 @@ class Retrieved:
     required_count: int
     omissions: list[str]
     edits: dict[str, list[tuple[int, int]]]
+    causes: dict[str, list[dict]]
 
 
 class ContextUnavailable(ValueError):
@@ -79,13 +80,16 @@ def retrieve(repository, result: ReviewResult, changes, limits) -> Retrieved:
             text = repository.read(snapshot.base_sha, rule.source.path)
             line = text[:text.index(rule.source.quote)].count("\n") + 1
             sources[key] = fragment(rule.source.path, snapshot.base_sha, rule.source.quote, "normative", line)
-    fragments, changed_lines = list(sources.values()), {}
+    fragments, changed_lines, causes = list(sources.values()), {}, {}
     for change in changes:
         if not readable(change.path) or change.status != "A" and not readable(change.before_path):
             raise ContextUnavailable("Before/head source is outside the review corpus; provenance cannot be assessed")
         after = repository.read(snapshot.head_sha, change.path) if change.status != "D" else ""
         before = repository.read(snapshot.merge_base_sha, change.before_path) if change.status != "A" else ""
         edits = [op for op in SequenceMatcher(None, before.splitlines(), after.splitlines()).get_opcodes() if op[0] != "equal"]
+        causes[change.path] = [{"id": hashlib.sha256((snapshot.diff_sha256 + change.path + repr(op)).encode()).hexdigest()[:20],
+            "before_path": change.before_path, "before": [op[1] + 1, op[2]], "head": [op[3] + 1, op[4]],
+            "removed": "".join(before.splitlines(keepends=True)[op[1]:op[2]])} for op in edits]
         changed_lines["head:" + change.path] = [(op[3] + 1, op[4]) for op in edits if op[4] > op[3]]
         changed_lines["before:" + change.before_path] = [(op[1] + 1, op[2]) for op in edits if op[2] > op[1]]
         for role, path, sha, content, mode in (
@@ -108,6 +112,8 @@ def retrieve(repository, result: ReviewResult, changes, limits) -> Retrieved:
     changed = {change.path for change in changes}
     for sha, role in ((snapshot.head_sha, "head"), (snapshot.base_sha, "normative")):
         for path in repository.paths(sha):
+            if path.startswith(".ai-review/"):
+                continue
             if not (code(path) if role == "head" else document(path)) or role == "head" and path in changed:
                 continue
             scanned += 1
@@ -128,4 +134,4 @@ def retrieve(repository, result: ReviewResult, changes, limits) -> Retrieved:
                     candidates.append((score, candidate))
     candidates.sort(key=lambda item: (-item[0], item[1].path, item[1].line))
     fragments += [candidate for _, candidate in candidates[:8]]
-    return Retrieved(fragments, required_count, omissions, changed_lines)
+    return Retrieved(fragments, required_count, omissions, changed_lines, causes)

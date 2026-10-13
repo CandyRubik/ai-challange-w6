@@ -1,6 +1,6 @@
 from typing import Literal, Protocol
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from .models import Record, Text
 
@@ -9,6 +9,13 @@ class JsonModel(Protocol):
     name: str
 
     def generate_json(self, *, messages: list[dict], max_tokens: int, schema: dict) -> str: ...
+
+
+def generate_json(model, *, messages, max_tokens, schema, context_bytes):
+    bounded = getattr(model, 'generate_bounded_json', None)
+    if bounded is not None:
+        return bounded(messages=messages, max_tokens=max_tokens, schema=schema, context_bytes=context_bytes)
+    return model.generate_json(messages=messages, max_tokens=max_tokens, schema=schema)
 
 
 class Limits(Record):
@@ -30,8 +37,19 @@ class Fragment(Record):
 
 
 class Citation(Record):
+    line: int | None = Field(default=None, ge=1)
     fragment_id: Text
-    quote: Text
+    end_line: int | None = Field(default=None, ge=1)
+    quote: Text | None = None
+
+    @model_validator(mode='after')
+    def complete_reference(self):
+        if self.line is None:
+            if self.quote is None or self.end_line is not None:
+                raise ValueError('A quote or complete range is required')
+        elif self.end_line is None or self.end_line < self.line:
+            raise ValueError('Invalid evidence range')
+        return self
 
 
 class DraftCriterion(Record):
