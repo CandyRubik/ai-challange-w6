@@ -398,8 +398,19 @@ SQLite автоматически получает новую таблицу `ch
 
 ## Проверки
 
+Локальный аудит PR по инженерным правилам проекта:
+
+```bash
+python scripts/review_pr.py --base origin/main --head HEAD --format json
+```
+
+Профиль берётся из base-коммита, код — из зафиксированных Git-объектов.
+Первый срез проверяет запрещённые Python-импорты; семантические правила явно
+помечаются непроверенными. Bootstrap, формат профиля и коды выхода:
+[аудит PR](docs/ai-review.md).
+
 ```bash
 python -m pytest -q
-python -m compileall -q app tests
+python -m compileall -q app reviewer tests scripts
 node --check static/app.js
 ```
