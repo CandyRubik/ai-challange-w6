@@ -38,6 +38,7 @@ def test_optional_code_and_docs_stay_in_bounded_ranked_windows():
     for path, role in [('app/code.py','head'),('docs/design.md','normative')]:
         selected = windows(path,'head',source,role)
         assert [f.line for f in selected] == [1,61,121,181]
+    assert len(windows('docs/design.md','base',source,'normative',[(80,81)])) == 2
 
 
 def test_full_function_and_decorators_keep_all_previously_required_source():
