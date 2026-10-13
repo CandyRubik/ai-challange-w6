@@ -1,1 +1,2 @@
-import sqlite3
+def identity(snapshot):
+    return snapshot
