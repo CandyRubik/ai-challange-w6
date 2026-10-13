@@ -13,7 +13,8 @@ related-head code. Добавлены регрессионные тесты.
 
 Первый проход: 2 P2. Старый before guard мог оправдать его удаление из head;
 метрики не учитывали supporting evidence. Исправлено требованием текущего head proof
-для modified/renamed; before-only допускается для удаления файла. Статические checks
+для modified/renamed; before-only допускается для удаления файла. Targeted Spec rereview обнаружил ещё matching другого causal path; условие того же
+causal path восстановлено, отдельный red → green тест добавлен. Статические checks
 модель не переопределяет. Ошибки/неопределённость не дают success.
 
 ## Проверки
@@ -28,6 +29,6 @@ related-head code. Добавлены регрессионные тесты.
   self-review исправлений; [пересчитанные counts](calibration-counts.json) не являются новым API-прогоном.
 - Quality gate **не пройден**. Автоматический облачный workflow пока не включается.
 
-Бюджет кода: 494 reviewable lines; большие входные fixtures и результаты eval исключены
+Бюджет кода: 504 reviewable lines; большие входные fixtures и результаты eval исключены
 как data. Следующий самостоятельный срез 3b улучшает формат structured output и проверяет
 качество до автоматических публикаций.

@@ -23,7 +23,7 @@ def summarize(case, result):
     remaining = list(case['expected'])
     tp = 0
     for finding in blockers:
-        match = next((e for e in remaining if e['rule_id'] == finding.rule_id and any(ref.path == e['path'] and any(quote in ref.quote for quote in [e['quote'], *e.get('alternatives', [])])
+        match = next((e for e in remaining if e['rule_id'] == finding.rule_id and e['path'] == finding.evidence.path and any(ref.path == e['path'] and any(quote in ref.quote for quote in [e['quote'], *e.get('alternatives', [])])
                           for ref in [finding.evidence, *finding.supporting_evidence])), None)
         if match is not None:
             remaining.remove(match)

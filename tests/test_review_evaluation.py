@@ -45,3 +45,12 @@ def test_removed_guard_matches_gold_alternative_and_supporting_evidence():
                      dict(rule_id='INV', path='app/service.py', quote='unused', alternatives=['if not approved:'])]:
         row = summarize({'expected': [expected]}, ReviewResult(status='failure', findings=[finding]))
         assert (row['tp'], row['fp'], row['fn']) == (1, 0, 0)
+
+
+def test_supporting_evidence_cannot_change_the_causal_path_for_gold_matching():
+    finding = Finding(rule_id='INV', blocking=True, message='Other defect',
+        evidence=Evidence(path='app/other.py', sha='new', line=2, quote='return None'),
+        supporting_evidence=[Evidence(path='app/service.py', sha='new', line=2, quote='publish()')])
+    row = summarize({'expected': [dict(rule_id='INV', path='app/service.py', quote='publish()')]},
+                    ReviewResult(status='failure', findings=[finding]))
+    assert (row['tp'], row['fp'], row['fn']) == (0, 1, 1)
