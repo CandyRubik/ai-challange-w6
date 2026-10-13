@@ -217,3 +217,18 @@ def test_partial_visibility_rerun_reconciles_full_batch_without_duplicates(tmp_p
     publish_inline(api,rerun,result,repo,guard=lambda:assert_current(api,rerun))
     assert len(writes)==(2 if changed_plan else 1) and len(comments)==(3 if changed_plan else 2)
     assert all('/attempts/2' in c['body'] for c in comments)
+
+
+def test_visible_comment_with_temporarily_hidden_review_prevents_a_duplicate_post(tmp_path):
+    api, context, result, repo, files, comments, reviews, writes, guard, pr = setup(tmp_path)
+    publish_inline(api,context,result,repo,guard=guard)
+    original, visibility = api.request, {'review_reads':2}
+    def hidden(method,path,body=None,**kwargs):
+        response = original(method,path,body,**kwargs)
+        if method=='GET' and path=='/pulls/4/reviews' and visibility['review_reads']:
+            visibility['review_reads'] -= 1
+            return []
+        return response
+    api.request = hidden
+    publish_inline(api,context,result,repo,guard=guard)
+    assert len(writes)==1 and len(comments)==1

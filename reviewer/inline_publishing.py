@@ -70,6 +70,21 @@ def readback(api, context, guard, attempt):
     return owned_batches(reviews), comments
 
 
+def reconcile(api, context, groups, batches, comments, guard):
+    missing, delayed = [], []
+    for group in groups:
+        existing = next((c for c in comments if matches(c,group,context.head_sha,group_reviews(batches,group,context.head_sha))),None)
+        if existing:
+            update_comment(api,existing,group['body'],guard)
+        elif (group_reviews(batches,group,context.head_sha,published=False)
+              or any(matches(c,group,context.head_sha,{c['pull_request_review_id']}) for c in comments
+                     if type(c.get('pull_request_review_id')) is int)):
+            delayed.append(group)
+        else:
+            missing.append(group)
+    return missing, delayed
+
+
 def publish_inline(api, context, result, repository, *, guard):
     guard()
     files = api.items(f'/pulls/{context.pr_number}/files')
@@ -77,25 +92,15 @@ def publish_inline(api, context, result, repository, *, guard):
     groups, fallback = plan_inline(context,result,files,repository)
     comments = api.items(f'/pulls/{context.pr_number}/comments')
     batches = owned_batches(api.items(f'/pulls/{context.pr_number}/reviews'))
-    missing, delayed = [], []
-    for group in groups:
-        existing = next((c for c in comments if matches(c,group,context.head_sha,group_reviews(batches,group,context.head_sha))),None)
-        if existing:
-            update_comment(api,existing,group['body'],guard)
-        elif group_reviews(batches,group,context.head_sha,published=False):
-            delayed.append(group)
-        else:
-            missing.append(group)
+    missing, delayed = reconcile(api,context,groups,batches,comments,guard)
     if delayed:
         for attempt in range(3):
             try:
                 batches, comments = readback(api,context,guard,attempt)
             except GitHubError:
                 continue
-            recovered = [(g,next((c for c in comments if matches(c,g,context.head_sha,group_reviews(batches,g,context.head_sha))),None)) for g in delayed]
-            if all(c is not None for g,c in recovered):
-                for group,comment in recovered:
-                    update_comment(api,comment,group['body'],guard)
+            missing, delayed = reconcile(api,context,groups,batches,comments,guard)
+            if not delayed:
                 break
         else:
             raise GitHubError('Prior inline batch could not be confirmed or is pending; no duplicate POST; rerun required')
