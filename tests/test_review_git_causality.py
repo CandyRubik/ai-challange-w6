@@ -1,4 +1,5 @@
 import json
+import pytest
 from reviewer import review
 from tests.test_reviewer import repository, commit
 
@@ -34,6 +35,7 @@ def test_git_line_ranges_cover_insert_delete_replace_and_empty_files():
     assert line_edits('a\nc\n','a\nb\nc\n')==[('insert',1,1,1,2)]
     assert line_edits('a\nb\nc\n','a\nc\n')==[('delete',1,2,1,1)]
     assert line_edits('unchanged\n','unchanged\n')==[]
+    assert line_edits('a\r\nc\r\n','a\r\nb\r\nc\r\n')==[('insert',1,1,1,2)]
 
 
 def test_git_line_failure_is_bounded_and_does_not_expose_source(tmp_path, monkeypatch):
@@ -48,3 +50,25 @@ def test_git_line_failure_is_bounded_and_does_not_expose_source(tmp_path, monkey
     with pytest.raises(GitError) as error:
         line_edits('source-secret','changed')
     assert 'source-secret' not in str(error.value)
+
+
+@pytest.mark.parametrize('before', ['pass\rpass\n','message = "one\u2028two"\npass\n','message = "one\x85two"\npass\n'])
+def test_ambiguous_line_separators_fail_before_any_model_request(tmp_path, before):
+    root,_=repository(tmp_path)
+    path='app/repeated.py'
+    base=commit(root,{path:before})
+    head=commit(root,{path:before+'added = 1\n'})
+    class NoCall:
+        name='must-not-run'
+        def generate_json(self,**kwargs):
+            raise AssertionError('No model request is allowed')
+    result=review(root,base,head,model=NoCall())
+    assert result.status=='error' and not result.findings and result.trace['model_calls']==0
+    assert any('LF/CRLF' in reason for reason in result.limitations)
+
+
+def test_static_audit_does_not_publish_ambiguous_line_coordinates(tmp_path):
+    root,base=repository(tmp_path)
+    head=commit(root,{'app/state/service.py':'message = "one\u2028two"\nimport sqlite3\n'})
+    result=review(root,base,head)
+    assert result.status=='error' and not result.findings

@@ -14,8 +14,15 @@ class GitError(ValueError):
     pass
 
 
+def validate_line_separators(text):
+    if re.search(r'[\v\f\x1c-\x1e\x85\u2028\u2029]|\r(?!\n)',text):
+        raise GitError('Review coordinates support LF/CRLF; escape other line separators')
+
+
 def line_edits(before: str, after: str) -> list[tuple]:
     """Git Myers over pinned blob text; content is data and never executed."""
+    validate_line_separators(before)
+    validate_line_separators(after)
     if before == after:
         return []
     try:
@@ -101,6 +108,7 @@ class Repository:
             text = self.run("cat-file", "blob", oid.decode()).decode("utf-8")
             if "\0" in text:
                 raise ValueError("binary")
-            return text
         except (UnicodeError, ValueError) as error:
             raise GitError(f"Source is not UTF-8 text: {path}") from error
+        validate_line_separators(text)
+        return text
