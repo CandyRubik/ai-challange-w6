@@ -148,6 +148,9 @@ def ground_response(raw, schema, payload, aliases=None, resolutions=None):
                     if resolutions is not None:
                         resolutions.append({'requested': item.fragment_id, 'resolved': identity, 'path': fragment['path'],
                                             'sha': fragment['sha'], 'start_line': item.start_line, 'end_line': item.end_line})
+                selected = ''.join(fragment['text'].splitlines(keepends=True)[item.start_line - fragment['line']:item.end_line - fragment['line'] + 1])
+                if not selected.strip():
+                    raise ValueError('Blank lines are not evidence')
                 refs.append({'fragment_id': identity, 'line': item.start_line, 'end_line': item.end_line})
         return refs
     if isinstance(response, VerificationResponse):

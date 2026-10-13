@@ -67,11 +67,8 @@ def analyze(repository, result, changes, model: JsonModel, limits: Limits):
         trace.update(context_sha256=hashlib.sha256(bundle(payload)).hexdigest(), context_bytes=len(bundle(payload)), fragments=len(fragments))
         if trace["context_bytes"] > limits.context_bytes:
             raise ReviewIncomplete("Required context exceeds budget")
-        trace["model_calls"] = 1
         raw = generate_json(model, messages=[{"role": "system", "content": SYSTEM}, {"role": "user", "content": payload}],
-                                  max_tokens=limits.output_tokens, schema=schema, context_bytes=limits.context_bytes)
-        trace["token_usage"].append(getattr(model, "last_usage", None))
-        trace["wire_inputs"].append(getattr(model, "last_input", None))
+                                  max_tokens=limits.output_tokens, schema=schema, context_bytes=limits.context_bytes, trace=trace, validate=DraftReview.model_validate_json)
         if len(raw.encode()) > limits.output_tokens * 16:
             raise ReviewIncomplete("Model response exceeds budget")
         draft = DraftReview.model_validate_json(raw)

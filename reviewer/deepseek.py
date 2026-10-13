@@ -2,8 +2,9 @@ import hashlib
 import json
 import os
 
-from openai import OpenAI
+from openai import APIResponseValidationError, OpenAI
 
+from .semantic_models import InvalidModelResponse, REPAIR_MARKER
 from .generation import display_payload, ground_response, protocol, response_type
 
 
@@ -33,17 +34,31 @@ class DeepSeekReviewModel:
         self.last_input = {"sha256": hashlib.sha256(wire).hexdigest(), "bytes": len(wire), "protocol": "line-assessments-v3", "request_sent": False, "reference_resolutions": []}
         if len(wire) > context_bytes:
             raise RuntimeError("DeepSeek wire context exceeds budget")
+        options = {"temperature": 0.0} if REPAIR_MARKER in messages[0]["content"] else {}
+        self.last_input["temperature"] = options.get("temperature")
         try:
             self.last_input["request_sent"] = True
             response = self.client.chat.completions.create(model=self.name, messages=messages, max_tokens=max_tokens,
-                response_format={"type": "json_object"}, extra_body={"thinking": {"type": "disabled"}})
-            if response.usage:
-                self.last_usage = response.usage.model_dump()
-            choice = response.choices[0]
-            if choice.finish_reason != "stop" or not choice.message.content:
-                raise ValueError("Incomplete response")
-            if len(choice.message.content.encode()) > max_tokens * 16:
-                raise ValueError("Model response exceeds budget")
-            return ground_response(choice.message.content, schema, payload, aliases, self.last_input["reference_resolutions"])
+                response_format={"type": "json_object"}, extra_body={"thinking": {"type": "disabled"}}, **options)
+        except (APIResponseValidationError, json.JSONDecodeError) as error:
+            raise InvalidModelResponse("DeepSeek API envelope is invalid") from error
         except Exception as error:
             raise RuntimeError("DeepSeek review request failed") from error
+        try:
+            usage = getattr(response, "usage", None)
+            if hasattr(usage, "model_dump"):
+                counts = usage.model_dump()
+                if all(type(counts.get(key)) is int and counts[key] >= 0 for key in ("prompt_tokens", "completion_tokens", "total_tokens")):
+                    self.last_usage = counts
+            choices = getattr(response, "choices", None)
+            if not isinstance(choices, list) or not choices:
+                raise ValueError("No completion choices")
+            choice = choices[0]
+            content = getattr(getattr(choice, "message", None), "content", None)
+            if getattr(choice, "finish_reason", None) != "stop" or not isinstance(content, str) or not content:
+                raise ValueError("Incomplete response")
+            if len(content.encode()) > max_tokens * 16:
+                raise ValueError("Model response exceeds budget")
+            return ground_response(content, schema, payload, aliases, self.last_input["reference_resolutions"])
+        except (ValueError, KeyError, IndexError, TypeError, AttributeError) as error:
+            raise InvalidModelResponse("DeepSeek structured response is invalid") from error
