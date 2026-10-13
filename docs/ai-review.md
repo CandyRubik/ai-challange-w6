@@ -195,6 +195,8 @@ decision_identity, api_envelope, incomplete_completion, response_budget либо
 invalid_structure. Для schema сохраняются только allowlisted типы и имена полей;
 значения, неизвестные имена полей и сырой ответ не сохраняются. Диагностика не
 меняет строгую валидацию, retry budgets или verdict.
+Post-ground/core schema failures также видны в `trace.validation_failures`;
+generic JsonModel получает эту диагностику без изменения своего интерфейса.
 
 Повтор одного causal anchor под несколькими правилами отображается одной группой; все
 исходные findings, правила и влияние на gate сохраняются в JSON. Eval отдельно считает
