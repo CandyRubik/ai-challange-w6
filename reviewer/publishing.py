@@ -10,7 +10,7 @@ from pydantic import Field
 from .git import Repository
 from .github import GitHubError, UncertainSummaryPost, bot_authored, raw_body
 from .models import Profile, Record, ReviewResult
-from .report import markdown, safe_comment, text
+from .report import markdown
 from .retrieval import code
 
 SHA = Annotated[str, Field(pattern=r'^[0-9a-f]{40}$')]
@@ -213,15 +213,8 @@ def upsert_summary(api, number, body, *, before_write):
             raise UncertainSummaryPost('Summary POST could not be confirmed; no blind retry; rerun required') from None
 
 
-def _publish(api, context, rendered, raw, repository):
+def _publish(api, context, rendered):
     assert_current(api, context)
-    if repository is not None:
-        from .inline_publishing import publish_inline
-        fallback = publish_inline(api,context,ReviewResult.model_validate(raw['result']),repository,
-                                  guard=lambda: assert_current(api,context))
-        if fallback:
-            rendered = {**rendered,'body':safe_comment(rendered['body']+'\n\n## Inline coverage\n'+
-                '\n'.join('- '+text(reason) for reason in fallback))}
     # Per-PR workflow serialization covers writes; snapshot is rechecked around the operation.
     upsert_summary(api, context.pr_number, rendered['body'], before_write=lambda: assert_current(api, context))
     assert_current(api, context)
@@ -230,11 +223,11 @@ def _publish(api, context, rendered, raw, repository):
     return rendered['state']
 
 
-def publish(api, context, raw, *, repository=None):
+def publish(api, context, raw):
     # Invalid content must not cause writes; subsequent transport/freshness failure invalidates our prior result.
     rendered = preview(context, raw)
     try:
-        return _publish(api, context, rendered, raw, repository)
+        return _publish(api, context, rendered)
     except (StaleReview, RuntimeError):
         try:
             invalidate_own_status(api, context)

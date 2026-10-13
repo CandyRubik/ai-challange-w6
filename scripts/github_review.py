@@ -7,10 +7,9 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from reviewer.ci import (analyze_snapshot, check_code, check_context, mark_unfinished,
-                         prepare_snapshot, select_prs, fetch_head)
-from reviewer.git import Repository
+                         prepare_snapshot, select_prs)
 from reviewer.github import GitHub, GitHubError, UncertainSummaryPost
-from reviewer.publishing import RunContext, StaleReview, publish, assert_current
+from reviewer.publishing import RunContext, StaleReview, publish
 
 
 def load(path):
@@ -47,10 +46,7 @@ def main():
                 artifact = analyze_snapshot(api, root, context, env)
                 result_path.write_text(json.dumps(artifact, ensure_ascii=False, indent=2))
             else:
-                assert_current(api,context)
-                if fetch_head(root,args.pr,context.repository,env['GITHUB_TOKEN']) != context.head_sha:
-                    raise StaleReview('PR changed during publisher fetch')
-                state = publish(api, context, load(result_path),repository=Repository(root))
+                state = publish(api, context, load(result_path))
                 print(f'AI review: {state} @ {context.head_sha}')
                 return {'success':0, 'failure':1, 'error':2}[state]
         return 0
