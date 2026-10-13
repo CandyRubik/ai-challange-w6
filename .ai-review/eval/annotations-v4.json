@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "case_set_sha256": "0064cf53e4a85f8d027534bd0f038b1b9dd662294723cc6d76a6b059e0371c3a",
+  "reviewed_by": [
+    "/root/review_spec_slice1",
+    "/root/review_standards_slice1"
+  ],
+  "entries": [
+    {
+      "case_id": "INV-ATOMIC-regression",
+      "context_sha256": "2b48efabe12bbdb09d51e7c01227e5020711de846d33d3785a8292bbff9b30dd",
+      "finding_sha256": "b2e5c25f1c45588437b8cef452004988dd50ab0c1af28789fa1962bce116567a",
+      "expected_rule_id": "INV-ATOMIC",
+      "reason": "Same state.save moved before the supplied transaction context, with the same partial state/memory commit on memory.save failure and the same fix. The caller-wrapping phrase is not established by the fixture and is not used as evidence for this root-cause label."
+    },
+    {
+      "case_id": "INV-SESSION-regression",
+      "context_sha256": "6a58171996268f7d3b06c4af7ad10b72da356978d3651adc2ef300b2f04d9da9",
+      "finding_sha256": "957c5437823d3fd245aacf9e51ee81651a99aab959492447e84effc5343c82c9",
+      "expected_rule_id": "INV-SESSION",
+      "reason": "Same removed session predicate: a row from s2/t1 is returned for a request s1/t1. The violation, consequence and fix are already covered by the matched INV-SESSION finding."
+    }
+  ]
+}

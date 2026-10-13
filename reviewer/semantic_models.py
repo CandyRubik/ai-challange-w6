@@ -1,3 +1,4 @@
+import json
 from typing import Literal, Protocol
 
 from pydantic import Field, model_validator
@@ -11,11 +12,46 @@ class JsonModel(Protocol):
     def generate_json(self, *, messages: list[dict], max_tokens: int, schema: dict) -> str: ...
 
 
-def generate_json(model, *, messages, max_tokens, schema, context_bytes):
+REPAIR_MARKER = 'RESPONSE_FORMAT_RETRY'
+
+
+class InvalidModelResponse(ValueError):
+    pass
+
+
+def generate_json(model, *, messages, max_tokens, schema, context_bytes, trace, validate):
     bounded = getattr(model, 'generate_bounded_json', None)
-    if bounded is not None:
-        return bounded(messages=messages, max_tokens=max_tokens, schema=schema, context_bytes=context_bytes)
-    return model.generate_json(messages=messages, max_tokens=max_tokens, schema=schema)
+    for attempt in range(2):
+        if bounded is None:
+            bundle = json.dumps({'system':messages[0]['content'], 'schema':schema, 'input':messages[-1]['content']}, ensure_ascii=False).encode()
+            if len(bundle) > context_bytes:
+                raise ValueError('Model prompt exceeds context budget')
+        trace['model_calls'] += 1
+        try:
+            if bounded is not None:
+                raw = bounded(messages=messages, max_tokens=max_tokens, schema=schema, context_bytes=context_bytes)
+            else:
+                raw = model.generate_json(messages=messages, max_tokens=max_tokens, schema=schema)
+            try:
+                if not isinstance(raw, str) or len(raw.encode()) > max_tokens * 16:
+                    raise ValueError('Invalid response size or type')
+                validate(raw)
+            except (ValueError, TypeError) as error:
+                raise InvalidModelResponse('Structured response validation failed') from error
+            return raw
+        except InvalidModelResponse:
+            if attempt:
+                raise
+            trace.setdefault('response_retries', []).append({'after_call': trace['model_calls'], 'reason': 'invalid_response'})
+            messages = [dict(message) for message in messages]
+            collection = 'assessments' if schema['title'] == 'DraftReview' else 'decisions'
+            messages[0]['content'] += ('\n' + REPAIR_MARKER + ': Previous output failed structural validation. '
+                f'Regenerate exactly one valid JSON object matching the schema; keep all {collection} inside its array. '
+                'Cite only nonblank supplied lines in the correct revision. Reassess using the same policy and source; '
+                'do not omit criteria or change identities to avoid validation.')
+        finally:
+            trace['token_usage'].append(getattr(model, 'last_usage', None))
+            trace['wire_inputs'].append(getattr(model, 'last_input', None))
 
 
 class Limits(Record):

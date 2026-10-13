@@ -58,7 +58,8 @@ def test_supporting_evidence_cannot_change_the_causal_path_for_gold_matching():
 
 def test_unknown_and_mixed_transport_counts_are_not_zero():
     from reviewer.evaluation import metrics
-    for inputs in ([None, None], [dict(request_sent=True), None]):
+    for inputs in ([None, None], [dict(request_sent=True), None], [{}, {}],
+                   [dict(request_sent=True), dict(request_sent=None)]):
         row = summarize({'expected': []}, ReviewResult(trace=dict(model_calls=2, wire_inputs=inputs)))
         assert metrics([row])['api_calls'] is None
 
@@ -91,3 +92,51 @@ def test_same_opcode_does_not_hide_a_false_diagnosis_at_another_head_anchor():
     row = summarize({'expected': [dict(rule_id='INV', path='app/service.py', quote='return None', duplicate_rules=['BUGS'])]},
                     ReviewResult(status='failure', findings=[good, false]))
     assert (row['tp'], row['fp'], row['duplicates']) == (1, 1, 0)
+
+
+def test_resume_reuses_complete_cases_and_rejects_changed_inputs():
+    corpus = json.loads(CASES.read_text())
+    corpus['cases'] = [next(c for c in corpus['cases'] if c['id'] == 'INV-STATE-clean')]
+    class Pass:
+        name = 'controlled-pass'
+        calls = 0
+        def generate_json(self, *, messages, max_tokens, schema):
+            Pass.calls += 1
+            payload = json.loads(messages[-1]['content'])
+            source = next(f for f in payload['fragments'] if f['role'] == 'head' and f['kind'] == 'text')
+            return json.dumps({'criteria':[{**c,'verdict':'pass','reason':'Equivalent transition',
+                'evidence':[dict(fragment_id=source['id'],quote=source['text'])]} for c in payload['criteria']],
+                'findings':[],'recommendations':[]})
+    first = evaluate(corpus, 'all', Pass)
+    resumed = evaluate(corpus, 'all', Pass, previous=first)
+    assert Pass.calls == 1
+    assert resumed['reused_cases'] == ['INV-STATE-clean']
+    changed = json.loads(json.dumps(corpus))
+    changed['cases'][0]['contract'] += ' changed'
+    import pytest
+    with pytest.raises(ValueError):
+        evaluate(changed, 'all', Pass, previous=first)
+
+
+def test_eval_rejects_git_control_files_before_a_commit():
+    corpus = json.loads(CASES.read_text())
+    corpus['cases'] = [corpus['cases'][0]]
+    corpus['cases'][0]['before']['.git/config'] = 'untrusted fixture configuration'
+    import pytest
+    with pytest.raises(ValueError,match='fixture path'):
+        evaluate(corpus, 'all', lambda: None)
+
+
+def test_resume_retries_incomplete_cases_without_erasing_prior_costs():
+    corpus = json.loads(CASES.read_text())
+    corpus['cases'] = [next(c for c in corpus['cases'] if c['id'] == 'INV-STATE-clean')]
+    class Missing:
+        name = 'controlled-failed'
+        def generate_json(self, **kwargs):
+            raise RuntimeError('unavailable')
+    first = evaluate(corpus, 'all', Missing)
+    assert first['summary']['incomplete'] == 1
+    continued = evaluate(corpus, 'all', Missing, previous=first)
+    assert continued['resumed_cases'] == ['INV-STATE-clean']
+    assert continued['summary']['model_calls'] == 2
+    assert continued['results'][0]['trace']['prior_attempt']['trace']['model_calls'] == 1

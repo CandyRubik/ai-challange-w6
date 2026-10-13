@@ -43,11 +43,8 @@ def verify(draft, findings, criteria, payload, model, limits, trace, evidence, r
     trace["verification_context_bytes"] = len(bundle)
     if len(bundle) > limits.context_bytes:
         raise ValueError("Verification context exceeds budget")
-    trace["model_calls"] += 1
     raw = generate_json(model, messages=[{"role": "system", "content": SYSTEM}, {"role": "user", "content": body}],
-                              max_tokens=limits.output_tokens, schema=schema, context_bytes=limits.context_bytes)
-    trace["token_usage"].append(getattr(model, "last_usage", None))
-    trace["wire_inputs"].append(getattr(model, "last_input", None))
+                              max_tokens=limits.output_tokens, schema=schema, context_bytes=limits.context_bytes, trace=trace, validate=Verification.model_validate_json)
     if len(raw.encode()) > limits.output_tokens * 16:
         raise ValueError("Verification response exceeds budget")
     decisions = Verification.model_validate_json(raw).decisions

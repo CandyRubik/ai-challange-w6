@@ -20,7 +20,7 @@ def main() -> int:
     parser.add_argument("--profile", type=Path, help="Explicit trusted local profile for bootstrap")
     parser.add_argument("--format", choices=["json", "markdown"], default="markdown")
     parser.add_argument("--explain-policy", action="store_true")
-    parser.add_argument("--semantic", action="store_true", help="Explicitly enable bounded DeepSeek review (up to two calls)")
+    parser.add_argument("--semantic", action="store_true", help="Explicitly enable bounded DeepSeek review (up to four calls including structural retries)")
     parser.add_argument("--context-bytes", type=int, default=48_000)
     parser.add_argument("--output-tokens", type=int, default=4_000)
     args = parser.parse_args()
