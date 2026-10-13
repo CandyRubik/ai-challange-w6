@@ -149,3 +149,15 @@ def test_inline_publisher_keeps_summary_status_and_validates_before_writes(tmp_p
     assert publish(api,context,artifact,repository=repo)=='failure'
     assert len(writes)==1 and len(comments)==1
     assert any('AI review' in r.get('body','') or 'Project review' in r.get('body','') for r in api.items('/issues/4/comments'))
+
+
+def test_complete_review_preserves_human_replies_and_foreign_review_comments(tmp_path):
+    api, context, result, repo, files, comments, reviews, writes, guard, pr = setup(tmp_path)
+    publish_inline(api,context,result,repo,guard=guard)
+    for update in [{'user':{'login':'human','type':'User'}},{'in_reply_to_id':comments[0]['id']},
+                   {'pull_request_review_id':99}]:
+        comments.append({**comments[0],'id':100+len(comments),**update})
+    bodies = [c['body'] for c in comments[1:]]
+    publish_inline(api,context,result.model_copy(update={'findings':[]}),repo,guard=guard)
+    assert [c['body'] for c in comments[1:]]==bodies
+    assert 'superseded' in comments[0]['body']

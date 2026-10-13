@@ -14,7 +14,8 @@ BATCH = '<!-- ai-review:batch:v1:'
 def published_reviews(reviews):
     return {r['id'] for r in reviews if bot_authored(r) and r.get('state') == 'COMMENTED'
             and type(r.get('id')) is int
-            and re.fullmatch(re.escape(BATCH)+r'[0-9a-f]{40}:[0-9a-f]{64} -->',raw_body(r))}
+            and re.fullmatch(re.escape(BATCH)+re.escape(str(r.get('commit_id')))+r':[0-9a-f]{64} -->',raw_body(r))
+            and re.fullmatch(r'[0-9a-f]{40}',str(r.get('commit_id')))}
 
 
 def matches(comment, group, head, published):
