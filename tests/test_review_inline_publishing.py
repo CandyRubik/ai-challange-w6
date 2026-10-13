@@ -164,18 +164,26 @@ def test_complete_review_preserves_human_replies_and_foreign_review_comments(tmp
 
 
 def test_error_even_with_complete_execution_keeps_existing_inline_current(tmp_path):
+    from reviewer.publishing import make_artifact, publish
     api, context, result, repo, files, comments, reviews, writes, guard, pr = setup(tmp_path)
     publish_inline(api,context,result,repo,guard=guard)
-    current = result.model_copy(update={'status':'error','execution':'complete','findings':[]})
-    publish_inline(api,context,current,repo,guard=guard)
+    current = result.model_copy(update={'status':'error','execution':'complete','findings':[],
+        'criteria':[c.model_copy(update={'verdict':'pass'}) for c in result.criteria]})
+    assert publish(api,context,make_artifact(context,current),repository=repo)=='error'
     assert 'superseded' not in comments[0]['body']
 
 
-def test_retirement_preserves_large_original_body_without_truncation(tmp_path):
+@pytest.mark.parametrize('edited_oversize', [False, True])
+def test_retirement_preserves_large_original_body_without_truncation(tmp_path, edited_oversize):
     api, context, result, repo, files, comments, reviews, writes, guard, pr = setup(tmp_path)
-    large = result.model_copy(update={'findings':[result.findings[0].model_copy(update={'message':'x'*57_000})]})
+    large = result.model_copy(update={'findings':[result.findings[0].model_copy(update={'message':'x'*58_000})]})
     publish_inline(api,context,large,repo,guard=guard)
+    if edited_oversize:
+        comments[0]['body'] = comments[0]['body'].split('\n',1)[0]+'\n'+'x'*64_000
     original = comments[0]['body']
-    assert len(original.encode())>57_000
-    publish_inline(api,context,result.model_copy(update={'findings':[]}),repo,guard=guard)
-    assert comments[0]['body'].endswith(original) and len(comments[0]['body'].encode())<64_000
+    assert len(original.encode())>58_000
+    fallback = publish_inline(api,context,result.model_copy(update={'findings':[]}),repo,guard=guard)
+    if edited_oversize:
+        assert comments[0]['body']==original and fallback
+    else:
+        assert comments[0]['body'].endswith(original) and len(comments[0]['body'].encode())<64_000
