@@ -232,3 +232,25 @@ def test_visible_comment_with_temporarily_hidden_review_prevents_a_duplicate_pos
     api.request = hidden
     publish_inline(api,context,result,repo,guard=guard)
     assert len(writes)==1 and len(comments)==1
+
+
+@pytest.mark.parametrize('first_visible', ['declaration','orphan'])
+def test_observed_identity_survives_later_empty_readbacks(tmp_path, first_visible):
+    api, context, result, repo, files, comments, reviews, writes, guard, pr = setup(tmp_path)
+    publish_inline(api,context,result,repo,guard=guard)
+    original, reads = api.request, {'comments':0,'reviews':0}
+    def disappearing(method,path,body=None,**kwargs):
+        response = original(method,path,body,**kwargs)
+        if method=='GET' and path in ('/pulls/4/comments','/pulls/4/reviews'):
+            kind = path.rsplit('/',1)[1]
+            reads[kind] += 1
+            visible = (kind=='comments' and first_visible=='orphan') or (kind=='reviews' and first_visible=='declaration')
+            return response if reads[kind]==1 and visible else []
+        return response
+    api.request = disappearing
+    with pytest.raises(GitHubError,match='confirmed'):
+        publish_inline(api,context,result,repo,guard=guard)
+    assert len(writes)==1 and len(comments)==1
+    api.request = original
+    publish_inline(api,context,result,repo,guard=guard)
+    assert len(writes)==1

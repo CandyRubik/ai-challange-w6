@@ -70,15 +70,17 @@ def readback(api, context, guard, attempt):
     return owned_batches(reviews), comments
 
 
-def reconcile(api, context, groups, batches, comments, guard):
+def reconcile(api, context, groups, batches, comments, guard, observed):
     missing, delayed = [], []
     for group in groups:
         existing = next((c for c in comments if matches(c,group,context.head_sha,group_reviews(batches,group,context.head_sha))),None)
         if existing:
+            observed.add(group['key'])
             update_comment(api,existing,group['body'],guard)
-        elif (group_reviews(batches,group,context.head_sha,published=False)
+        elif (group['key'] in observed or group_reviews(batches,group,context.head_sha,published=False)
               or any(matches(c,group,context.head_sha,{c['pull_request_review_id']}) for c in comments
                      if type(c.get('pull_request_review_id')) is int)):
+            observed.add(group['key'])
             delayed.append(group)
         else:
             missing.append(group)
@@ -92,14 +94,15 @@ def publish_inline(api, context, result, repository, *, guard):
     groups, fallback = plan_inline(context,result,files,repository)
     comments = api.items(f'/pulls/{context.pr_number}/comments')
     batches = owned_batches(api.items(f'/pulls/{context.pr_number}/reviews'))
-    missing, delayed = reconcile(api,context,groups,batches,comments,guard)
+    observed = set()
+    missing, delayed = reconcile(api,context,groups,batches,comments,guard,observed)
     if delayed:
         for attempt in range(3):
             try:
                 batches, comments = readback(api,context,guard,attempt)
             except GitHubError:
                 continue
-            missing, delayed = reconcile(api,context,groups,batches,comments,guard)
+            missing, delayed = reconcile(api,context,groups,batches,comments,guard,observed)
             if not delayed:
                 break
         else:
