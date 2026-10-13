@@ -2,7 +2,6 @@
 import hashlib
 import json
 import re
-from difflib import SequenceMatcher
 
 from .report import finding_details, safe_comment
 
@@ -74,11 +73,9 @@ def anchor(context, finding, files, repository):
         if file.get('sha') != oid:
             return None
         current = after if side == 'RIGHT' else before
-        actual = set()
-        for op in SequenceMatcher(None,before.splitlines(),after.splitlines()).get_opcodes():
-            if op[0] != 'equal':
-                first,last = (op[3],op[4]) if side == 'RIGHT' else (op[1],op[2])
-                actual.update(range(first+1,last+1))
+        actual = patch_lines(repository.run('diff','--no-ext-diff','--no-textconv','--no-color','--text',
+            '--find-renames','--unified=3',context.merge_base_sha,context.head_sha,'--',
+            context.before_paths[path],path).decode('utf-8'))[side]
         source = current.splitlines(keepends=True)
         if ref.line > len(source):
             return None

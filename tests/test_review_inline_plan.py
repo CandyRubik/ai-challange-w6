@@ -64,19 +64,21 @@ def test_before_anchor_uses_left(tmp_path):
     assert groups[0]['anchor']['side']=='LEFT' and groups[0]['anchor']['line']==2
 
 
-def test_stale_patch_cannot_anchor_a_line_unchanged_against_current_base(tmp_path):
+@pytest.mark.parametrize('repeated', [False, True])
+def test_stale_patch_cannot_anchor_a_line_unchanged_against_current_base(tmp_path, repeated):
     api, context, result, repo, files, pr = setup(tmp_path)
-    before = 'import json\n\ndef apply(state):\n    return state\n'
-    after = before.replace('return state','return None')
-    class Reader:
-        def read(self, sha, path):
-            return after if sha == context.head_sha else before
+    path = files[0]['filename']
+    before = 'pass\n'*300 if repeated else 'import json\n\ndef apply(state):\n    return state\n'
+    after = 'pass\n'*150+'added = 1\n'+'pass\n'*150 if repeated else before.replace('return state','return None')
+    pr['base']['sha'] = commit(repo.root,{path:before})
+    pr['head']['sha'] = commit(repo.root,{path:after})
+    context = capture(api,repo.root,4,run_id=10,run_attempt=1)
     raw = after.encode()
     files[0].update(sha=hashlib.sha1(b'blob '+str(len(raw)).encode()+b'\0'+raw).hexdigest(),
-                    patch='@@ -0,0 +1 @@\n+import json')
+        patch='@@ -199 +200 @@\n-old_from_a_different_base\n+pass' if repeated else '@@ -0,0 +1 @@\n+import json')
     finding = result.findings[0].model_copy(update={'source':None,
-        'evidence':Evidence(path='app/state/service.py',sha=context.head_sha,line=1,quote=after)})
-    groups, fallback = plan_inline(context,result.model_copy(update={'findings':[finding]}),files,Reader())
+        'evidence':Evidence(path=path,sha=context.head_sha,line=200 if repeated else 1,quote='pass\n' if repeated else 'import json\n')})
+    groups, fallback = plan_inline(context,result.model_copy(update={'findings':[finding]}),files,repo)
     assert not groups and fallback
 
 
