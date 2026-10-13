@@ -19,6 +19,10 @@ class Model:
     def generate_json(self, *, messages, max_tokens, schema):
         self.calls += 1
         self.payload = json.loads(messages[-1]["content"])
+        if "candidates" in self.payload:
+            return json.dumps({"decisions": [{"index": c["index"], "verdict": "confirmed",
+                "reason": "Fixture confirms reachable defect", "counterargument": "Caller requires preserved state",
+                "evidence": c["evidence"]} for c in self.payload["candidates"]]})
         evidence = next(f for f in self.payload["fragments"] if f["role"] == "head" and "return None" in f["text"])
         return json.dumps({
             "criteria": [{**criterion, "verdict": "violation" if criterion["rule_id"] == "ARCH-STATE-PURE" else "pass",
@@ -126,7 +130,7 @@ def test_small_change_in_large_module_retrieves_affected_function(tmp_path):
     model = Model()
     result = review(root, base, head, model=model, limits=Limits(context_bytes=16_000))
     assert result.status == "failure"
-    assert model.calls == 1
+    assert model.calls == 2
     assert result.findings[0].evidence.line == 1002
 
 
@@ -135,6 +139,8 @@ def test_bug_severity_controls_blocking_and_renders_recommendation(tmp_path, sev
     class Bug(Model):
         def generate_json(self, **kwargs):
             draft = json.loads(super().generate_json(**kwargs))
+            if "decisions" in draft:
+                return json.dumps(draft)
             for criterion in draft["criteria"]:
                 criterion["verdict"] = "violation" if criterion["rule_id"] == "BUGS" else "pass"
             draft["findings"][0].update(rule_id="BUGS", severity=severity)
@@ -167,7 +173,7 @@ def test_empty_file_uses_verified_git_metadata(tmp_path):
 
 
 @pytest.mark.parametrize("status, expected", [(200, "failure"), (503, "error")])
-def test_deepseek_adapter_has_one_bounded_http_call(tmp_path, monkeypatch, status, expected):
+def test_deepseek_adapter_has_bounded_http_calls(tmp_path, monkeypatch, status, expected):
     import httpx
     from openai import OpenAI
     import reviewer.deepseek as adapter
@@ -180,7 +186,7 @@ def test_deepseek_adapter_has_one_bounded_http_call(tmp_path, monkeypatch, statu
             return httpx.Response(status, json={"error": {"message": "test unavailable"}})
         response = Model().generate_json(messages=body["messages"], max_tokens=body["max_tokens"], schema={})
         return httpx.Response(200, json={"id": "test", "object": "chat.completion", "created": 1,
-            "model": "configured-model", "choices": [{"index": 0, "message": {"role": "assistant", "content": response}, "finish_reason": "stop"}]})
+            "model": "configured-model", "usage": {"prompt_tokens": 50, "completion_tokens": 11, "total_tokens": 61}, "choices": [{"index": 0, "message": {"role": "assistant", "content": response}, "finish_reason": "stop"}]})
 
     monkeypatch.setenv("DEEPSEEK_API_KEY", "test-only-key")
     monkeypatch.setattr(adapter, "OpenAI", lambda **kwargs: OpenAI(**kwargs, http_client=httpx.Client(transport=httpx.MockTransport(handle))))
@@ -188,7 +194,9 @@ def test_deepseek_adapter_has_one_bounded_http_call(tmp_path, monkeypatch, statu
     head = commit(root, {"app/state/service.py": "def apply(state):\n    return None\n"})
     result = review(root, base, head, model=adapter.DeepSeekReviewModel(), limits=Limits(output_tokens=512))
     assert result.status == expected
-    assert len(requests) == 1
+    assert len(requests) == (2 if status == 200 else 1)
+    if status == 200:
+        assert [u["total_tokens"] for u in result.trace["token_usage"]] == [61, 61]
     assert json.loads(requests[0].content)["thinking"] == {"type": "disabled"}
     assert requests[0].extensions["timeout"]["read"] == 60
 
@@ -206,6 +214,8 @@ def test_deleted_api_finding_cites_removed_code(tmp_path):
     class Deleted(Model):
         def generate_json(self, *, messages, **kwargs):
             payload = json.loads(messages[-1]["content"])
+            if "candidates" in payload:
+                return super().generate_json(messages=messages, **kwargs)
             source = next(f for f in payload["fragments"] if f["role"] == "before" and f["kind"] == "text")
             reference = {"fragment_id": source["id"], "quote": "def apply(state):"}
             return json.dumps({"criteria": [{**c, "verdict": "violation" if c["rule_id"] == "BUGS" else "pass",
@@ -289,7 +299,8 @@ def test_causal_quote_can_include_a_trailing_newline(tmp_path, quote):
     class Quoted(Model):
         def generate_json(self, **kwargs):
             draft = json.loads(super().generate_json(**kwargs))
-            draft["findings"][0]["evidence"][0]["quote"] = quote
+            if "decisions" not in draft:
+                draft["findings"][0]["evidence"][0]["quote"] = quote
             return json.dumps(draft)
 
     root, base = semantic_repository(tmp_path)
