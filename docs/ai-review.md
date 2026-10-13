@@ -229,6 +229,9 @@ workflow должен отдельно подтвердить, что выпол
 
 ```bash
 python scripts/publish_review.py --context context.json --artifact result.json
+# Offline: GitHub files JSON + доступные pinned Git objects, без credentials:
+python scripts/publish_review.py --context context.json --artifact result.json \
+  --inline-plan files.json --repo .
 # Явная публикация подготовленного trusted-run artifact, GITHUB_TOKEN только в env:
 python scripts/publish_review.py --context context.json --artifact result.json --publish
 ```
@@ -324,6 +327,17 @@ Case-set hash и fingerprint связывают label с конкретным р
 или context не получает исключение. Raw summary и каждый finding остаются в отчёте.
 Разметка не создаёт TP, не очищает incomplete/clean blocking и не участвует в PR gate,
 профиле или решениях владельца. Подготовка старого отчёта сохраняет его исходные counts.
+
+### Планирование inline
+
+`--inline-plan` принимает сохранённый ответ GitHub PR files API и показывает JSON комментариев
+без сети и секретов; режим несовместим с `--publish`. Проверяются Git blob SHA, фактические
+изменения относительно merge-base и изменённые строки полного patch. Primary evidence
+определяет anchor: head → RIGHT, before → LEFT; rename учитывает прежний путь. Caller вне diff,
+metadata, отсутствующий/truncated patch или недоказуемая строка остаются в summary.
+Несколько правил на одной строке объединяются с сохранением каждого основания и сценария.
+План ограничен10 комментариями; остальные findings сохраняются в полном отчёте. Автоматическая
+публикация batch review подключается следующим самостоятельным срезом.
 
 Оценка относится к блокирующим корневым дефектам на маленьком размеченном наборе;
 она не доказывает точность всех фраз и рекомендаций. Спорные детали и duplicates
