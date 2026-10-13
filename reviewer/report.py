@@ -16,9 +16,14 @@ def markdown(result: ReviewResult, *, explain_policy: bool = False) -> str:
               "Only configured checks are assessed; this is not a full architectural review.", "", "## Findings"]
     for finding in result.findings:
         evidence, source = finding.evidence, finding.source
+        location = "metadata" if evidence.kind == "file_metadata" else str(evidence.line)
         lines += [f"- **{text(finding.rule_id)}** ({'blocking' if finding.blocking else 'advisory'}): {text(finding.message)}",
-                  f"  Evidence: {text(evidence.path)}:{evidence.line} @ `{evidence.sha}` — {text(evidence.quote)}",
-                  f"  Rule source: {text(source.path)}:{source.line} @ `{source.sha}` — {text(source.quote)}"]
+                  f"  Evidence: {text(evidence.path)}:{location} @ `{evidence.sha}` — {text(evidence.quote)}"]
+        if source:
+            lines.append(f"  Rule source: {text(source.path)}:{source.line} @ `{source.sha}` — {text(source.quote)}")
+        if finding.scenario:
+            lines += [f"  Scenario: {text(finding.scenario)}; impact: {text(finding.impact)}",
+                      f"  Recommendation: {text(finding.recommendation)}"]
     if not result.findings:
         lines.append("No new violations found by the configured checks.")
     lines += ["", "## Coverage"]
@@ -29,4 +34,10 @@ def markdown(result: ReviewResult, *, explain_policy: bool = False) -> str:
     if explain_policy:
         lines += ["", "## Policy"]
         lines += [f"- **{text(r.id)}** [{r.level}, {r.check}] {text(r.requirement)}; scope: {text(', '.join(r.scope))}" for r in result.policy]
+    if result.recommendations:
+        lines += ["", "## Recommendations", *[f"- {text(item)}" for item in result.recommendations]]
+    if result.trace:
+        lines += ["", "## Analysis", f"Model: {text(result.trace.get('model', ''))}; calls: {result.trace.get('model_calls', 0)}",
+                  f"Optional fragments omitted: {result.trace.get('optional_fragments_omitted', 0)}; unavailable sources: {len(result.trace.get('optional_sources_unavailable', []))}",
+                  f"Context SHA256: `{result.trace.get('context_sha256', '')}`"]
     return "\n\n".join(lines) + "\n"

@@ -5,6 +5,7 @@ from pathlib import Path, PurePosixPath
 
 from .git import Repository
 from .models import Criterion, Evidence, Finding, Profile, ReviewResult
+from .semantic_models import JsonModel, Limits
 
 
 def imports(text: str, path: str, forbidden: list[str]) -> tuple[dict[str, int], set[str]]:
@@ -50,7 +51,8 @@ def boundaries(text: str, path: str, forbidden: list[str]) -> tuple[dict[str, in
     return {name: line for name, line in modules.items() if matches(name, forbidden)}, possible
 
 
-def review(root: Path, base: str, head: str, *, profile_path: Path | None = None) -> ReviewResult:
+def review(root: Path, base: str, head: str, *, profile_path: Path | None = None,
+           model: JsonModel | None = None, limits: Limits | None = None) -> ReviewResult:
     repository = Repository(root)
     metadata = {"profile_origin": "explicit_local" if profile_path else "base"}
     sources, findings, criteria, not_applicable = {}, [], [], []
@@ -107,6 +109,10 @@ def review(root: Path, base: str, head: str, *, profile_path: Path | None = None
     incomplete = [c for c in criteria if c.verdict == "inconclusive"]
     status = "error" if any(levels[c.rule_id] == "must" for c in incomplete) else (
         "failure" if any(f.blocking for f in findings) else "success")
-    return ReviewResult(**metadata, findings=findings, criteria=criteria, status=status,
+    result = ReviewResult(**metadata, findings=findings, criteria=criteria, status=status,
         execution="partial" if incomplete else "complete", not_applicable=not_applicable,
         limitations=[f"{c.path} [{c.rule_id}]: {c.reason}" for c in incomplete])
+    if model is not None:
+        from .semantic import analyze
+        return analyze(repository, result, changes, model, limits or Limits())
+    return result

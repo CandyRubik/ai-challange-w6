@@ -17,6 +17,8 @@ class Change:
     status: str
     path: str
     before_path: str
+    before_mode: str
+    after_mode: str
 
 
 class Repository:
@@ -32,6 +34,9 @@ class Repository:
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError) as error:
             raise GitError(f"Git operation failed: {args[0]}") from error
 
+    def paths(self, sha: str) -> list[str]:
+        return [path.decode("utf-8") for path in self.run("ls-tree", "-r", "-z", "--name-only", sha).split(b"\0") if path]
+
     def snapshot(self, base: str, head: str) -> tuple[Snapshot, list[Change]]:
         base_sha, head_sha = (
             self.run("rev-parse", "--verify", "--end-of-options", ref + "^{commit}").decode().strip()
@@ -43,10 +48,11 @@ class Repository:
         fields, changes = iter(raw.rstrip(b"\0").split(b"\0")), []
         if raw:
             for header in fields:
-                status = header.decode().split()[-1]
+                metadata = header.decode().split()
+                status = metadata[-1]
                 before = next(fields).decode("utf-8")
                 after = next(fields).decode("utf-8") if status.startswith("R") else before
-                changes.append(Change(status[0], after, before))
+                changes.append(Change(status[0], after, before, metadata[0][1:], metadata[1]))
         return Snapshot(base_sha=base_sha, head_sha=head_sha, merge_base_sha=ancestor,
                         diff_sha256=hashlib.sha256(raw).hexdigest()), changes
 

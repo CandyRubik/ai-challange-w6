@@ -68,6 +68,7 @@ class Snapshot(Record):
 class Evidence(Source):
     sha: str
     line: int
+    kind: Literal["text", "file_metadata"] = "text"
 
 
 class Finding(Record):
@@ -75,7 +76,13 @@ class Finding(Record):
     blocking: bool
     message: str
     evidence: Evidence
-    source: Evidence
+    source: Evidence | None = None
+    category: Literal["bug", "architecture", "forbidden", "best_practice", "invariant"] = "forbidden"
+    severity: Literal["critical", "major", "minor"] = "major"
+    scenario: str = ""
+    impact: str = ""
+    recommendation: str = ""
+    supporting_evidence: list[Evidence] = Field(default_factory=list)
 
 
 class Criterion(Record):
@@ -83,6 +90,7 @@ class Criterion(Record):
     rule_id: str
     verdict: Literal["pass", "violation", "inconclusive"]
     reason: str
+    evidence: list[Evidence] = Field(default_factory=list)
 
 
 class ReviewResult(Record):
@@ -96,3 +104,5 @@ class ReviewResult(Record):
     not_applicable: list[str] = Field(default_factory=list)
     limitations: list[str] = Field(default_factory=list)
     policy: list[Rule] = Field(default_factory=list)
+    recommendations: list[str] = Field(default_factory=list)
+    trace: dict = Field(default_factory=dict)
