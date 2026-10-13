@@ -35,3 +35,22 @@ def test_uncertain_summary_failure_finalizes_status_without_another_comment(tmp_
     mark_unfinished(api,4,env,'Summary POST uncertain',summary=False)
     assert statuses[0]['state']=='error'
     assert not any(method=='POST' and path.endswith('/comments') for method,path,body in calls)
+
+
+@pytest.mark.parametrize('failure', [KeyError, TypeError, ValueError, OSError])
+def test_failed_confirmation_preserves_unknown_post_classification(tmp_path, failure):
+    api, context, artifact, pr, calls, statuses, root = fixture(tmp_path)
+    original, checks = api.request, []
+    def uncertain(method, path, body=None, **kwargs):
+        response = original(method,path,body,**kwargs)
+        if method=='POST' and path.endswith('/comments'):
+            raise GitHubError('Response lost after acceptance')
+        return response
+    def guard():
+        checks.append(True)
+        if len(checks)>1:
+            raise failure('Malformed freshness response')
+    api.request = uncertain
+    with pytest.raises(UncertainSummaryPost):
+        upsert_summary(api,4,SUMMARY_MARKER+'\nReview',before_write=guard)
+    assert sum(method=='POST' and path.endswith('/comments') for method,path,body in calls)==1

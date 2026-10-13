@@ -206,7 +206,7 @@ def upsert_summary(api, number, body, *, before_write):
                     recovered = api.items(f'/issues/{number}/comments')
                 except GitHubError:
                     continue
-                except ValueError:
+                except (ValueError, KeyError, TypeError, OSError):
                     break
                 if any(bot_authored(c) and raw_body(c) == body for c in recovered):
                     return
