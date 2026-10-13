@@ -1,0 +1,3193 @@
+{
+  "case_set_version": 2,
+  "split": "all",
+  "case_set_sha256": "d11cbdbf88c7ac6c02b4df7187a2783a70a5bc9ee6b44db8a6106a14cd16ece6",
+  "summary": {
+    "tp": 11,
+    "fp": 4,
+    "fn": 2,
+    "incomplete": 3,
+    "cases": 26,
+    "precision": 0.7333333333333333,
+    "recall": 0.8461538461538461,
+    "clean_blocked": 0,
+    "clean_passed": 12,
+    "model_calls": 38,
+    "api_calls": 38,
+    "elapsed_ms": 127742,
+    "token_usage": [
+      {
+        "completion_tokens": 520,
+        "prompt_tokens": 2026,
+        "total_tokens": 2546,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 0
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 2026
+      },
+      {
+        "completion_tokens": 353,
+        "prompt_tokens": 1861,
+        "total_tokens": 2214,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 0
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 1861
+      },
+      {
+        "completion_tokens": 282,
+        "prompt_tokens": 2056,
+        "total_tokens": 2338,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 1024
+        },
+        "prompt_cache_hit_tokens": 1024,
+        "prompt_cache_miss_tokens": 1032
+      },
+      {
+        "completion_tokens": 530,
+        "prompt_tokens": 2079,
+        "total_tokens": 2609,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 896
+        },
+        "prompt_cache_hit_tokens": 896,
+        "prompt_cache_miss_tokens": 1183
+      },
+      {
+        "completion_tokens": 535,
+        "prompt_tokens": 2106,
+        "total_tokens": 2641,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 512
+        },
+        "prompt_cache_hit_tokens": 512,
+        "prompt_cache_miss_tokens": 1594
+      },
+      {
+        "completion_tokens": 272,
+        "prompt_tokens": 2085,
+        "total_tokens": 2357,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 1024
+        },
+        "prompt_cache_hit_tokens": 1024,
+        "prompt_cache_miss_tokens": 1061
+      },
+      {
+        "completion_tokens": 553,
+        "prompt_tokens": 2062,
+        "total_tokens": 2615,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 896
+        },
+        "prompt_cache_hit_tokens": 896,
+        "prompt_cache_miss_tokens": 1166
+      },
+      {
+        "completion_tokens": 487,
+        "prompt_tokens": 2128,
+        "total_tokens": 2615,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 512
+        },
+        "prompt_cache_hit_tokens": 512,
+        "prompt_cache_miss_tokens": 1616
+      },
+      {
+        "completion_tokens": 317,
+        "prompt_tokens": 2059,
+        "total_tokens": 2376,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 1024
+        },
+        "prompt_cache_hit_tokens": 1024,
+        "prompt_cache_miss_tokens": 1035
+      },
+      {
+        "completion_tokens": 690,
+        "prompt_tokens": 2137,
+        "total_tokens": 2827,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 896
+        },
+        "prompt_cache_hit_tokens": 896,
+        "prompt_cache_miss_tokens": 1241
+      },
+      {
+        "completion_tokens": 482,
+        "prompt_tokens": 2271,
+        "total_tokens": 2753,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 512
+        },
+        "prompt_cache_hit_tokens": 512,
+        "prompt_cache_miss_tokens": 1759
+      },
+      {
+        "completion_tokens": 274,
+        "prompt_tokens": 2147,
+        "total_tokens": 2421,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 1024
+        },
+        "prompt_cache_hit_tokens": 1024,
+        "prompt_cache_miss_tokens": 1123
+      },
+      {
+        "completion_tokens": 538,
+        "prompt_tokens": 2048,
+        "total_tokens": 2586,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 896
+        },
+        "prompt_cache_hit_tokens": 896,
+        "prompt_cache_miss_tokens": 1152
+      },
+      {
+        "completion_tokens": 310,
+        "prompt_tokens": 1912,
+        "total_tokens": 2222,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 512
+        },
+        "prompt_cache_hit_tokens": 512,
+        "prompt_cache_miss_tokens": 1400
+      },
+      {
+        "completion_tokens": 351,
+        "prompt_tokens": 2076,
+        "total_tokens": 2427,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 1024
+        },
+        "prompt_cache_hit_tokens": 1024,
+        "prompt_cache_miss_tokens": 1052
+      },
+      {
+        "completion_tokens": 468,
+        "prompt_tokens": 2047,
+        "total_tokens": 2515,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 896
+        },
+        "prompt_cache_hit_tokens": 896,
+        "prompt_cache_miss_tokens": 1151
+      },
+      {
+        "completion_tokens": 283,
+        "prompt_tokens": 1909,
+        "total_tokens": 2192,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 512
+        },
+        "prompt_cache_hit_tokens": 512,
+        "prompt_cache_miss_tokens": 1397
+      },
+      {
+        "completion_tokens": 247,
+        "prompt_tokens": 2084,
+        "total_tokens": 2331,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 1024
+        },
+        "prompt_cache_hit_tokens": 1024,
+        "prompt_cache_miss_tokens": 1060
+      },
+      {
+        "completion_tokens": 484,
+        "prompt_tokens": 2077,
+        "total_tokens": 2561,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 896
+        },
+        "prompt_cache_hit_tokens": 896,
+        "prompt_cache_miss_tokens": 1181
+      },
+      {
+        "completion_tokens": 376,
+        "prompt_tokens": 1927,
+        "total_tokens": 2303,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 512
+        },
+        "prompt_cache_hit_tokens": 512,
+        "prompt_cache_miss_tokens": 1415
+      },
+      {
+        "completion_tokens": 421,
+        "prompt_tokens": 2102,
+        "total_tokens": 2523,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 1024
+        },
+        "prompt_cache_hit_tokens": 1024,
+        "prompt_cache_miss_tokens": 1078
+      },
+      {
+        "completion_tokens": 531,
+        "prompt_tokens": 2064,
+        "total_tokens": 2595,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 896
+        },
+        "prompt_cache_hit_tokens": 896,
+        "prompt_cache_miss_tokens": 1168
+      },
+      {
+        "completion_tokens": 292,
+        "prompt_tokens": 1896,
+        "total_tokens": 2188,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 512
+        },
+        "prompt_cache_hit_tokens": 512,
+        "prompt_cache_miss_tokens": 1384
+      },
+      {
+        "completion_tokens": 330,
+        "prompt_tokens": 2021,
+        "total_tokens": 2351,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 1024
+        },
+        "prompt_cache_hit_tokens": 1024,
+        "prompt_cache_miss_tokens": 997
+      },
+      {
+        "completion_tokens": 528,
+        "prompt_tokens": 1984,
+        "total_tokens": 2512,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 896
+        },
+        "prompt_cache_hit_tokens": 896,
+        "prompt_cache_miss_tokens": 1088
+      },
+      {
+        "completion_tokens": 501,
+        "prompt_tokens": 1992,
+        "total_tokens": 2493,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 512
+        },
+        "prompt_cache_hit_tokens": 512,
+        "prompt_cache_miss_tokens": 1480
+      },
+      {
+        "completion_tokens": 357,
+        "prompt_tokens": 2054,
+        "total_tokens": 2411,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 1024
+        },
+        "prompt_cache_hit_tokens": 1024,
+        "prompt_cache_miss_tokens": 1030
+      },
+      {
+        "completion_tokens": 1259,
+        "prompt_tokens": 6199,
+        "total_tokens": 7458,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 896
+        },
+        "prompt_cache_hit_tokens": 896,
+        "prompt_cache_miss_tokens": 5303
+      },
+      {
+        "completion_tokens": 492,
+        "prompt_tokens": 6319,
+        "total_tokens": 6811,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 512
+        },
+        "prompt_cache_hit_tokens": 512,
+        "prompt_cache_miss_tokens": 5807
+      },
+      {
+        "completion_tokens": 1393,
+        "prompt_tokens": 6235,
+        "total_tokens": 7628,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 1024
+        },
+        "prompt_cache_hit_tokens": 1024,
+        "prompt_cache_miss_tokens": 5211
+      },
+      {
+        "completion_tokens": 454,
+        "prompt_tokens": 2135,
+        "total_tokens": 2589,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 896
+        },
+        "prompt_cache_hit_tokens": 896,
+        "prompt_cache_miss_tokens": 1239
+      },
+      {
+        "completion_tokens": 365,
+        "prompt_tokens": 2020,
+        "total_tokens": 2385,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 512
+        },
+        "prompt_cache_hit_tokens": 512,
+        "prompt_cache_miss_tokens": 1508
+      },
+      {
+        "completion_tokens": 338,
+        "prompt_tokens": 2126,
+        "total_tokens": 2464,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 1024
+        },
+        "prompt_cache_hit_tokens": 1024,
+        "prompt_cache_miss_tokens": 1102
+      },
+      {
+        "completion_tokens": 524,
+        "prompt_tokens": 2099,
+        "total_tokens": 2623,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 896
+        },
+        "prompt_cache_hit_tokens": 896,
+        "prompt_cache_miss_tokens": 1203
+      },
+      {
+        "completion_tokens": 297,
+        "prompt_tokens": 1982,
+        "total_tokens": 2279,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 512
+        },
+        "prompt_cache_hit_tokens": 512,
+        "prompt_cache_miss_tokens": 1470
+      },
+      {
+        "completion_tokens": 295,
+        "prompt_tokens": 2089,
+        "total_tokens": 2384,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 1024
+        },
+        "prompt_cache_hit_tokens": 1024,
+        "prompt_cache_miss_tokens": 1065
+      },
+      {
+        "completion_tokens": 671,
+        "prompt_tokens": 2134,
+        "total_tokens": 2805,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 896
+        },
+        "prompt_cache_hit_tokens": 896,
+        "prompt_cache_miss_tokens": 1238
+      },
+      {
+        "completion_tokens": 338,
+        "prompt_tokens": 2198,
+        "total_tokens": 2536,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 1024
+        },
+        "prompt_cache_hit_tokens": 1024,
+        "prompt_cache_miss_tokens": 1174
+      }
+    ]
+  },
+  "results": [
+    {
+      "id": "INV-STATE-regression",
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "clean": false,
+      "blocked": true,
+      "status": "failure",
+      "incomplete": false,
+      "trace": {
+        "model": "deepseek-v4-flash",
+        "prompt_version": "review-v3",
+        "retriever_version": "review-v1",
+        "model_calls": 2,
+        "token_usage": [
+          {
+            "completion_tokens": 520,
+            "prompt_tokens": 2026,
+            "total_tokens": 2546,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 2026
+          },
+          {
+            "completion_tokens": 353,
+            "prompt_tokens": 1861,
+            "total_tokens": 2214,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 1861
+          }
+        ],
+        "wire_inputs": [
+          {
+            "sha256": "2640c551dc75084e6c56bcfb003524226a2b8475b02c77c9753f7cb150b0d8f7",
+            "bytes": 7165,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          },
+          {
+            "sha256": "1413a249c21c2bc3409b271dda53a428b8abcdd69963ba8e84d9280fffbe638b",
+            "bytes": 6466,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          }
+        ],
+        "excluded_paths": [],
+        "optional_sources_unavailable": [],
+        "optional_fragments_omitted": 0,
+        "context_sha256": "392211ff08feeb531ee5da9284a1c728aa406f539893cf1a02ed1490b08847e7",
+        "context_bytes": 6357,
+        "fragments": 6,
+        "verification_context_sha256": "a22867a570bc00ef152fc3e93de7f4f8f9fe270662bee98eeb711e247e10fcf6",
+        "verification_context_bytes": 5896,
+        "verification": [
+          {
+            "index": 0,
+            "verdict": "confirmed",
+            "reason": "The head version of apply() is `def apply(state):\n    return None\n`, which discards the supplied state and returns None. The before version returned the state (`return state`), preserving it. The documented normative invariant in README.md states 'Transitions preserve the supplied state.', and the only changed line (line 2) removed that preservation, violating INV-STATE. No counterargument based on reachability, caller contract, or accepted alternatives survives: apply(state) is a public module-level function with a clear contract to return a transition of the supplied state, and None does not preserve it.",
+            "counterargument": "The strongest counterargument is that a transition is allowed to be a void/None operation and no caller contract is shown in the provided snippets, so returning None could be an intentional 'no-op' that does not violate the invariant. This fails because the policy rule INV-STATE explicitly requires transitions to preserve the supplied state, and the README quote is the normative contract; returning None discards the state entirely rather than preserving it, and the before code confirms preservation was the established behavior.",
+            "rule_id": "INV-STATE",
+            "path": "app/state/service.py",
+            "evidence": [
+              {
+                "path": "app/state/service.py",
+                "quote": "def apply(state):\n    return None\n",
+                "sha": "856693cdbd74d25c54e9bdfe321810e2772e3c20",
+                "line": 1,
+                "kind": "text"
+              },
+              {
+                "path": "app/state/service.py",
+                "quote": "def apply(state):\n    return state\n",
+                "sha": "c7748b5f5ba673d7033507924a459d6ba2b52985",
+                "line": 1,
+                "kind": "text"
+              },
+              {
+                "path": "README.md",
+                "quote": "Transitions preserve the supplied state.",
+                "sha": "c7748b5f5ba673d7033507924a459d6ba2b52985",
+                "line": 1,
+                "kind": "text"
+              }
+            ]
+          }
+        ],
+        "elapsed_ms": 6294
+      },
+      "profile_sha256": "d53e62530bc3e5fbc580a81847f2597cbea84221abf7c4bda1e6fdde905fd6c0",
+      "snapshot": {
+        "base_sha": "c7748b5f5ba673d7033507924a459d6ba2b52985",
+        "head_sha": "856693cdbd74d25c54e9bdfe321810e2772e3c20",
+        "merge_base_sha": "c7748b5f5ba673d7033507924a459d6ba2b52985",
+        "diff_sha256": "485d4a75dc18e5833df21c88116246b91c26d118bf4521577529183854e22066"
+      },
+      "findings": [
+        {
+          "rule_id": "INV-STATE",
+          "blocking": true,
+          "message": "apply() no longer preserves the supplied state and returns None.",
+          "evidence": {
+            "path": "app/state/service.py",
+            "quote": "def apply(state):\n    return state\n",
+            "sha": "c7748b5f5ba673d7033507924a459d6ba2b52985",
+            "line": 1,
+            "kind": "text"
+          },
+          "source": {
+            "path": "README.md",
+            "quote": "Transitions preserve the supplied state.",
+            "sha": "c7748b5f5ba673d7033507924a459d6ba2b52985",
+            "line": 1,
+            "kind": "text"
+          },
+          "category": "invariant",
+          "severity": "critical",
+          "scenario": "Any caller invokes apply(state) expecting a transition result that preserves the supplied state, e.g. result = apply(state).",
+          "impact": "The supplied state is discarded and callers receive None, violating the documented invariant and causing downstream failures when the state is dereferenced.",
+          "recommendation": "Restore returning the supplied state (or an equivalent preserved state) instead of None.",
+          "supporting_evidence": [
+            {
+              "path": "app/state/service.py",
+              "quote": "def apply(state):\n    return state\n",
+              "sha": "c7748b5f5ba673d7033507924a459d6ba2b52985",
+              "line": 1,
+              "kind": "text"
+            },
+            {
+              "path": "app/state/service.py",
+              "quote": "def apply(state):\n    return None\n",
+              "sha": "856693cdbd74d25c54e9bdfe321810e2772e3c20",
+              "line": 1,
+              "kind": "text"
+            }
+          ]
+        }
+      ],
+      "limitations": []
+    },
+    {
+      "id": "INV-STATE-clean",
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "clean": true,
+      "blocked": false,
+      "status": "success",
+      "incomplete": false,
+      "trace": {
+        "model": "deepseek-v4-flash",
+        "prompt_version": "review-v3",
+        "retriever_version": "review-v1",
+        "model_calls": 1,
+        "token_usage": [
+          {
+            "completion_tokens": 282,
+            "prompt_tokens": 2056,
+            "total_tokens": 2338,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 1024
+            },
+            "prompt_cache_hit_tokens": 1024,
+            "prompt_cache_miss_tokens": 1032
+          }
+        ],
+        "wire_inputs": [
+          {
+            "sha256": "af067e5e5fa418bae5e04cdba9f0eafd271c060dd2f876465f30a8d6a7742266",
+            "bytes": 7190,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          }
+        ],
+        "excluded_paths": [],
+        "optional_sources_unavailable": [],
+        "optional_fragments_omitted": 0,
+        "context_sha256": "aa7be088f5a92718447b0c36811de15f3db1ee7e14103a68e73ad924339b5462",
+        "context_bytes": 6382,
+        "fragments": 6,
+        "elapsed_ms": 2508
+      },
+      "profile_sha256": "d53e62530bc3e5fbc580a81847f2597cbea84221abf7c4bda1e6fdde905fd6c0",
+      "snapshot": {
+        "base_sha": "1dad1e2ef00bba5ebbb3d11256e26aaf2b8f4601",
+        "head_sha": "82df080a6b908d312ec63e33a707df8662315045",
+        "merge_base_sha": "1dad1e2ef00bba5ebbb3d11256e26aaf2b8f4601",
+        "diff_sha256": "5462c8269e5755e9e1416de5ab1dac4e4f3728518b995ef99c321fe7dbe8e74d"
+      },
+      "findings": [],
+      "limitations": []
+    },
+    {
+      "id": "INV-APPROVAL-regression",
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "clean": false,
+      "blocked": true,
+      "status": "failure",
+      "incomplete": false,
+      "trace": {
+        "model": "deepseek-v4-flash",
+        "prompt_version": "review-v3",
+        "retriever_version": "review-v1",
+        "model_calls": 2,
+        "token_usage": [
+          {
+            "completion_tokens": 530,
+            "prompt_tokens": 2079,
+            "total_tokens": 2609,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 896
+            },
+            "prompt_cache_hit_tokens": 896,
+            "prompt_cache_miss_tokens": 1183
+          },
+          {
+            "completion_tokens": 535,
+            "prompt_tokens": 2106,
+            "total_tokens": 2641,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 512
+            },
+            "prompt_cache_hit_tokens": 512,
+            "prompt_cache_miss_tokens": 1594
+          }
+        ],
+        "wire_inputs": [
+          {
+            "sha256": "905662d0b5b9f760de93809c6a3254669c81f7f761c848512b6842363101ae29",
+            "bytes": 7366,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          },
+          {
+            "sha256": "5ecffa730dc84d26f2ae444089b9755fc43513d32ccb2a44546b4646c7a5598d",
+            "bytes": 7453,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          }
+        ],
+        "excluded_paths": [],
+        "optional_sources_unavailable": [],
+        "optional_fragments_omitted": 0,
+        "context_sha256": "126d0c5baea7223217fbb9107c6fb9ea88dad13f7327b5e1e22760244b9116f8",
+        "context_bytes": 6558,
+        "fragments": 6,
+        "verification_context_sha256": "51e83b46785ac36cccd61cc1aa84043f303210fe054e2fca05599860f987139a",
+        "verification_context_bytes": 6883,
+        "verification": [
+          {
+            "index": 0,
+            "verdict": "confirmed",
+            "reason": "The head version of apply() no longer checks the approved argument: it unconditionally calls publish(). The before version contained the guard `if not approved: return`, which the diff removed (changed_lines before:app/service.py [[2,3]]). This directly violates INV-APPROVAL, which requires that a false approval return without publishing. No alternate guard or caller contract is present in the provided head fragment to preserve the invariant.",
+            "counterargument": "The strongest possible counterargument is that the head fragment is truncated or that the approved check may have moved into publish() or into callers. However, the head text shows apply(approved, publish) with an unused approved parameter and an unconditional publish() call, and no caller code is provided that would enforce the invariant. The before code explicitly had the guard, and the file shrank from 80 bytes to 44 bytes consistent with its removal, so the counterargument fails.",
+            "rule_id": "INV-APPROVAL",
+            "path": "app/service.py",
+            "evidence": [
+              {
+                "path": "app/service.py",
+                "quote": "def apply(approved, publish):\n    publish()\n",
+                "sha": "54efd60a476e6f1c452be929ff4c8e1e349d1f43",
+                "line": 1,
+                "kind": "text"
+              },
+              {
+                "path": "app/service.py",
+                "quote": "def apply(approved, publish):\n    if not approved:\n        return\n",
+                "sha": "0a07f524453d65cd68275abfd8c93d6a9acf89b7",
+                "line": 1,
+                "kind": "text"
+              },
+              {
+                "path": "app/service.py",
+                "quote": "{\"mode\": \"100644\", \"status\": \"M\", \"previous_path\": \"app/service.py\", \"bytes\": 44, \"sha256\": \"f226e1ed56f03ae051054a2dacfa6ccb93f3465635d3fd702d10fbb4890e0e83\"}",
+                "sha": "54efd60a476e6f1c452be929ff4c8e1e349d1f43",
+                "line": 0,
+                "kind": "file_metadata"
+              },
+              {
+                "path": "app/service.py",
+                "quote": "{\"mode\": \"100644\", \"status\": \"M\", \"previous_path\": \"app/service.py\", \"bytes\": 80, \"sha256\": \"105b05cc3bd723756d4e12b015dca1709dd6adb93265609e7c03e7accf855823\"}",
+                "sha": "0a07f524453d65cd68275abfd8c93d6a9acf89b7",
+                "line": 0,
+                "kind": "file_metadata"
+              }
+            ]
+          },
+          {
+            "index": 1,
+            "verdict": "confirmed",
+            "reason": "BUGS is confirmed by the same causal defect: apply() accepts approved but ignores it, so even approved=False results in publish() executing. The removed early-return guard was the only logic preventing the side effect, so a caller expecting apply(False, send_release) to be a no-op would still trigger send_release(). This is an incorrect side effect, not merely a style issue.",
+            "counterargument": "One could argue callers are responsible for only invoking apply when approval is already true, making the parameter redundant rather than a bug. But the function signature advertises an approval contract, the before code enforced it internally, and the candidate scenario is a valid caller contract violation-by-implementation. Without any caller-level guard shown, the counterargument does not disprove the defect.",
+            "rule_id": "BUGS",
+            "path": "app/service.py",
+            "evidence": [
+              {
+                "path": "app/service.py",
+                "quote": "def apply(approved, publish):\n    publish()\n",
+                "sha": "54efd60a476e6f1c452be929ff4c8e1e349d1f43",
+                "line": 1,
+                "kind": "text"
+              },
+              {
+                "path": "app/service.py",
+                "quote": "def apply(approved, publish):\n    if not approved:\n        return\n",
+                "sha": "0a07f524453d65cd68275abfd8c93d6a9acf89b7",
+                "line": 1,
+                "kind": "text"
+              }
+            ]
+          }
+        ],
+        "elapsed_ms": 8203
+      },
+      "profile_sha256": "2d02c435e5f186e92a4247b80995d3bcff8dd759ccb63f2e11a870d784ee8b0a",
+      "snapshot": {
+        "base_sha": "0a07f524453d65cd68275abfd8c93d6a9acf89b7",
+        "head_sha": "54efd60a476e6f1c452be929ff4c8e1e349d1f43",
+        "merge_base_sha": "0a07f524453d65cd68275abfd8c93d6a9acf89b7",
+        "diff_sha256": "760def2cfdd52dab4436cceb8da56c7f9b443097214d6a85c05c94bd31a8d70f"
+      },
+      "findings": [
+        {
+          "rule_id": "INV-APPROVAL",
+          "blocking": true,
+          "message": "Approval guard removed; publishing occurs regardless of the approved flag.",
+          "evidence": {
+            "path": "app/service.py",
+            "quote": "    if not approved:\n",
+            "sha": "0a07f524453d65cd68275abfd8c93d6a9acf89b7",
+            "line": 2,
+            "kind": "text"
+          },
+          "source": {
+            "path": "README.md",
+            "quote": "Publishing requires explicit approved=True; a false approval must return without publishing.",
+            "sha": "0a07f524453d65cd68275abfd8c93d6a9acf89b7",
+            "line": 1,
+            "kind": "text"
+          },
+          "category": "invariant",
+          "severity": "critical",
+          "scenario": "Code calls apply(False, publish); the removed `if not approved: return` guard no longer exists, so publish() executes unconditionally.",
+          "impact": "Content is published without explicit approval, breaking the documented safety contract and potentially releasing unauthorized changes.",
+          "recommendation": "Restore the guard so that when approved is not True the function returns before calling publish().",
+          "supporting_evidence": [
+            {
+              "path": "app/service.py",
+              "quote": "def apply(approved, publish):\n    publish()\n",
+              "sha": "54efd60a476e6f1c452be929ff4c8e1e349d1f43",
+              "line": 1,
+              "kind": "text"
+            },
+            {
+              "path": "app/service.py",
+              "quote": "    if not approved:\n",
+              "sha": "0a07f524453d65cd68275abfd8c93d6a9acf89b7",
+              "line": 2,
+              "kind": "text"
+            }
+          ]
+        },
+        {
+          "rule_id": "BUGS",
+          "blocking": true,
+          "message": "apply() ignores its approved argument and always publishes.",
+          "evidence": {
+            "path": "app/service.py",
+            "quote": "    if not approved:\n",
+            "sha": "0a07f524453d65cd68275abfd8c93d6a9acf89b7",
+            "line": 2,
+            "kind": "text"
+          },
+          "source": null,
+          "category": "bug",
+          "severity": "critical",
+          "scenario": "A caller invokes apply(approved=False, publish=send_release) expecting no action; send_release() is invoked anyway.",
+          "impact": "Unapproved releases are sent, causing incorrect side effects and potential downstream data/state corruption.",
+          "recommendation": "Reintroduce the early return for false/falsy approved values before publish(), and add a test covering approved=False.",
+          "supporting_evidence": [
+            {
+              "path": "app/service.py",
+              "quote": "def apply(approved, publish):\n    publish()\n",
+              "sha": "54efd60a476e6f1c452be929ff4c8e1e349d1f43",
+              "line": 1,
+              "kind": "text"
+            },
+            {
+              "path": "app/service.py",
+              "quote": "    if not approved:\n",
+              "sha": "0a07f524453d65cd68275abfd8c93d6a9acf89b7",
+              "line": 2,
+              "kind": "text"
+            }
+          ]
+        }
+      ],
+      "limitations": []
+    },
+    {
+      "id": "INV-APPROVAL-clean",
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "clean": true,
+      "blocked": false,
+      "status": "success",
+      "incomplete": false,
+      "trace": {
+        "model": "deepseek-v4-flash",
+        "prompt_version": "review-v3",
+        "retriever_version": "review-v1",
+        "model_calls": 1,
+        "token_usage": [
+          {
+            "completion_tokens": 272,
+            "prompt_tokens": 2085,
+            "total_tokens": 2357,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 1024
+            },
+            "prompt_cache_hit_tokens": 1024,
+            "prompt_cache_miss_tokens": 1061
+          }
+        ],
+        "wire_inputs": [
+          {
+            "sha256": "e37460ef935f51eae010080394dd14237d5d7c6b8a8b413b60011515019678ca",
+            "bytes": 7395,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          }
+        ],
+        "excluded_paths": [],
+        "optional_sources_unavailable": [],
+        "optional_fragments_omitted": 0,
+        "context_sha256": "117ad5089a59ea9867b3168c8aef29032995dcbc9423feabee569da425f8044d",
+        "context_bytes": 6587,
+        "fragments": 6,
+        "elapsed_ms": 2284
+      },
+      "profile_sha256": "2d02c435e5f186e92a4247b80995d3bcff8dd759ccb63f2e11a870d784ee8b0a",
+      "snapshot": {
+        "base_sha": "5c8a1343f63ef7ff0015a111b892eca2c60d2b83",
+        "head_sha": "82701d086c052c88e8a4947d170f0a3e0432bfa9",
+        "merge_base_sha": "5c8a1343f63ef7ff0015a111b892eca2c60d2b83",
+        "diff_sha256": "b544ded6b2de29f326d2e52c2f6bb2fd6d7604dfa0b6bc9fd8a9783f59e24cc9"
+      },
+      "findings": [],
+      "limitations": []
+    },
+    {
+      "id": "INV-REVISION-regression",
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "clean": false,
+      "blocked": true,
+      "status": "failure",
+      "incomplete": false,
+      "trace": {
+        "model": "deepseek-v4-flash",
+        "prompt_version": "review-v3",
+        "retriever_version": "review-v1",
+        "model_calls": 2,
+        "token_usage": [
+          {
+            "completion_tokens": 553,
+            "prompt_tokens": 2062,
+            "total_tokens": 2615,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 896
+            },
+            "prompt_cache_hit_tokens": 896,
+            "prompt_cache_miss_tokens": 1166
+          },
+          {
+            "completion_tokens": 487,
+            "prompt_tokens": 2128,
+            "total_tokens": 2615,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 512
+            },
+            "prompt_cache_hit_tokens": 512,
+            "prompt_cache_miss_tokens": 1616
+          }
+        ],
+        "wire_inputs": [
+          {
+            "sha256": "9f4261d6472f8cacc8bf187983d721e4d5833252801f1fd522e0389918b99c54",
+            "bytes": 7265,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          },
+          {
+            "sha256": "0f6075205c33cd54dfe72fa8a1657855efed99d88ca13ab0b584004eff5f238a",
+            "bytes": 7450,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          }
+        ],
+        "excluded_paths": [],
+        "optional_sources_unavailable": [],
+        "optional_fragments_omitted": 0,
+        "context_sha256": "62f833f477682d6ed9adb791ffc97297b88eb82ac02bc183fe8dc7304197515e",
+        "context_bytes": 6457,
+        "fragments": 6,
+        "verification_context_sha256": "908b0f928ce64a4b71becf86cbd6a6488ff1ac62113a27810a8598a831c34e4b",
+        "verification_context_bytes": 6880,
+        "verification": [
+          {
+            "index": 0,
+            "verdict": "confirmed",
+            "reason": "The head implementation of apply() is just 'def apply(expected, current, save):\\n    save()', with no validation of expected versus current before save() is invoked. The before version contained the guard, and the diff shows those guard lines were deleted. This directly violates the INV-REVISION invariant that a stale expected revision must raise before calling save.",
+            "counterargument": "One might argue the head snippet is incomplete or the guard moved elsewhere, but the file metadata shows the head file is only 47 bytes, too small to contain the check, and no other callers or mitigations are present in the context. Thus the counterargument fails.",
+            "rule_id": "INV-REVISION",
+            "path": "app/service.py",
+            "evidence": [
+              {
+                "path": "app/service.py",
+                "quote": "def apply(expected, current, save):\n    save()\n",
+                "sha": "36b42e6b3b8b0501ef4489d9c95fa84398c2b0e6",
+                "line": 1,
+                "kind": "text"
+              },
+              {
+                "path": "app/service.py",
+                "quote": "    if expected != current:\n        raise ValueError(\"stale\")\n",
+                "sha": "550ffcd8ce16bd56c445a5ecd3e65940ecac69fd",
+                "line": 2,
+                "kind": "text"
+              },
+              {
+                "path": "app/service.py",
+                "quote": "{\"mode\": \"100644\", \"status\": \"M\", \"previous_path\": \"app/service.py\", \"bytes\": 47, \"sha256\": \"577acb53b5d699b4dcc4700283b4c7ea685afd6f1d0dfdb6e9301f2f62502e2e\"}",
+                "sha": "36b42e6b3b8b0501ef4489d9c95fa84398c2b0e6",
+                "line": 0,
+                "kind": "file_metadata"
+              }
+            ]
+          },
+          {
+            "index": 1,
+            "verdict": "confirmed",
+            "reason": "The head code 'def apply(expected, current, save):\\n    save()' performs the save unconditionally, so when expected != current it still saves. This is the same defect as index 0 under the BUGS rule: a stale write is possible because the mismatch check was removed.",
+            "counterargument": "It could be argued that save() itself validates revisions, but there is no evidence of that in the provided fragments; save is an opaque callable argument with no shown guard. Therefore the counterargument does not defeat the finding.",
+            "rule_id": "BUGS",
+            "path": "app/service.py",
+            "evidence": [
+              {
+                "path": "app/service.py",
+                "quote": "def apply(expected, current, save):\n    save()\n",
+                "sha": "36b42e6b3b8b0501ef4489d9c95fa84398c2b0e6",
+                "line": 1,
+                "kind": "text"
+              },
+              {
+                "path": "app/service.py",
+                "quote": "    if expected != current:\n        raise ValueError(\"stale\")\n",
+                "sha": "550ffcd8ce16bd56c445a5ecd3e65940ecac69fd",
+                "line": 2,
+                "kind": "text"
+              },
+              {
+                "path": "app/service.py",
+                "quote": "{\"mode\": \"100644\", \"status\": \"M\", \"previous_path\": \"app/service.py\", \"bytes\": 47, \"sha256\": \"577acb53b5d699b4dcc4700283b4c7ea685afd6f1d0dfdb6e9301f2f62502e2e\"}",
+                "sha": "36b42e6b3b8b0501ef4489d9c95fa84398c2b0e6",
+                "line": 0,
+                "kind": "file_metadata"
+              }
+            ]
+          }
+        ],
+        "elapsed_ms": 7327
+      },
+      "profile_sha256": "5e715c7b9185cb4219c2131c9a02cf294926f670abce90a71d149e01566bdea9",
+      "snapshot": {
+        "base_sha": "550ffcd8ce16bd56c445a5ecd3e65940ecac69fd",
+        "head_sha": "36b42e6b3b8b0501ef4489d9c95fa84398c2b0e6",
+        "merge_base_sha": "550ffcd8ce16bd56c445a5ecd3e65940ecac69fd",
+        "diff_sha256": "88a60bc0790fe12bd82e9c109a08961e6bcbe47be07e778fa4f798e1470756bb"
+      },
+      "findings": [
+        {
+          "rule_id": "INV-REVISION",
+          "blocking": true,
+          "message": "Removed stale revision check allows save() with mismatched expected/current revisions.",
+          "evidence": {
+            "path": "app/service.py",
+            "quote": "    if expected != current:\n        raise ValueError(\"stale\")\n",
+            "sha": "550ffcd8ce16bd56c445a5ecd3e65940ecac69fd",
+            "line": 2,
+            "kind": "text"
+          },
+          "source": {
+            "path": "README.md",
+            "quote": "A stale expected revision must raise before calling save.",
+            "sha": "550ffcd8ce16bd56c445a5ecd3e65940ecac69fd",
+            "line": 1,
+            "kind": "text"
+          },
+          "category": "invariant",
+          "severity": "critical",
+          "scenario": "Caller invokes apply(expected=1, current=2, save=...). In the head implementation save() is executed immediately because the guard 'if expected != current: raise ValueError(\"stale\")' no longer exists.",
+          "impact": "The documented invariant that stale expected revisions must raise before calling save is broken, permitting writes based on stale revisions and potential lost updates.",
+          "recommendation": "Restore the guard before save(), e.g. raise ValueError(\"stale\") when expected != current prior to invoking save.",
+          "supporting_evidence": [
+            {
+              "path": "app/service.py",
+              "quote": "def apply(expected, current, save):\n    save()\n",
+              "sha": "36b42e6b3b8b0501ef4489d9c95fa84398c2b0e6",
+              "line": 1,
+              "kind": "text"
+            },
+            {
+              "path": "app/service.py",
+              "quote": "    if expected != current:\n        raise ValueError(\"stale\")\n",
+              "sha": "550ffcd8ce16bd56c445a5ecd3e65940ecac69fd",
+              "line": 2,
+              "kind": "text"
+            }
+          ]
+        },
+        {
+          "rule_id": "BUGS",
+          "blocking": true,
+          "message": "apply() saves even when expected and current revisions differ.",
+          "evidence": {
+            "path": "app/service.py",
+            "quote": "    if expected != current:\n        raise ValueError(\"stale\")\n",
+            "sha": "550ffcd8ce16bd56c445a5ecd3e65940ecac69fd",
+            "line": 2,
+            "kind": "text"
+          },
+          "source": null,
+          "category": "bug",
+          "severity": "critical",
+          "scenario": "A concurrent update changes current while a client holds an old expected value; calling apply(old, current, save) proceeds directly to save() instead of raising.",
+          "impact": "Stale writes overwrite newer data, causing data loss or corruption.",
+          "recommendation": "Reintroduce the revision mismatch check and raise before calling save().",
+          "supporting_evidence": [
+            {
+              "path": "app/service.py",
+              "quote": "def apply(expected, current, save):\n    save()\n",
+              "sha": "36b42e6b3b8b0501ef4489d9c95fa84398c2b0e6",
+              "line": 1,
+              "kind": "text"
+            },
+            {
+              "path": "app/service.py",
+              "quote": "    if expected != current:\n        raise ValueError(\"stale\")\n",
+              "sha": "550ffcd8ce16bd56c445a5ecd3e65940ecac69fd",
+              "line": 2,
+              "kind": "text"
+            }
+          ]
+        }
+      ],
+      "limitations": []
+    },
+    {
+      "id": "INV-REVISION-clean",
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "clean": true,
+      "blocked": false,
+      "status": "success",
+      "incomplete": false,
+      "trace": {
+        "model": "deepseek-v4-flash",
+        "prompt_version": "review-v3",
+        "retriever_version": "review-v1",
+        "model_calls": 1,
+        "token_usage": [
+          {
+            "completion_tokens": 317,
+            "prompt_tokens": 2059,
+            "total_tokens": 2376,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 1024
+            },
+            "prompt_cache_hit_tokens": 1024,
+            "prompt_cache_miss_tokens": 1035
+          }
+        ],
+        "wire_inputs": [
+          {
+            "sha256": "5a345a4ce9b0cee8a3f81f706685ba1f52db1185c4072999a62146922805fb4f",
+            "bytes": 7344,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          }
+        ],
+        "excluded_paths": [],
+        "optional_sources_unavailable": [],
+        "optional_fragments_omitted": 0,
+        "context_sha256": "d1e9e5f7b3298699b8a357b9fd8c72dfc572e204a9f290c5873c672125aed3d3",
+        "context_bytes": 6536,
+        "fragments": 6,
+        "elapsed_ms": 2921
+      },
+      "profile_sha256": "5e715c7b9185cb4219c2131c9a02cf294926f670abce90a71d149e01566bdea9",
+      "snapshot": {
+        "base_sha": "6487ee436f147d745f5d05cf58852441b5312477",
+        "head_sha": "fbae76b943a2d09e3d5acc3fbd62a1255dc94bf3",
+        "merge_base_sha": "6487ee436f147d745f5d05cf58852441b5312477",
+        "diff_sha256": "488530e74766e5c732ee4a4ae9714e76517ef70b9b3dca9fceb9b0a82e90cb20"
+      },
+      "findings": [],
+      "limitations": []
+    },
+    {
+      "id": "INV-ATOMIC-regression",
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "clean": false,
+      "blocked": true,
+      "status": "failure",
+      "incomplete": false,
+      "trace": {
+        "model": "deepseek-v4-flash",
+        "prompt_version": "review-v3",
+        "retriever_version": "review-v1",
+        "model_calls": 2,
+        "token_usage": [
+          {
+            "completion_tokens": 690,
+            "prompt_tokens": 2137,
+            "total_tokens": 2827,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 896
+            },
+            "prompt_cache_hit_tokens": 896,
+            "prompt_cache_miss_tokens": 1241
+          },
+          {
+            "completion_tokens": 482,
+            "prompt_tokens": 2271,
+            "total_tokens": 2753,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 512
+            },
+            "prompt_cache_hit_tokens": 512,
+            "prompt_cache_miss_tokens": 1759
+          }
+        ],
+        "wire_inputs": [
+          {
+            "sha256": "2c51956c1526af66e52aa7174d3b83400fa923404fcd7ef4520121c1130933fe",
+            "bytes": 7534,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          },
+          {
+            "sha256": "0b6d1859860b2f41641de6e2a32d75abdae8d487e8aac0d083d2ac45d0bb5fa6",
+            "bytes": 8128,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          }
+        ],
+        "excluded_paths": [],
+        "optional_sources_unavailable": [],
+        "optional_fragments_omitted": 0,
+        "context_sha256": "8d407a806c4b1078819c291895bca0c107751ce35a9d045d6f837fedbc545e62",
+        "context_bytes": 6726,
+        "fragments": 6,
+        "verification_context_sha256": "5ede6a74102e5accf7d39cccc467e68ec88660655049c92fed18e142eea25e8b",
+        "verification_context_bytes": 7558,
+        "verification": [
+          {
+            "index": 0,
+            "verdict": "confirmed",
+            "reason": "In the head revision, state.save() is invoked unconditionally before entering the transaction context, while only memory.save() runs inside it. If memory.save() or the commit fails, the transaction rolls back memory alone, leaving state persisted. This directly violates the INV-ATOMIC requirement that both saves happen inside the supplied transaction so either both commit or neither does.",
+            "counterargument": "One might argue the contract only governs that both saves occur when a transaction context is supplied, and that state.save() could be internally transactional or the transaction object may not roll back external writes. However, the README invariant explicitly requires both saves to be inside the supplied transaction context, and the function accepts an external transaction parameter, so the relocation of state.save() outside the with-block is a clear regression from the before revision where both saves were enclosed.",
+            "rule_id": "INV-ATOMIC",
+            "path": "app/service.py",
+            "evidence": [
+              {
+                "path": "app/service.py",
+                "quote": "def apply(transaction, state, memory):\n    state.save()\n    with transaction():\n        memory.save()\n",
+                "sha": "a54de9061fdb55bf9b357ce27afa2b4d88e4f375",
+                "line": 1,
+                "kind": "text"
+              },
+              {
+                "path": "app/service.py",
+                "quote": "def apply(transaction, state, memory):\n    with transaction():\n        state.save()\n        memory.save()\n",
+                "sha": "e759d8c1db94620d6e449d6df96a4695e1d3b63d",
+                "line": 1,
+                "kind": "text"
+              }
+            ]
+          },
+          {
+            "index": 1,
+            "verdict": "confirmed",
+            "reason": "The same defect is a functional bug under the BUGS rule: state.save() executing before the transaction means a rollback triggered by a memory.save() failure undoes only memory, producing orphaned/advanced state. This is a concrete data-inconsistency path in the head code.",
+            "counterargument": "The strongest counterargument is that some save implementations may be idempotent or that callers may wrap apply in an outer transaction that includes state.save(). But the function itself accepts the transaction to enclose its work, and the head code demonstrably performs state.save() outside it, so the failure mode described remains reachable regardless of caller behavior.",
+            "rule_id": "BUGS",
+            "path": "app/service.py",
+            "evidence": [
+              {
+                "path": "app/service.py",
+                "quote": "def apply(transaction, state, memory):\n    state.save()\n    with transaction():\n        memory.save()\n",
+                "sha": "a54de9061fdb55bf9b357ce27afa2b4d88e4f375",
+                "line": 1,
+                "kind": "text"
+              },
+              {
+                "path": "app/service.py",
+                "quote": "def apply(transaction, state, memory):\n    with transaction():\n        state.save()\n        memory.save()\n",
+                "sha": "e759d8c1db94620d6e449d6df96a4695e1d3b63d",
+                "line": 1,
+                "kind": "text"
+              }
+            ]
+          }
+        ],
+        "elapsed_ms": 8681
+      },
+      "profile_sha256": "dfa6f831a70469ae51eb701e662a398f34c7d29ca65c70c3c99c625541001a38",
+      "snapshot": {
+        "base_sha": "e759d8c1db94620d6e449d6df96a4695e1d3b63d",
+        "head_sha": "a54de9061fdb55bf9b357ce27afa2b4d88e4f375",
+        "merge_base_sha": "e759d8c1db94620d6e449d6df96a4695e1d3b63d",
+        "diff_sha256": "0668136dc61a0fb833ae46b8054a7617b1fd4739207434b9495c4f5b9e286503"
+      },
+      "findings": [
+        {
+          "rule_id": "INV-ATOMIC",
+          "blocking": true,
+          "message": "state.save() is executed outside the transaction context, so state and memory no longer commit atomically.",
+          "evidence": {
+            "path": "app/service.py",
+            "quote": "def apply(transaction, state, memory):\n    state.save()\n    with transaction():\n        memory.save()\n",
+            "sha": "a54de9061fdb55bf9b357ce27afa2b4d88e4f375",
+            "line": 1,
+            "kind": "text"
+          },
+          "source": {
+            "path": "README.md",
+            "quote": "A turn saves both state and memory inside the supplied transaction context; either both commit or neither does.",
+            "sha": "e759d8c1db94620d6e449d6df96a4695e1d3b63d",
+            "line": 1,
+            "kind": "text"
+          },
+          "category": "invariant",
+          "severity": "critical",
+          "scenario": "apply(transaction, state, memory) is called; state.save() runs and persists state before the with transaction() block. The transaction body then runs memory.save(), but if memory.save() or the commit itself raises (e.g., a database/IO error), state remains committed while memory is not.",
+          "impact": "The system is left in a split-brain state where durable state reflects a turn whose memory was never recorded, violating the invariant that either both commit or neither does.",
+          "recommendation": "Move state.save() back inside the with transaction(): block so both saves participate in the supplied transaction and can be rolled back together.",
+          "supporting_evidence": [
+            {
+              "path": "app/service.py",
+              "quote": "def apply(transaction, state, memory):\n    state.save()\n    with transaction():\n        memory.save()\n",
+              "sha": "a54de9061fdb55bf9b357ce27afa2b4d88e4f375",
+              "line": 1,
+              "kind": "text"
+            },
+            {
+              "path": "app/service.py",
+              "quote": "def apply(transaction, state, memory):\n    with transaction():\n        state.save()\n        memory.save()\n",
+              "sha": "e759d8c1db94620d6e449d6df96a4695e1d3b63d",
+              "line": 1,
+              "kind": "text"
+            }
+          ]
+        },
+        {
+          "rule_id": "BUGS",
+          "blocking": true,
+          "message": "state.save() outside the transaction leaves persistent state unsynchronized with memory on transaction failure.",
+          "evidence": {
+            "path": "app/service.py",
+            "quote": "def apply(transaction, state, memory):\n    state.save()\n    with transaction():\n        memory.save()\n",
+            "sha": "a54de9061fdb55bf9b357ce27afa2b4d88e4f375",
+            "line": 1,
+            "kind": "text"
+          },
+          "source": null,
+          "category": "bug",
+          "severity": "critical",
+          "scenario": "A caller invokes apply with a transaction that opens, while state.save() has already executed and persisted. If memory.save() raises inside the transaction, the transaction rolls back memory only; state remains written with no corresponding memory entry.",
+          "impact": "Data inconsistency: state advances while memory does not, causing downstream logic relying on the pair to observe mismatched or orphaned state.",
+          "recommendation": "Wrap both state.save() and memory.save() inside the with transaction(): block as in the base revision so a rollback undoes both.",
+          "supporting_evidence": [
+            {
+              "path": "app/service.py",
+              "quote": "def apply(transaction, state, memory):\n    state.save()\n    with transaction():\n        memory.save()\n",
+              "sha": "a54de9061fdb55bf9b357ce27afa2b4d88e4f375",
+              "line": 1,
+              "kind": "text"
+            },
+            {
+              "path": "app/service.py",
+              "quote": "def apply(transaction, state, memory):\n    with transaction():\n        state.save()\n        memory.save()\n",
+              "sha": "e759d8c1db94620d6e449d6df96a4695e1d3b63d",
+              "line": 1,
+              "kind": "text"
+            }
+          ]
+        }
+      ],
+      "limitations": []
+    },
+    {
+      "id": "INV-ATOMIC-clean",
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "clean": true,
+      "blocked": false,
+      "status": "success",
+      "incomplete": false,
+      "trace": {
+        "model": "deepseek-v4-flash",
+        "prompt_version": "review-v3",
+        "retriever_version": "review-v1",
+        "model_calls": 1,
+        "token_usage": [
+          {
+            "completion_tokens": 274,
+            "prompt_tokens": 2147,
+            "total_tokens": 2421,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 1024
+            },
+            "prompt_cache_hit_tokens": 1024,
+            "prompt_cache_miss_tokens": 1123
+          }
+        ],
+        "wire_inputs": [
+          {
+            "sha256": "8312038f8400c1bbb0c6c8500f31fe8fc31f7eecfa21af7c85456c0fcb230c29",
+            "bytes": 7538,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          }
+        ],
+        "excluded_paths": [],
+        "optional_sources_unavailable": [],
+        "optional_fragments_omitted": 0,
+        "context_sha256": "b8f2735d428c210dbbab5668fee1ef60b45f673a5882330f0848d18d483e3df5",
+        "context_bytes": 6730,
+        "fragments": 6,
+        "elapsed_ms": 2445
+      },
+      "profile_sha256": "dfa6f831a70469ae51eb701e662a398f34c7d29ca65c70c3c99c625541001a38",
+      "snapshot": {
+        "base_sha": "d2e81a64247baa8c6c07787e41f240a22d474f0a",
+        "head_sha": "9f3fad4dedddb20d5f5716cfe59fff51b2d6a6f8",
+        "merge_base_sha": "d2e81a64247baa8c6c07787e41f240a22d474f0a",
+        "diff_sha256": "bbe974100b2842798a920de2569e6b1b8dbbd8c9cbf31fc83528bc572e3373ac"
+      },
+      "findings": [],
+      "limitations": []
+    },
+    {
+      "id": "INV-SCOPE-regression",
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "clean": false,
+      "blocked": true,
+      "status": "failure",
+      "incomplete": false,
+      "trace": {
+        "model": "deepseek-v4-flash",
+        "prompt_version": "review-v3",
+        "retriever_version": "review-v1",
+        "model_calls": 2,
+        "token_usage": [
+          {
+            "completion_tokens": 538,
+            "prompt_tokens": 2048,
+            "total_tokens": 2586,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 896
+            },
+            "prompt_cache_hit_tokens": 896,
+            "prompt_cache_miss_tokens": 1152
+          },
+          {
+            "completion_tokens": 310,
+            "prompt_tokens": 1912,
+            "total_tokens": 2222,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 512
+            },
+            "prompt_cache_hit_tokens": 512,
+            "prompt_cache_miss_tokens": 1400
+          }
+        ],
+        "wire_inputs": [
+          {
+            "sha256": "5959e13a62a8bf7994502132524814c9a750e5be7c3e65fd560f2ee695ac1b73",
+            "bytes": 7228,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          },
+          {
+            "sha256": "1c12042e7f8b009d71617f8e0333381e495b4c57cf8be43fadaf8a9e816f8750",
+            "bytes": 6550,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          }
+        ],
+        "excluded_paths": [],
+        "optional_sources_unavailable": [],
+        "optional_fragments_omitted": 0,
+        "context_sha256": "946af9e24c6d73c0a75758a9ab4b8883a58722754689ffb10e186f73ded7a605",
+        "context_bytes": 6420,
+        "fragments": 6,
+        "verification_context_sha256": "175bf420879bb78b2f450ce37523a7b863404236472793dc424b479f0acabf7c",
+        "verification_context_bytes": 5980,
+        "verification": [
+          {
+            "index": 0,
+            "verdict": "confirmed",
+            "reason": "The head implementation `def select(rows, task):\\n    return list(rows)\\n` returns every row without applying the task filter. The requested task argument is ignored, so rows belonging to other tasks are returned, violating the INV-SCOPE invariant that only rows belonging to the requested task may be returned. The before implementation applied the filter (`return [r for r in rows if r[\"task\"] == task]`), and the diff removed that guard on line 2. The scenario with rows from tasks \"a\" and \"b\" selecting task \"a\" would indeed return the \"b\" row.",
+            "counterargument": "One might argue `list(rows)` preserves input selection and that caller contracts guarantee rows are pre-filtered by task, making the deleted filter redundant. However, no such caller contract or pre-filtering is documented; the normative README requires the function itself to return only rows belonging to the requested task, and the removed line was the only enforcement. The counterargument therefore fails.",
+            "rule_id": "INV-SCOPE",
+            "path": "app/service.py",
+            "evidence": [
+              {
+                "path": "app/service.py",
+                "quote": "def select(rows, task):\n    return list(rows)\n",
+                "sha": "134dd37628cb1ab33e6e3fac20cfdfaf2c1740af",
+                "line": 1,
+                "kind": "text"
+              },
+              {
+                "path": "app/service.py",
+                "quote": "def select(rows, task):\n    return [r for r in rows if r[\"task\"] == task]\n",
+                "sha": "f213dfd77ffe16155c1d229c035357d7074d9ef6",
+                "line": 1,
+                "kind": "text"
+              },
+              {
+                "path": "README.md",
+                "quote": "Only rows belonging to the requested task may be returned.",
+                "sha": "f213dfd77ffe16155c1d229c035357d7074d9ef6",
+                "line": 1,
+                "kind": "text"
+              }
+            ]
+          }
+        ],
+        "elapsed_ms": 6074
+      },
+      "profile_sha256": "3b53560729781e1bc7aa0453950ce69c4f74e58742299b06bf25dd8871e5ab25",
+      "snapshot": {
+        "base_sha": "f213dfd77ffe16155c1d229c035357d7074d9ef6",
+        "head_sha": "134dd37628cb1ab33e6e3fac20cfdfaf2c1740af",
+        "merge_base_sha": "f213dfd77ffe16155c1d229c035357d7074d9ef6",
+        "diff_sha256": "3b7bda0206517e0f2709cdf64edcb0a56fbc15d85e15346ffcac949011a96c7b"
+      },
+      "findings": [
+        {
+          "rule_id": "INV-SCOPE",
+          "blocking": true,
+          "message": "Task filter removed; all rows are returned regardless of requested task.",
+          "evidence": {
+            "path": "app/service.py",
+            "quote": "def select(rows, task):\n    return list(rows)\n",
+            "sha": "134dd37628cb1ab33e6e3fac20cfdfaf2c1740af",
+            "line": 1,
+            "kind": "text"
+          },
+          "source": {
+            "path": "README.md",
+            "quote": "Only rows belonging to the requested task may be returned.",
+            "sha": "f213dfd77ffe16155c1d229c035357d7074d9ef6",
+            "line": 1,
+            "kind": "text"
+          },
+          "category": "invariant",
+          "severity": "critical",
+          "scenario": "Call `select(rows, task)` with rows containing multiple tasks (e.g. rows=[{\"task\":\"a\"},{\"task\":\"b\"}]) and task=\"a\".",
+          "impact": "Rows for task \"b\" are returned, violating the invariant that only rows belonging to the requested task may be returned, causing cross-task data leakage.",
+          "recommendation": "Restore the task filter, e.g. `return [r for r in rows if r[\"task\"] == task]`.",
+          "supporting_evidence": [
+            {
+              "path": "app/service.py",
+              "quote": "def select(rows, task):\n    return list(rows)\n",
+              "sha": "134dd37628cb1ab33e6e3fac20cfdfaf2c1740af",
+              "line": 1,
+              "kind": "text"
+            },
+            {
+              "path": "app/service.py",
+              "quote": "def select(rows, task):\n    return [r for r in rows if r[\"task\"] == task]\n",
+              "sha": "f213dfd77ffe16155c1d229c035357d7074d9ef6",
+              "line": 1,
+              "kind": "text"
+            }
+          ]
+        }
+      ],
+      "limitations": []
+    },
+    {
+      "id": "INV-SCOPE-clean",
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "clean": true,
+      "blocked": false,
+      "status": "success",
+      "incomplete": false,
+      "trace": {
+        "model": "deepseek-v4-flash",
+        "prompt_version": "review-v3",
+        "retriever_version": "review-v1",
+        "model_calls": 1,
+        "token_usage": [
+          {
+            "completion_tokens": 351,
+            "prompt_tokens": 2076,
+            "total_tokens": 2427,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 1024
+            },
+            "prompt_cache_hit_tokens": 1024,
+            "prompt_cache_miss_tokens": 1052
+          }
+        ],
+        "wire_inputs": [
+          {
+            "sha256": "0acdd9507a8aba935c16a79eb67c49a40f658a2b589480c5b9dd012c0a8cd45a",
+            "bytes": 7271,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          }
+        ],
+        "excluded_paths": [],
+        "optional_sources_unavailable": [],
+        "optional_fragments_omitted": 0,
+        "context_sha256": "8073c662c8ae50ef9f46c43108246b395c026a7fd1bbd886f5dbf2efbbc16ecc",
+        "context_bytes": 6463,
+        "fragments": 6,
+        "elapsed_ms": 2700
+      },
+      "profile_sha256": "3b53560729781e1bc7aa0453950ce69c4f74e58742299b06bf25dd8871e5ab25",
+      "snapshot": {
+        "base_sha": "48845feec65b9ed3f8c0a47d17ed0073f013f56b",
+        "head_sha": "bd556c48872640b25f07e2c39d5db0863082038e",
+        "merge_base_sha": "48845feec65b9ed3f8c0a47d17ed0073f013f56b",
+        "diff_sha256": "a47e51a3cbd0715941c9921ae306cd59c473c6bcf5d49512648b890df07f476f"
+      },
+      "findings": [],
+      "limitations": []
+    },
+    {
+      "id": "INV-TASK-regression",
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "clean": false,
+      "blocked": true,
+      "status": "failure",
+      "incomplete": false,
+      "trace": {
+        "model": "deepseek-v4-flash",
+        "prompt_version": "review-v3",
+        "retriever_version": "review-v1",
+        "model_calls": 2,
+        "token_usage": [
+          {
+            "completion_tokens": 468,
+            "prompt_tokens": 2047,
+            "total_tokens": 2515,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 896
+            },
+            "prompt_cache_hit_tokens": 896,
+            "prompt_cache_miss_tokens": 1151
+          },
+          {
+            "completion_tokens": 283,
+            "prompt_tokens": 1909,
+            "total_tokens": 2192,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 512
+            },
+            "prompt_cache_hit_tokens": 512,
+            "prompt_cache_miss_tokens": 1397
+          }
+        ],
+        "wire_inputs": [
+          {
+            "sha256": "e74809877a5c5e407b017966c1fa69d215ca09d970594c19c70793fd68eb55e5",
+            "bytes": 7304,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          },
+          {
+            "sha256": "72b1949a6c3c86bf5653c3a36111ee877a71b8e81aa8df0bccec19924a527b9c",
+            "bytes": 6605,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          }
+        ],
+        "excluded_paths": [],
+        "optional_sources_unavailable": [],
+        "optional_fragments_omitted": 0,
+        "context_sha256": "85a7f3d33443bb30f1c6608cb727eee4066a5b07e979f3b0f66dd8fee562fb91",
+        "context_bytes": 6496,
+        "fragments": 6,
+        "verification_context_sha256": "80ea5ae3beac941a6f9664ebc2e39e9d681bfc6eb86fa81a3a7578045ae1e099",
+        "verification_context_bytes": 6035,
+        "verification": [
+          {
+            "index": 0,
+            "verdict": "confirmed",
+            "reason": "The before version returned `snapshot[\"goal\"]`, but the head version returns `chat[\"goal\"]`, directly replacing the immutable snapshot goal with the mutable chat goal. This contradicts the documented contract that a task owns its immutable snapshot goal and that an updated chat goal cannot replace it. The function remains reachable at head since it is defined and callable with both arguments, and the changed line 2 is exactly the return value relied upon.",
+            "counterargument": "The strongest possible counterargument is that perhaps `chat` is guaranteed to be a snapshot of the goal at task creation and thus equivalent, but the policy explicitly distinguishes an updated chat goal from the immutable snapshot goal and forbids replacement. There is no code evidence that prevents a chat goal from later differing from the snapshot goal; the function takes both parameters and ignores the snapshot entirely. Thus the counterargument fails.",
+            "rule_id": "INV-TASK",
+            "path": "app/service.py",
+            "evidence": [
+              {
+                "path": "app/service.py",
+                "quote": "def goal(snapshot, chat):\n    return chat[\"goal\"]\n",
+                "sha": "8518224f3cd431d8cb5e5979361f960de3a62253",
+                "line": 1,
+                "kind": "text"
+              },
+              {
+                "path": "app/service.py",
+                "quote": "def goal(snapshot, chat):\n    return snapshot[\"goal\"]\n",
+                "sha": "903cbfd0347158263684f17975ffaaecd8cf913a",
+                "line": 1,
+                "kind": "text"
+              },
+              {
+                "path": "README.md",
+                "quote": "A task owns its immutable snapshot goal; an updated chat goal cannot replace it.",
+                "sha": "903cbfd0347158263684f17975ffaaecd8cf913a",
+                "line": 1,
+                "kind": "text"
+              }
+            ]
+          }
+        ],
+        "elapsed_ms": 5090
+      },
+      "profile_sha256": "85ff7872ffbea8a6d38fdd2d2f8682ff7fef9e0a90827c464e9961f7860cad21",
+      "snapshot": {
+        "base_sha": "903cbfd0347158263684f17975ffaaecd8cf913a",
+        "head_sha": "8518224f3cd431d8cb5e5979361f960de3a62253",
+        "merge_base_sha": "903cbfd0347158263684f17975ffaaecd8cf913a",
+        "diff_sha256": "c7fc9b0529aa0b12738788c3bb1c55447f594d36fa25cb03e482570abdc6a6c4"
+      },
+      "findings": [
+        {
+          "rule_id": "INV-TASK",
+          "blocking": true,
+          "message": "Chat goal replaces immutable snapshot goal",
+          "evidence": {
+            "path": "app/service.py",
+            "quote": "def goal(snapshot, chat):\n    return snapshot[\"goal\"]\n",
+            "sha": "903cbfd0347158263684f17975ffaaecd8cf913a",
+            "line": 1,
+            "kind": "text"
+          },
+          "source": {
+            "path": "README.md",
+            "quote": "A task owns its immutable snapshot goal; an updated chat goal cannot replace it.",
+            "sha": "903cbfd0347158263684f17975ffaaecd8cf913a",
+            "line": 1,
+            "kind": "text"
+          },
+          "category": "invariant",
+          "severity": "critical",
+          "scenario": "A caller invokes goal(snapshot, chat) where chat has been updated with a new goal different from the snapshot's original goal.",
+          "impact": "The task's immutable snapshot goal is ignored, and the updated chat goal is returned, breaking the documented contract.",
+          "recommendation": "Return snapshot[\"goal\"] instead of chat[\"goal\"].",
+          "supporting_evidence": [
+            {
+              "path": "app/service.py",
+              "quote": "def goal(snapshot, chat):\n    return snapshot[\"goal\"]\n",
+              "sha": "903cbfd0347158263684f17975ffaaecd8cf913a",
+              "line": 1,
+              "kind": "text"
+            },
+            {
+              "path": "app/service.py",
+              "quote": "def goal(snapshot, chat):\n    return chat[\"goal\"]\n",
+              "sha": "8518224f3cd431d8cb5e5979361f960de3a62253",
+              "line": 1,
+              "kind": "text"
+            },
+            {
+              "path": "README.md",
+              "quote": "A task owns its immutable snapshot goal; an updated chat goal cannot replace it.",
+              "sha": "903cbfd0347158263684f17975ffaaecd8cf913a",
+              "line": 1,
+              "kind": "text"
+            }
+          ]
+        }
+      ],
+      "limitations": []
+    },
+    {
+      "id": "INV-TASK-clean",
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "clean": true,
+      "blocked": false,
+      "status": "success",
+      "incomplete": false,
+      "trace": {
+        "model": "deepseek-v4-flash",
+        "prompt_version": "review-v3",
+        "retriever_version": "review-v1",
+        "model_calls": 1,
+        "token_usage": [
+          {
+            "completion_tokens": 247,
+            "prompt_tokens": 2084,
+            "total_tokens": 2331,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 1024
+            },
+            "prompt_cache_hit_tokens": 1024,
+            "prompt_cache_miss_tokens": 1060
+          }
+        ],
+        "wire_inputs": [
+          {
+            "sha256": "ce5b159e7419d0c24ed916c16ba2d30edc1fbed98ade2c19d3512467072bbc1e",
+            "bytes": 7336,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          }
+        ],
+        "excluded_paths": [],
+        "optional_sources_unavailable": [],
+        "optional_fragments_omitted": 0,
+        "context_sha256": "477a735525dabf25b3a39faa5e99a62e466350f29f981f0ce4969306222ed798",
+        "context_bytes": 6528,
+        "fragments": 6,
+        "elapsed_ms": 2119
+      },
+      "profile_sha256": "85ff7872ffbea8a6d38fdd2d2f8682ff7fef9e0a90827c464e9961f7860cad21",
+      "snapshot": {
+        "base_sha": "512f5bb3f5fe84a80ca7d447f575ca326124b513",
+        "head_sha": "3edfaf1fbfd5a5824261dcfea44cd78eacaca87a",
+        "merge_base_sha": "512f5bb3f5fe84a80ca7d447f575ca326124b513",
+        "diff_sha256": "a57c9ad33aa8243aa9fc50581403306eba5d835e6828b6f3c9e4361d4b3af5e5"
+      },
+      "findings": [],
+      "limitations": []
+    },
+    {
+      "id": "INV-RETRY-regression",
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "clean": false,
+      "blocked": true,
+      "status": "failure",
+      "incomplete": false,
+      "trace": {
+        "model": "deepseek-v4-flash",
+        "prompt_version": "review-v3",
+        "retriever_version": "review-v1",
+        "model_calls": 2,
+        "token_usage": [
+          {
+            "completion_tokens": 484,
+            "prompt_tokens": 2077,
+            "total_tokens": 2561,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 896
+            },
+            "prompt_cache_hit_tokens": 896,
+            "prompt_cache_miss_tokens": 1181
+          },
+          {
+            "completion_tokens": 376,
+            "prompt_tokens": 1927,
+            "total_tokens": 2303,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 512
+            },
+            "prompt_cache_hit_tokens": 512,
+            "prompt_cache_miss_tokens": 1415
+          }
+        ],
+        "wire_inputs": [
+          {
+            "sha256": "ca1195d65299f11e6cd33ef969cd8325c6103bd66cab828acc22e6c56cb31d8c",
+            "bytes": 7397,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          },
+          {
+            "sha256": "5bee1038511d59e2e67443c257c87d13ca3a403151bd5e1b498117d85d0d3651",
+            "bytes": 6776,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          }
+        ],
+        "excluded_paths": [],
+        "optional_sources_unavailable": [],
+        "optional_fragments_omitted": 0,
+        "context_sha256": "55a4a35fca6b6f21b78fa790dbf89fdb521f3bd857b9b11de72b2f6982e101f5",
+        "context_bytes": 6589,
+        "fragments": 6,
+        "verification_context_sha256": "2f604dec7f022964b3aa7c85ddcaee0a357ad91bdfabec6d0d35f6e49abb91e1",
+        "verification_context_bytes": 6206,
+        "verification": [
+          {
+            "index": 0,
+            "verdict": "confirmed",
+            "reason": "The head implementation of retry returns `selected` instead of the failed message's recorded model. The before revision returned `failed[\"model\"]`, and the policy INV-RETRY explicitly requires that a chat-message retry uses the model recorded on the failed message regardless of the current selection. The change directly violates this documented invariant: when a user retries after switching the current selection (selected != failed[\"model\"]), the retry is dispatched to the wrong model. The defect is reachable in the retry path and the behavior regression is causally attributable to the changed lines.",
+            "counterargument": "The strongest counterargument is that the README contract may not be normative for app/service.py, or that the change intentionally makes retry follow the current selection, making the finding a scope or intent dispute rather than a real defect. This fails because the policy source is the normative README quote, the scope is app/service.py, and the before code plus the removed return expression show the original behavior matched the contract. The head function contains no conditional or fallback preserving failed[\"model\"], so there is no alternative path that satisfies the invariant. Thus the counterargument is refuted and the defect is supported.",
+            "rule_id": "INV-RETRY",
+            "path": "app/service.py",
+            "evidence": [
+              {
+                "path": "app/service.py",
+                "quote": "def retry(failed, selected):\n    return selected\n",
+                "sha": "daca1afb227134df4d9023d8b9512138aeee1dce",
+                "line": 1,
+                "kind": "text"
+              },
+              {
+                "path": "app/service.py",
+                "quote": "def retry(failed, selected):\n    return failed[\"model\"]\n",
+                "sha": "66a3e64dd60caca68523f6206ff5d3e71e787657",
+                "line": 1,
+                "kind": "text"
+              },
+              {
+                "path": "README.md",
+                "quote": "A chat-message retry uses the model recorded on the failed message, regardless of the current selection.",
+                "sha": "66a3e64dd60caca68523f6206ff5d3e71e787657",
+                "line": 1,
+                "kind": "text"
+              }
+            ]
+          }
+        ],
+        "elapsed_ms": 5865
+      },
+      "profile_sha256": "c62d4ff940dfb86a325548ba2f00aab16b222d7feb05178b76190ece1f5a295d",
+      "snapshot": {
+        "base_sha": "66a3e64dd60caca68523f6206ff5d3e71e787657",
+        "head_sha": "daca1afb227134df4d9023d8b9512138aeee1dce",
+        "merge_base_sha": "66a3e64dd60caca68523f6206ff5d3e71e787657",
+        "diff_sha256": "e205cf108294e58da485665c00174de69a911485a0da4e83b09dcbc98226e21c"
+      },
+      "findings": [
+        {
+          "rule_id": "INV-RETRY",
+          "blocking": true,
+          "message": "Retry returns the current model selection instead of the failed message's recorded model.",
+          "evidence": {
+            "path": "app/service.py",
+            "quote": "def retry(failed, selected):\n    return selected\n",
+            "sha": "daca1afb227134df4d9023d8b9512138aeee1dce",
+            "line": 1,
+            "kind": "text"
+          },
+          "source": {
+            "path": "README.md",
+            "quote": "A chat-message retry uses the model recorded on the failed message, regardless of the current selection.",
+            "sha": "66a3e64dd60caca68523f6206ff5d3e71e787657",
+            "line": 1,
+            "kind": "text"
+          },
+          "category": "invariant",
+          "severity": "critical",
+          "scenario": "A user retries a failed chat message after switching the current model selection to a different model; the retry function returns selected rather than failed[\"model\"].",
+          "impact": "The retry is sent to the wrong model, breaking the documented retry contract and potentially producing incorrect or inconsistent results.",
+          "recommendation": "Return the failed message's recorded model, e.g. `return failed[\"model\"]`, regardless of the current selection.",
+          "supporting_evidence": [
+            {
+              "path": "app/service.py",
+              "quote": "def retry(failed, selected):\n    return selected\n",
+              "sha": "daca1afb227134df4d9023d8b9512138aeee1dce",
+              "line": 1,
+              "kind": "text"
+            },
+            {
+              "path": "app/service.py",
+              "quote": "def retry(failed, selected):\n    return failed[\"model\"]\n",
+              "sha": "66a3e64dd60caca68523f6206ff5d3e71e787657",
+              "line": 1,
+              "kind": "text"
+            }
+          ]
+        }
+      ],
+      "limitations": []
+    },
+    {
+      "id": "INV-RETRY-clean",
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "clean": true,
+      "blocked": false,
+      "status": "success",
+      "incomplete": false,
+      "trace": {
+        "model": "deepseek-v4-flash",
+        "prompt_version": "review-v3",
+        "retriever_version": "review-v1",
+        "model_calls": 1,
+        "token_usage": [
+          {
+            "completion_tokens": 421,
+            "prompt_tokens": 2102,
+            "total_tokens": 2523,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 1024
+            },
+            "prompt_cache_hit_tokens": 1024,
+            "prompt_cache_miss_tokens": 1078
+          }
+        ],
+        "wire_inputs": [
+          {
+            "sha256": "b098b2003288003379e0891e265fe8c7676e97b673ba8e1db710399b66f86349",
+            "bytes": 7448,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          }
+        ],
+        "excluded_paths": [],
+        "optional_sources_unavailable": [],
+        "optional_fragments_omitted": 0,
+        "context_sha256": "a3b9530c1f8c436529c46a7464d82f7b0c49ddf78cf77bcd67fcff1be5532b08",
+        "context_bytes": 6640,
+        "fragments": 6,
+        "elapsed_ms": 2575
+      },
+      "profile_sha256": "c62d4ff940dfb86a325548ba2f00aab16b222d7feb05178b76190ece1f5a295d",
+      "snapshot": {
+        "base_sha": "45b0de403a9dc5dd38b5c60fe06459e27927adc9",
+        "head_sha": "0891f880c8a5a55688338c7ade0877abf82ecdb8",
+        "merge_base_sha": "45b0de403a9dc5dd38b5c60fe06459e27927adc9",
+        "diff_sha256": "64f16d956a365c16770264fdea73c15bb64105e0116911f985b9faa0c10b3839"
+      },
+      "findings": [],
+      "limitations": []
+    },
+    {
+      "id": "ARCH-PURE-regression",
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "clean": false,
+      "blocked": true,
+      "status": "failure",
+      "incomplete": false,
+      "trace": {
+        "model": "deepseek-v4-flash",
+        "prompt_version": "review-v3",
+        "retriever_version": "review-v1",
+        "model_calls": 2,
+        "token_usage": [
+          {
+            "completion_tokens": 531,
+            "prompt_tokens": 2064,
+            "total_tokens": 2595,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 896
+            },
+            "prompt_cache_hit_tokens": 896,
+            "prompt_cache_miss_tokens": 1168
+          },
+          {
+            "completion_tokens": 292,
+            "prompt_tokens": 1896,
+            "total_tokens": 2188,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 512
+            },
+            "prompt_cache_hit_tokens": 512,
+            "prompt_cache_miss_tokens": 1384
+          }
+        ],
+        "wire_inputs": [
+          {
+            "sha256": "efbcc8683c2279157f5665974dcf6ff72736f4433f570bd35f459f7b7b889aa8",
+            "bytes": 7310,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          },
+          {
+            "sha256": "6203f728b8c5b422812e03754131d0bf5d8c72288ddd8d7c4072c0086429fc8f",
+            "bytes": 6647,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          }
+        ],
+        "excluded_paths": [],
+        "optional_sources_unavailable": [],
+        "optional_fragments_omitted": 0,
+        "context_sha256": "515f0e984a9ce6a55a36a9161e5dc92534889cd838fc838f15dbbc80e011dd55",
+        "context_bytes": 6502,
+        "fragments": 6,
+        "verification_context_sha256": "a10d684233d2a8bc9c6bd408cd32317992f392701031bac0828c53666ed5b0ac",
+        "verification_context_bytes": 6077,
+        "verification": [
+          {
+            "index": 0,
+            "verdict": "confirmed",
+            "reason": "The head version of apply() directly performs filesystem IO during a state transition by opening 'state.txt' for writing, which violates the normative ARCH-PURE requirement that state transitions have no database, provider or filesystem IO. The before version shows the function was previously pure (just returning state), and the changed_lines shows line 2 was added, confirming this is a new defect introduced at head.",
+            "counterargument": "The strongest counterargument would be that README.md is merely documentation and not normative policy, or that the open/write call is somehow not considered 'filesystem IO' within the stated scope. However, the policy explicitly cites README.md as its source with the exact quote, the scope path matches app/state/service.py, and open().write() is textbook filesystem IO. The counterargument therefore fails.",
+            "rule_id": "ARCH-PURE",
+            "path": "app/state/service.py",
+            "evidence": [
+              {
+                "path": "app/state/service.py",
+                "quote": "def apply(state):\n    open(\"state.txt\", \"w\").write(str(state))\n    return state\n",
+                "sha": "ee6c45656c0582822d782d961972f4cded26f2ed",
+                "line": 1,
+                "kind": "text"
+              },
+              {
+                "path": "app/state/service.py",
+                "quote": "def apply(state):\n    return state\n",
+                "sha": "4d51eadc2208e57e015af2a02217d5f326fafb53",
+                "line": 1,
+                "kind": "text"
+              },
+              {
+                "path": "README.md",
+                "quote": "State transitions have no database, provider or filesystem IO.",
+                "sha": "4d51eadc2208e57e015af2a02217d5f326fafb53",
+                "line": 1,
+                "kind": "text"
+              }
+            ]
+          }
+        ],
+        "elapsed_ms": 6076
+      },
+      "profile_sha256": "21606a7d2167de7690c8a16464645b5311a2c4dd0279732ed3e855c37d9d44cf",
+      "snapshot": {
+        "base_sha": "4d51eadc2208e57e015af2a02217d5f326fafb53",
+        "head_sha": "ee6c45656c0582822d782d961972f4cded26f2ed",
+        "merge_base_sha": "4d51eadc2208e57e015af2a02217d5f326fafb53",
+        "diff_sha256": "778facad1cfb8733effa8a77100183d299ae10964640fad134f1b94124b80716"
+      },
+      "findings": [
+        {
+          "rule_id": "ARCH-PURE",
+          "blocking": true,
+          "message": "apply() performs filesystem IO during a state transition",
+          "evidence": {
+            "path": "app/state/service.py",
+            "quote": "def apply(state):\n    open(\"state.txt\", \"w\").write(str(state))\n    return state\n",
+            "sha": "ee6c45656c0582822d782d961972f4cded26f2ed",
+            "line": 1,
+            "kind": "text"
+          },
+          "source": {
+            "path": "README.md",
+            "quote": "State transitions have no database, provider or filesystem IO.",
+            "sha": "4d51eadc2208e57e015af2a02217d5f326fafb53",
+            "line": 1,
+            "kind": "text"
+          },
+          "category": "architecture",
+          "severity": "critical",
+          "scenario": "Any caller invokes apply(state); the function opens state.txt for writing and writes the serialized state to disk before returning.",
+          "impact": "State transitions become impure and side-effecting, contradicting the documented architecture contract and coupling state logic to filesystem availability and side effects.",
+          "recommendation": "Remove the file write from apply() and delegate persistence to an adapter outside the state transition layer.",
+          "supporting_evidence": [
+            {
+              "path": "app/state/service.py",
+              "quote": "def apply(state):\n    open(\"state.txt\", \"w\").write(str(state))\n    return state\n",
+              "sha": "ee6c45656c0582822d782d961972f4cded26f2ed",
+              "line": 1,
+              "kind": "text"
+            },
+            {
+              "path": "README.md",
+              "quote": "State transitions have no database, provider or filesystem IO.",
+              "sha": "4d51eadc2208e57e015af2a02217d5f326fafb53",
+              "line": 1,
+              "kind": "text"
+            }
+          ]
+        }
+      ],
+      "limitations": []
+    },
+    {
+      "id": "ARCH-PURE-clean",
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "clean": true,
+      "blocked": false,
+      "status": "success",
+      "incomplete": false,
+      "trace": {
+        "model": "deepseek-v4-flash",
+        "prompt_version": "review-v3",
+        "retriever_version": "review-v1",
+        "model_calls": 1,
+        "token_usage": [
+          {
+            "completion_tokens": 330,
+            "prompt_tokens": 2021,
+            "total_tokens": 2351,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 1024
+            },
+            "prompt_cache_hit_tokens": 1024,
+            "prompt_cache_miss_tokens": 997
+          }
+        ],
+        "wire_inputs": [
+          {
+            "sha256": "eeef8a958037b2e3d5e96068c489de2ee7337f113d6464874403cf0d149794b4",
+            "bytes": 7263,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          }
+        ],
+        "excluded_paths": [],
+        "optional_sources_unavailable": [],
+        "optional_fragments_omitted": 0,
+        "context_sha256": "6083c095fdbbb3681b0ced30e550f3c29403a4640b19e5c0885e5a65ea31583a",
+        "context_bytes": 6455,
+        "fragments": 6,
+        "elapsed_ms": 2894
+      },
+      "profile_sha256": "21606a7d2167de7690c8a16464645b5311a2c4dd0279732ed3e855c37d9d44cf",
+      "snapshot": {
+        "base_sha": "4babdff571b921d75bc8de74146472b29882aa20",
+        "head_sha": "86e80bc37831cceacaec707882811db1b74d663b",
+        "merge_base_sha": "4babdff571b921d75bc8de74146472b29882aa20",
+        "diff_sha256": "fbb3c7292054986b22b3e796f406ce03cdf5a00398948511014c508c0090ee87"
+      },
+      "findings": [],
+      "limitations": []
+    },
+    {
+      "id": "SEC-LOGGING-regression",
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "clean": false,
+      "blocked": true,
+      "status": "failure",
+      "incomplete": false,
+      "trace": {
+        "model": "deepseek-v4-flash",
+        "prompt_version": "review-v3",
+        "retriever_version": "review-v1",
+        "model_calls": 2,
+        "token_usage": [
+          {
+            "completion_tokens": 528,
+            "prompt_tokens": 1984,
+            "total_tokens": 2512,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 896
+            },
+            "prompt_cache_hit_tokens": 896,
+            "prompt_cache_miss_tokens": 1088
+          },
+          {
+            "completion_tokens": 501,
+            "prompt_tokens": 1992,
+            "total_tokens": 2493,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 512
+            },
+            "prompt_cache_hit_tokens": 512,
+            "prompt_cache_miss_tokens": 1480
+          }
+        ],
+        "wire_inputs": [
+          {
+            "sha256": "31e1dd2de8cb2ed87f3dc0d5464bd20dbb0a5579158c9ed2ae0b92755c091297",
+            "bytes": 7017,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          },
+          {
+            "sha256": "829f92ffa0d70a21541f2bd3a33846913aa804188b0991f03b21950f41b248f6",
+            "bytes": 6953,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          }
+        ],
+        "excluded_paths": [],
+        "optional_sources_unavailable": [],
+        "optional_fragments_omitted": 0,
+        "context_sha256": "a77dbd8fd1ae70a77d7869ec0f38ba24608cf00359ee5423526f4b722a68e6c2",
+        "context_bytes": 6209,
+        "fragments": 5,
+        "verification_context_sha256": "827c6c4dc32d921f1393375196161358e2ec43e4eaa0034479242624c3daaa95",
+        "verification_context_bytes": 6383,
+        "verification": [
+          {
+            "index": 0,
+            "verdict": "confirmed",
+            "reason": "Head code `logger.info(key)` passes the raw API key value to the logger, which will emit the unredacted secret to the log sink. The prior version logged the redacted status message `request started`, matching the allowed exception in SEC-LOGGING. This is a reachable, concrete contract violation of 'API keys must never appear in logs'.",
+            "counterargument": "One might argue the logging sink could be configured to redact secrets or that `key` is not necessarily an API key. However, the policy requires that API keys never appear in logs and the code passes the key directly to `logger.info` without any redaction step; the parameter is named `key` and is the obvious credential input, so the counterargument fails.",
+            "rule_id": "SEC-LOGGING",
+            "path": "app/service.py",
+            "evidence": [
+              {
+                "path": "app/service.py",
+                "quote": "def request(key, logger):\n    logger.info(key)\n",
+                "sha": "9e23f81f2098803fed7c4b89f4a6c83992ec5b9a",
+                "line": 1,
+                "kind": "text"
+              },
+              {
+                "path": "app/service.py",
+                "quote": "def request(key, logger):\n    logger.info(\"request started\")\n",
+                "sha": "06089085dbf810919b5c74fd0ef1ed9d3cb6dd17",
+                "line": 1,
+                "kind": "text"
+              },
+              {
+                "path": "README.md",
+                "quote": "API keys must never appear in logs; redacted status messages are allowed.",
+                "sha": "06089085dbf810919b5c74fd0ef1ed9d3cb6dd17",
+                "line": 1,
+                "kind": "text"
+              }
+            ]
+          },
+          {
+            "index": 1,
+            "verdict": "confirmed",
+            "reason": "The change from `logger.info(\"request started\")` to `logger.info(key)` directly discloses the sensitive API key value whenever `request` runs. This is the same causal defect as candidate 0, confirmed by the head snippet and the removed redacted status message.",
+            "counterargument": "The strongest counterargument is that this is duplicative of the SEC-LOGGING finding and merely restates that policy rule rather than an independent bug. The counterargument fails because BUGS covers the concrete data-exposure defect introduced by the diff, and the head code `logger.info(key)` demonstrably leaks the secret on every execution.",
+            "rule_id": "BUGS",
+            "path": "app/service.py",
+            "evidence": [
+              {
+                "path": "app/service.py",
+                "quote": "def request(key, logger):\n    logger.info(key)\n",
+                "sha": "9e23f81f2098803fed7c4b89f4a6c83992ec5b9a",
+                "line": 1,
+                "kind": "text"
+              },
+              {
+                "path": "app/service.py",
+                "quote": "def request(key, logger):\n    logger.info(\"request started\")\n",
+                "sha": "06089085dbf810919b5c74fd0ef1ed9d3cb6dd17",
+                "line": 1,
+                "kind": "text"
+              }
+            ]
+          }
+        ],
+        "elapsed_ms": 7299
+      },
+      "profile_sha256": "0eb3f89a361b97364c0b41e83a30b54b622ff86dc4fce5bb1b119dc68e6e402b",
+      "snapshot": {
+        "base_sha": "06089085dbf810919b5c74fd0ef1ed9d3cb6dd17",
+        "head_sha": "9e23f81f2098803fed7c4b89f4a6c83992ec5b9a",
+        "merge_base_sha": "06089085dbf810919b5c74fd0ef1ed9d3cb6dd17",
+        "diff_sha256": "0c2b58efe2fd60347670ebe6ca8a7435cf43ccf6424604d97939c5230095da66"
+      },
+      "findings": [
+        {
+          "rule_id": "SEC-LOGGING",
+          "blocking": true,
+          "message": "API key is logged in plaintext by `logger.info(key)`.",
+          "evidence": {
+            "path": "app/service.py",
+            "quote": "def request(key, logger):\n    logger.info(key)\n",
+            "sha": "9e23f81f2098803fed7c4b89f4a6c83992ec5b9a",
+            "line": 1,
+            "kind": "text"
+          },
+          "source": {
+            "path": "README.md",
+            "quote": "API keys must never appear in logs; redacted status messages are allowed.",
+            "sha": "06089085dbf810919b5c74fd0ef1ed9d3cb6dd17",
+            "line": 1,
+            "kind": "text"
+          },
+          "category": "forbidden",
+          "severity": "critical",
+          "scenario": "Any caller invokes `request(key, logger)` with a real API key; the key value is emitted to the log sink without redaction.",
+          "impact": "Secret API keys are persisted/forwarded in logs, exposing credentials to anyone with log access or log aggregation systems.",
+          "recommendation": "Log a redacted or status message instead of the key, e.g., `logger.info(\"request started\")`, and never pass the key value to a logger.",
+          "supporting_evidence": [
+            {
+              "path": "app/service.py",
+              "quote": "def request(key, logger):\n    logger.info(key)\n",
+              "sha": "9e23f81f2098803fed7c4b89f4a6c83992ec5b9a",
+              "line": 1,
+              "kind": "text"
+            },
+            {
+              "path": "app/service.py",
+              "quote": "def request(key, logger):\n    logger.info(\"request started\")\n",
+              "sha": "06089085dbf810919b5c74fd0ef1ed9d3cb6dd17",
+              "line": 1,
+              "kind": "text"
+            }
+          ]
+        },
+        {
+          "rule_id": "BUGS",
+          "blocking": true,
+          "message": "Sensitive API key disclosed via logging.",
+          "evidence": {
+            "path": "app/service.py",
+            "quote": "def request(key, logger):\n    logger.info(key)\n",
+            "sha": "9e23f81f2098803fed7c4b89f4a6c83992ec5b9a",
+            "line": 1,
+            "kind": "text"
+          },
+          "source": null,
+          "category": "bug",
+          "severity": "critical",
+          "scenario": "The function now logs `key` directly rather than a redacted status message; any execution of `request` writes the secret to the configured logger output.",
+          "impact": "Unauthorized parties obtaining logs can retrieve usable API credentials.",
+          "recommendation": "Remove the key from log output and record only non-sensitive status information.",
+          "supporting_evidence": [
+            {
+              "path": "app/service.py",
+              "quote": "def request(key, logger):\n    logger.info(key)\n",
+              "sha": "9e23f81f2098803fed7c4b89f4a6c83992ec5b9a",
+              "line": 1,
+              "kind": "text"
+            }
+          ]
+        }
+      ],
+      "limitations": []
+    },
+    {
+      "id": "SEC-LOGGING-clean",
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "clean": true,
+      "blocked": false,
+      "status": "success",
+      "incomplete": false,
+      "trace": {
+        "model": "deepseek-v4-flash",
+        "prompt_version": "review-v3",
+        "retriever_version": "review-v1",
+        "model_calls": 1,
+        "token_usage": [
+          {
+            "completion_tokens": 357,
+            "prompt_tokens": 2054,
+            "total_tokens": 2411,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 1024
+            },
+            "prompt_cache_hit_tokens": 1024,
+            "prompt_cache_miss_tokens": 1030
+          }
+        ],
+        "wire_inputs": [
+          {
+            "sha256": "9eb8a2021be622bad58f0b722a8016b0f2518b24da7031a6e3f26c1c2b412642",
+            "bytes": 7299,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          }
+        ],
+        "excluded_paths": [],
+        "optional_sources_unavailable": [],
+        "optional_fragments_omitted": 0,
+        "context_sha256": "53dd6a73c068b18be25340ba499ccdd85049a20a0fa8d3d94f1a2b269011f991",
+        "context_bytes": 6491,
+        "fragments": 6,
+        "elapsed_ms": 2195
+      },
+      "profile_sha256": "0eb3f89a361b97364c0b41e83a30b54b622ff86dc4fce5bb1b119dc68e6e402b",
+      "snapshot": {
+        "base_sha": "80fd09da6fef82ccc67957fdf74ac9bd5f410bb1",
+        "head_sha": "8a081b0b952300dd529950dd6fe5d17946763068",
+        "merge_base_sha": "80fd09da6fef82ccc67957fdf74ac9bd5f410bb1",
+        "diff_sha256": "8e783b8ad49c544b8bceaf660be0b87824bdacdca0c01eb276db46001a8675b7"
+      },
+      "findings": [],
+      "limitations": []
+    },
+    {
+      "id": "INV-GOAL-regression",
+      "tp": 0,
+      "fp": 0,
+      "fn": 1,
+      "clean": false,
+      "blocked": false,
+      "status": "error",
+      "incomplete": true,
+      "trace": {
+        "model": "deepseek-v4-flash",
+        "prompt_version": "review-v3",
+        "retriever_version": "review-v1",
+        "model_calls": 2,
+        "token_usage": [
+          {
+            "completion_tokens": 1259,
+            "prompt_tokens": 6199,
+            "total_tokens": 7458,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 896
+            },
+            "prompt_cache_hit_tokens": 896,
+            "prompt_cache_miss_tokens": 5303
+          },
+          {
+            "completion_tokens": 492,
+            "prompt_tokens": 6319,
+            "total_tokens": 6811,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 512
+            },
+            "prompt_cache_hit_tokens": 512,
+            "prompt_cache_miss_tokens": 5807
+          }
+        ],
+        "wire_inputs": [
+          {
+            "sha256": "053674a144797ce96cf2ffb6c8c3cb9cfccc88505d259ff7efd12fd1906614f4",
+            "bytes": 24402,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          },
+          {
+            "sha256": "72678aa914367d96402d62454b0e2fe73ddd531391845ecfbb9b345f6e497705",
+            "bytes": 24725,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          }
+        ],
+        "excluded_paths": [],
+        "optional_sources_unavailable": [],
+        "optional_fragments_omitted": 0,
+        "context_sha256": "4fb4210d98ccd2fe12fa74ff46289167b6916498747b085413f49f0d145dd9b5",
+        "context_bytes": 23594,
+        "fragments": 11,
+        "verification_context_sha256": "d58ce9e1a1e1303d7f40d6fc723fbfe19934ba04b092d2aa1c866ed3e77025ff",
+        "verification_context_bytes": 24155,
+        "elapsed_ms": 11291
+      },
+      "profile_sha256": "c7ec8f413a04a1180c5429582bd542df6175037b25d62eff6c2cdbadd5f8fd71",
+      "snapshot": {
+        "base_sha": "5f2576bccc36c727bc5da6434a5d448adc9389cf",
+        "head_sha": "be16e833290eb8b25d570fab159c62c867770740",
+        "merge_base_sha": "5f2576bccc36c727bc5da6434a5d448adc9389cf",
+        "diff_sha256": "5972ebe10b96f23ed74ced09cf720064e7e8852d883d06063e828d1f8d84c505"
+      },
+      "findings": [],
+      "limitations": [
+        "app/memory/updates.py [INV-GOAL]: Semantic analysis is not available in this audit",
+        "Semantic call, context or response invalid (RuntimeError)"
+      ]
+    },
+    {
+      "id": "INV-GOAL-clean",
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "clean": true,
+      "blocked": false,
+      "status": "error",
+      "incomplete": true,
+      "trace": {
+        "model": "deepseek-v4-flash",
+        "prompt_version": "review-v3",
+        "retriever_version": "review-v1",
+        "model_calls": 1,
+        "token_usage": [
+          {
+            "completion_tokens": 1393,
+            "prompt_tokens": 6235,
+            "total_tokens": 7628,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 1024
+            },
+            "prompt_cache_hit_tokens": 1024,
+            "prompt_cache_miss_tokens": 5211
+          }
+        ],
+        "wire_inputs": [
+          {
+            "sha256": "95a03e2d87896f6f951b5183524446d13af681dfcae8025ee71781a6e3401c2b",
+            "bytes": 24402,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          }
+        ],
+        "excluded_paths": [],
+        "optional_sources_unavailable": [],
+        "optional_fragments_omitted": 0,
+        "context_sha256": "ff5daf70048de3b986c05190e1ade64ec1b75cb34d77c4e1b25bf87e93c13a56",
+        "context_bytes": 23594,
+        "fragments": 11,
+        "elapsed_ms": 9149
+      },
+      "profile_sha256": "c7ec8f413a04a1180c5429582bd542df6175037b25d62eff6c2cdbadd5f8fd71",
+      "snapshot": {
+        "base_sha": "4ccdbf29fecedb670fc3a9266c293156411fb6a3",
+        "head_sha": "51eee92833f3fc35aa1bda7a85f3ae5ba8df78f4",
+        "merge_base_sha": "4ccdbf29fecedb670fc3a9266c293156411fb6a3",
+        "diff_sha256": "ff0f15041c98f2e5bbf2e1568bcfa15a7f9206ca1d9782949575d97af0046129"
+      },
+      "findings": [],
+      "limitations": [
+        "app/memory/updates.py [INV-GOAL]: Semantic analysis is not available in this audit",
+        "Semantic call, context or response invalid (RuntimeError)"
+      ]
+    },
+    {
+      "id": "INV-BACKEND-regression",
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "clean": false,
+      "blocked": true,
+      "status": "failure",
+      "incomplete": false,
+      "trace": {
+        "model": "deepseek-v4-flash",
+        "prompt_version": "review-v3",
+        "retriever_version": "review-v1",
+        "model_calls": 2,
+        "token_usage": [
+          {
+            "completion_tokens": 454,
+            "prompt_tokens": 2135,
+            "total_tokens": 2589,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 896
+            },
+            "prompt_cache_hit_tokens": 896,
+            "prompt_cache_miss_tokens": 1239
+          },
+          {
+            "completion_tokens": 365,
+            "prompt_tokens": 2020,
+            "total_tokens": 2385,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 512
+            },
+            "prompt_cache_hit_tokens": 512,
+            "prompt_cache_miss_tokens": 1508
+          }
+        ],
+        "wire_inputs": [
+          {
+            "sha256": "121d389a3dc952fc3b9f56aa146d109dc4660b78d074b7d5f08c35a57cb4d71d",
+            "bytes": 7517,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          },
+          {
+            "sha256": "61c1dd9993bf04bba32043980a322969f0d57e86856db344b43d99e56f01718a",
+            "bytes": 6927,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          }
+        ],
+        "excluded_paths": [],
+        "optional_sources_unavailable": [],
+        "optional_fragments_omitted": 0,
+        "context_sha256": "7e91cc37c3c2a3920f590d5e29e1c64fb1ec09df93c438e65fb62c2e39c579c0",
+        "context_bytes": 6709,
+        "fragments": 6,
+        "verification_context_sha256": "20f2baecac7067c98a0b255504e4b2ebd60c98da9ae6e679da05a473446bb659",
+        "verification_context_bytes": 6357,
+        "verification": [
+          {
+            "index": 0,
+            "verdict": "confirmed",
+            "reason": "The head code at app/service.py line 2 reads `if client[\"approved\"]:` to decide whether to call `publish()`. The normative README states approval is owned by backend state and only `state[\"approved\"]` allows publish; client claims do not grant approval. The before code used `state[\"approved\"]`, so this diff replaced the trusted backend check with an untrusted client-provided flag. A client dict containing `{\"approved\": true}` causes publishing even when backend state approval is false, directly violating INV-BACKEND and permitting unauthorized publishes.",
+            "counterargument": "The strongest counterargument is that `client` may be a trusted internal object or that the caller only passes a client whose approval mirrors backend state, making the change behavior-preserving. However, the policy scope explicitly treats client claims as insufficient approval evidence and forbids using them to grant publish, and there is no head code or caller contract shown that sanitizes or verifies `client[\"approved\"]` against `state`. Even if some callers supply a trusted client, the function no longer enforces the backend-owned approval invariant, so the defect stands.",
+            "rule_id": "INV-BACKEND",
+            "path": "app/service.py",
+            "evidence": [
+              {
+                "path": "app/service.py",
+                "quote": "    if client[\"approved\"]:\n",
+                "sha": "83b7b40273ad9adccd512685d7b40be259b4554a",
+                "line": 2,
+                "kind": "text"
+              },
+              {
+                "path": "app/service.py",
+                "quote": "    if state[\"approved\"]:\n",
+                "sha": "aa75604ccd758699b2e76c9c5aa41e82f4bb7fba",
+                "line": 2,
+                "kind": "text"
+              },
+              {
+                "path": "README.md",
+                "quote": "Approval is owned by backend state. Only state[\"approved\"] allows publish; client claims do not grant approval.",
+                "sha": "aa75604ccd758699b2e76c9c5aa41e82f4bb7fba",
+                "line": 1,
+                "kind": "text"
+              }
+            ]
+          }
+        ],
+        "elapsed_ms": 5535
+      },
+      "profile_sha256": "5d61d5d411c21384eb75b513abc488ae4660cefbfd7adf4e02dc1f43fdc85fa4",
+      "snapshot": {
+        "base_sha": "aa75604ccd758699b2e76c9c5aa41e82f4bb7fba",
+        "head_sha": "83b7b40273ad9adccd512685d7b40be259b4554a",
+        "merge_base_sha": "aa75604ccd758699b2e76c9c5aa41e82f4bb7fba",
+        "diff_sha256": "1e7c6aa63cb20c33caa7361974a2aa194d09ae2103526880d7e2552e3195f276"
+      },
+      "findings": [
+        {
+          "rule_id": "INV-BACKEND",
+          "blocking": true,
+          "message": "Publish is gated on client-claimed approval instead of backend state.",
+          "evidence": {
+            "path": "app/service.py",
+            "quote": "    if client[\"approved\"]:\n",
+            "sha": "83b7b40273ad9adccd512685d7b40be259b4554a",
+            "line": 2,
+            "kind": "text"
+          },
+          "source": {
+            "path": "README.md",
+            "quote": "Approval is owned by backend state. Only state[\"approved\"] allows publish; client claims do not grant approval.",
+            "sha": "aa75604ccd758699b2e76c9c5aa41e82f4bb7fba",
+            "line": 1,
+            "kind": "text"
+          },
+          "category": "invariant",
+          "severity": "critical",
+          "scenario": "A client submits `{\"approved\": true}` while backend `state[\"approved\"]` is false; `apply` calls `publish()` because it now reads the client dict.",
+          "impact": "Unauthorized publishing is permitted based solely on an untrusted client-provided flag, defeating the backend approval contract.",
+          "recommendation": "Restore the guard to check `state[\"approved\"]` and ignore any client-provided approval claim.",
+          "supporting_evidence": [
+            {
+              "path": "app/service.py",
+              "quote": "    if client[\"approved\"]:\n",
+              "sha": "83b7b40273ad9adccd512685d7b40be259b4554a",
+              "line": 2,
+              "kind": "text"
+            },
+            {
+              "path": "app/service.py",
+              "quote": "    if state[\"approved\"]:\n",
+              "sha": "aa75604ccd758699b2e76c9c5aa41e82f4bb7fba",
+              "line": 2,
+              "kind": "text"
+            },
+            {
+              "path": "README.md",
+              "quote": "Approval is owned by backend state. Only state[\"approved\"] allows publish; client claims do not grant approval.",
+              "sha": "aa75604ccd758699b2e76c9c5aa41e82f4bb7fba",
+              "line": 1,
+              "kind": "text"
+            }
+          ]
+        }
+      ],
+      "limitations": []
+    },
+    {
+      "id": "INV-BACKEND-clean",
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "clean": true,
+      "blocked": false,
+      "status": "success",
+      "incomplete": false,
+      "trace": {
+        "model": "deepseek-v4-flash",
+        "prompt_version": "review-v3",
+        "retriever_version": "review-v1",
+        "model_calls": 1,
+        "token_usage": [
+          {
+            "completion_tokens": 338,
+            "prompt_tokens": 2126,
+            "total_tokens": 2464,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 1024
+            },
+            "prompt_cache_hit_tokens": 1024,
+            "prompt_cache_miss_tokens": 1102
+          }
+        ],
+        "wire_inputs": [
+          {
+            "sha256": "aec1c98b265a9c047ac085117751f76673085516400764bf9bd3c6d44858eba6",
+            "bytes": 7545,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          }
+        ],
+        "excluded_paths": [],
+        "optional_sources_unavailable": [],
+        "optional_fragments_omitted": 0,
+        "context_sha256": "5dc1af5cb406b5ac140225542808b0ff29d60dcd8c34769bc33701a93f05f172",
+        "context_bytes": 6737,
+        "fragments": 6,
+        "elapsed_ms": 2667
+      },
+      "profile_sha256": "5d61d5d411c21384eb75b513abc488ae4660cefbfd7adf4e02dc1f43fdc85fa4",
+      "snapshot": {
+        "base_sha": "af14f5b186fe2a19a10230e0ea37a51a1fee0353",
+        "head_sha": "75fc7784f3cf8866bf751ba41fe1407c5536471c",
+        "merge_base_sha": "af14f5b186fe2a19a10230e0ea37a51a1fee0353",
+        "diff_sha256": "29fc27f8865d426a3c42e63c44d8d737c26b5eb33906dd4ba783b1e92ef4c380"
+      },
+      "findings": [],
+      "limitations": []
+    },
+    {
+      "id": "INV-SESSION-regression",
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "clean": false,
+      "blocked": true,
+      "status": "failure",
+      "incomplete": false,
+      "trace": {
+        "model": "deepseek-v4-flash",
+        "prompt_version": "review-v3",
+        "retriever_version": "review-v1",
+        "model_calls": 2,
+        "token_usage": [
+          {
+            "completion_tokens": 524,
+            "prompt_tokens": 2099,
+            "total_tokens": 2623,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 896
+            },
+            "prompt_cache_hit_tokens": 896,
+            "prompt_cache_miss_tokens": 1203
+          },
+          {
+            "completion_tokens": 297,
+            "prompt_tokens": 1982,
+            "total_tokens": 2279,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 512
+            },
+            "prompt_cache_hit_tokens": 512,
+            "prompt_cache_miss_tokens": 1470
+          }
+        ],
+        "wire_inputs": [
+          {
+            "sha256": "b51c404e7a5f6febf8f0615174802e7c7df41da195da1f173808dda75f97aff4",
+            "bytes": 7499,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          },
+          {
+            "sha256": "500f7c9470c98e9a2585687eca4fd8d67d7f2d9b2ecf14455171d8daa97cc722",
+            "bytes": 6950,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          }
+        ],
+        "excluded_paths": [],
+        "optional_sources_unavailable": [],
+        "optional_fragments_omitted": 0,
+        "context_sha256": "d8d8d4bdc2debee2e14825f811aed053cf74d6097d6ef802171bf9ac7ea702de",
+        "context_bytes": 6691,
+        "fragments": 6,
+        "verification_context_sha256": "18383ff8fa13fb69435137c89dcf0e532429d5203587407b80c27918050a914f",
+        "verification_context_bytes": 6380,
+        "verification": [
+          {
+            "index": 0,
+            "verdict": "confirmed",
+            "reason": "The head implementation of `select` filters only on `r[\"task\"] == task`; the session equality check present before (`r[\"session\"] == session and r[\"task\"] == task`) was removed. Thus a row with session 's2' and task 't1' is returned when 's1'/'t1' is requested, violating the documented contract that rows may be returned only when both session and task match.",
+            "counterargument": "One might argue the callers already filter by session or that `rows` is pre-scoped to a single session, making the removed predicate redundant. However, the `select` signature explicitly accepts a `session` parameter and the before-code actively used it; nothing in the diff or metadata restricts `rows` to the requested session, so the defect stands.",
+            "rule_id": "INV-SESSION",
+            "path": "app/service.py",
+            "evidence": [
+              {
+                "path": "app/service.py",
+                "quote": "def select(rows, session, task):\n    return [r for r in rows if r[\"task\"] == task]\n",
+                "sha": "bcbe85ccbf8b454f18db4092f442cf971be5eeb5",
+                "line": 1,
+                "kind": "text"
+              },
+              {
+                "path": "app/service.py",
+                "quote": "def select(rows, session, task):\n    return [r for r in rows if r[\"session\"] == session and r[\"task\"] == task]\n",
+                "sha": "a01b172bc8ef748a9cbd6abc5ad09ba820765d8b",
+                "line": 1,
+                "kind": "text"
+              },
+              {
+                "path": "README.md",
+                "quote": "Memory rows may be returned only when both their session and task match the requested session and task.",
+                "sha": "a01b172bc8ef748a9cbd6abc5ad09ba820765d8b",
+                "line": 1,
+                "kind": "text"
+              }
+            ]
+          }
+        ],
+        "elapsed_ms": 5985
+      },
+      "profile_sha256": "858a4c77293ff54036fffb8dfd72a74f46d4e16e8698a5cd20e5dcb4a72ea849",
+      "snapshot": {
+        "base_sha": "a01b172bc8ef748a9cbd6abc5ad09ba820765d8b",
+        "head_sha": "bcbe85ccbf8b454f18db4092f442cf971be5eeb5",
+        "merge_base_sha": "a01b172bc8ef748a9cbd6abc5ad09ba820765d8b",
+        "diff_sha256": "13d35c5185d3f3ee8d7ea4883077ad93b51076bce0c6a7ac52ac194fc630e8d4"
+      },
+      "findings": [
+        {
+          "rule_id": "INV-SESSION",
+          "blocking": true,
+          "message": "Session filter removed from select, returning rows across sessions",
+          "evidence": {
+            "path": "app/service.py",
+            "quote": "    return [r for r in rows if r[\"task\"] == task]\n",
+            "sha": "bcbe85ccbf8b454f18db4092f442cf971be5eeb5",
+            "line": 2,
+            "kind": "text"
+          },
+          "source": {
+            "path": "README.md",
+            "quote": "Memory rows may be returned only when both their session and task match the requested session and task.",
+            "sha": "a01b172bc8ef748a9cbd6abc5ad09ba820765d8b",
+            "line": 1,
+            "kind": "text"
+          },
+          "category": "invariant",
+          "severity": "critical",
+          "scenario": "Call select(rows, session='s1', task='t1') where rows contains a row with session 's2' and task 't1'. The current predicate r[\"task\"] == task is true for that row, so it is returned even though its session does not match the requested session.",
+          "impact": "Memory rows from other sessions leak into the result, breaking the documented session isolation contract and potentially exposing cross-session data.",
+          "recommendation": "Restore the session equality check: return [r for r in rows if r[\"session\"] == session and r[\"task\"] == task].",
+          "supporting_evidence": [
+            {
+              "path": "app/service.py",
+              "quote": "    return [r for r in rows if r[\"task\"] == task]\n",
+              "sha": "bcbe85ccbf8b454f18db4092f442cf971be5eeb5",
+              "line": 2,
+              "kind": "text"
+            },
+            {
+              "path": "app/service.py",
+              "quote": "    return [r for r in rows if r[\"session\"] == session and r[\"task\"] == task]\n",
+              "sha": "a01b172bc8ef748a9cbd6abc5ad09ba820765d8b",
+              "line": 2,
+              "kind": "text"
+            }
+          ]
+        }
+      ],
+      "limitations": []
+    },
+    {
+      "id": "INV-SESSION-clean",
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "clean": true,
+      "blocked": false,
+      "status": "success",
+      "incomplete": false,
+      "trace": {
+        "model": "deepseek-v4-flash",
+        "prompt_version": "review-v3",
+        "retriever_version": "review-v1",
+        "model_calls": 1,
+        "token_usage": [
+          {
+            "completion_tokens": 295,
+            "prompt_tokens": 2089,
+            "total_tokens": 2384,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 1024
+            },
+            "prompt_cache_hit_tokens": 1024,
+            "prompt_cache_miss_tokens": 1065
+          }
+        ],
+        "wire_inputs": [
+          {
+            "sha256": "b0bf34831170dd186000df8446e8e4b38a9858e9d49c5894c8f4467149dbbec9",
+            "bytes": 7534,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          }
+        ],
+        "excluded_paths": [],
+        "optional_sources_unavailable": [],
+        "optional_fragments_omitted": 0,
+        "context_sha256": "d8bc6026720757a9d18fe11be5004d944f165f6d300db0b243f05decce6e38c0",
+        "context_bytes": 6726,
+        "fragments": 6,
+        "elapsed_ms": 2199
+      },
+      "profile_sha256": "858a4c77293ff54036fffb8dfd72a74f46d4e16e8698a5cd20e5dcb4a72ea849",
+      "snapshot": {
+        "base_sha": "228848af5e3ee6ec9004c813bc6d645859d40789",
+        "head_sha": "46004793351ff18078cca458149ed456b6edec7c",
+        "merge_base_sha": "228848af5e3ee6ec9004c813bc6d645859d40789",
+        "diff_sha256": "0dbe991d46c561441318afa8328d0b5d0448db1e3ed4272dd73cd2bdc2c17b94"
+      },
+      "findings": [],
+      "limitations": []
+    },
+    {
+      "id": "IO-SCHEMA-regression",
+      "tp": 0,
+      "fp": 0,
+      "fn": 1,
+      "clean": false,
+      "blocked": false,
+      "status": "error",
+      "incomplete": true,
+      "trace": {
+        "model": "deepseek-v4-flash",
+        "prompt_version": "review-v3",
+        "retriever_version": "review-v1",
+        "model_calls": 1,
+        "token_usage": [
+          {
+            "completion_tokens": 671,
+            "prompt_tokens": 2134,
+            "total_tokens": 2805,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 896
+            },
+            "prompt_cache_hit_tokens": 896,
+            "prompt_cache_miss_tokens": 1238
+          }
+        ],
+        "wire_inputs": [
+          {
+            "sha256": "361cbc76e258271de6ba1e5115ba4d3e6aeeb80d5c1fd367ab69f96355e5a651",
+            "bytes": 7674,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          }
+        ],
+        "excluded_paths": [],
+        "optional_sources_unavailable": [],
+        "optional_fragments_omitted": 0,
+        "context_sha256": "72baacab954d934697134354afae1445e89b5a8ee73f9f484bb427e0b838195a",
+        "context_bytes": 6866,
+        "fragments": 6,
+        "elapsed_ms": 4829
+      },
+      "profile_sha256": "25a8dd133c2a0f4a89fe478048dec68e382d261a277a6e5cc05a894f7195e1ba",
+      "snapshot": {
+        "base_sha": "955c3d80d17bf052af2cace437e3b53678b44746",
+        "head_sha": "e62dc8e5a07116e0a30dfedfe60d51fe2337a367",
+        "merge_base_sha": "955c3d80d17bf052af2cace437e3b53678b44746",
+        "diff_sha256": "d70db51561ef7261c234469e4d40e96708a217877984ca809714682cf4cec893"
+      },
+      "findings": [],
+      "limitations": [
+        "app/service.py [IO-SCHEMA]: Semantic analysis is not available in this audit",
+        "Semantic call, context or response invalid (RuntimeError)"
+      ]
+    },
+    {
+      "id": "IO-SCHEMA-clean",
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "clean": true,
+      "blocked": false,
+      "status": "success",
+      "incomplete": false,
+      "trace": {
+        "model": "deepseek-v4-flash",
+        "prompt_version": "review-v3",
+        "retriever_version": "review-v1",
+        "model_calls": 1,
+        "token_usage": [
+          {
+            "completion_tokens": 338,
+            "prompt_tokens": 2198,
+            "total_tokens": 2536,
+            "completion_tokens_details": null,
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 1024
+            },
+            "prompt_cache_hit_tokens": 1024,
+            "prompt_cache_miss_tokens": 1174
+          }
+        ],
+        "wire_inputs": [
+          {
+            "sha256": "b1567aea1872445678c455ceb789d928f791813f5a768a50c7040e9fd40aea86",
+            "bytes": 7858,
+            "protocol": "line-assessments-v1",
+            "request_sent": true
+          }
+        ],
+        "excluded_paths": [],
+        "optional_sources_unavailable": [],
+        "optional_fragments_omitted": 0,
+        "context_sha256": "6d75a16332afa48e676b052c83c1c3bee5c074865b187cb301274086f387e7c5",
+        "context_bytes": 7050,
+        "fragments": 6,
+        "elapsed_ms": 2537
+      },
+      "profile_sha256": "25a8dd133c2a0f4a89fe478048dec68e382d261a277a6e5cc05a894f7195e1ba",
+      "snapshot": {
+        "base_sha": "9c5af04b34f916680f7be85c6a1fb72672eae06e",
+        "head_sha": "f9d588c7b6fe181d7958f04dcce5cddd99e61cd5",
+        "merge_base_sha": "9c5af04b34f916680f7be85c6a1fb72672eae06e",
+        "diff_sha256": "aad3a55a01a60cca2eff37097234e32577a8c2e1dd8210b37b6a4f65ec25e890"
+      },
+      "findings": [],
+      "limitations": []
+    }
+  ],
+  "quality_gate_passed": false
+}

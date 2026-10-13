@@ -5,7 +5,7 @@ import time
 from .models import Criterion, Evidence, Finding
 from .git import GitError
 from .retrieval import ContextUnavailable, code, readable, retrieve
-from .semantic_models import DraftReview, JsonModel, Limits
+from .semantic_models import DraftReview, JsonModel, Limits, generate_json
 from .verification import verify
 
 SYSTEM = """Review changes against the supplied project policy. Return JSON matching the schema.
@@ -31,7 +31,7 @@ def analyze(repository, result, changes, model: JsonModel, limits: Limits):
     requested += [{"path": change.path, "rule_id": "BUGS"} for change in changes if code(change.path)]
     if not requested:
         return result
-    trace = {"model": model.name, "prompt_version": "review-v2", "retriever_version": "review-v1", "model_calls": 0, "token_usage": []}
+    trace = {"model": model.name, "prompt_version": "review-v5", "retriever_version": "review-v2", "model_calls": 0, "token_usage": [], "wire_inputs": []}
     try:
         if "BUGS" in rules:
             raise ReviewIncomplete("BUGS is reserved for the general bug criterion")
@@ -50,7 +50,9 @@ def analyze(repository, result, changes, model: JsonModel, limits: Limits):
         def serialize():
             return json.dumps({"criteria": requested, "policy": [r.model_dump() for r in result.policy],
                 "snapshot": result.snapshot.model_dump(), "fragments": [f.model_dump() for f in fragments],
-                "changed_lines": retrieved.edits, "unavailable_context": retrieved.omissions,
+                "changed_lines": retrieved.edits,
+                "causal_changes": {p: [{k:v for k,v in c.items() if k != "removed"} for c in causes] for p, causes in retrieved.causes.items()},
+                "unavailable_context": retrieved.omissions,
                 "excluded_paths": trace["excluded_paths"]}, ensure_ascii=False)
 
         schema = DraftReview.model_json_schema()
@@ -66,9 +68,10 @@ def analyze(repository, result, changes, model: JsonModel, limits: Limits):
         if trace["context_bytes"] > limits.context_bytes:
             raise ReviewIncomplete("Required context exceeds budget")
         trace["model_calls"] = 1
-        raw = model.generate_json(messages=[{"role": "system", "content": SYSTEM}, {"role": "user", "content": payload}],
-                                  max_tokens=limits.output_tokens, schema=schema)
+        raw = generate_json(model, messages=[{"role": "system", "content": SYSTEM}, {"role": "user", "content": payload}],
+                                  max_tokens=limits.output_tokens, schema=schema, context_bytes=limits.context_bytes)
         trace["token_usage"].append(getattr(model, "last_usage", None))
+        trace["wire_inputs"].append(getattr(model, "last_input", None))
         if len(raw.encode()) > limits.output_tokens * 16:
             raise ReviewIncomplete("Model response exceeds budget")
         draft = DraftReview.model_validate_json(raw)
@@ -76,10 +79,21 @@ def analyze(repository, result, changes, model: JsonModel, limits: Limits):
 
         def evidence(citation):
             source = lookup[citation.fragment_id]
-            if source.text.count(citation.quote) != 1:
-                raise ReviewIncomplete("Model quote must occur exactly once in its fragment")
-            return Evidence(path=source.path, sha=source.sha, quote=citation.quote, kind=source.kind,
-                            line=source.line + source.text[:source.text.index(citation.quote)].count("\n"))
+            if citation.line is None:
+                if source.text.count(citation.quote) != 1:
+                    raise ReviewIncomplete("Model quote must occur exactly once in its fragment")
+                line = source.line + source.text[:source.text.index(citation.quote)].count("\n")
+            else:
+                offset = citation.line - source.line
+                lines = source.text.splitlines(keepends=True)
+                stop = citation.end_line - source.line + 1
+                if not 0 <= offset < stop <= len(lines):
+                    raise ReviewIncomplete("Evidence range does not match its fragment")
+                quote = "".join(lines[offset:stop])
+                if citation.quote is not None and citation.quote != quote:
+                    raise ReviewIncomplete("Evidence quote does not match its range")
+                line = citation.line
+            return Evidence(path=source.path, sha=source.sha, quote=citation.quote if citation.line is None else quote, kind=source.kind, line=line)
 
         roles = {change.path: "before" if change.status == "D" else "head" for change in relevant}
         before_paths = {change.path: change.before_path for change in relevant}
@@ -90,6 +104,13 @@ def analyze(repository, result, changes, model: JsonModel, limits: Limits):
                         if lookup[c.fragment_id].path == item.path and lookup[c.fragment_id].role == roles[item.path]
                         and (not needs_text or lookup[c.fragment_id].kind == "text"))
 
+        def paired_anchor(change, ref, fragment):
+            if (all(change[side][0] == change[side][1] for side in ('before', 'head'))
+                    and ref.line == change[fragment.role][0] and len(ref.quote.splitlines()) == 1
+                    and ref.quote.strip() == fragment.text.splitlines()[ref.line - fragment.line].strip()):
+                return change['id']
+            return ''
+
         def changed_cause(item):
             for citation in item.evidence:
                 fragment = lookup[citation.fragment_id]
@@ -97,14 +118,20 @@ def analyze(repository, result, changes, model: JsonModel, limits: Limits):
                     before_paths[item.path] if fragment.role == "before" else item.path):
                     continue
                 ref = evidence(citation)
-                edits = retrieved.edits[fragment.role + ":" + fragment.path]
                 end_line = ref.line + ref.quote.count("\n") - int(ref.quote.endswith("\n"))
-                if fragment.kind == "text" and any(ref.line <= stop and end_line >= start for start, stop in edits):
-                    return ref
+                if fragment.kind == "text":
+                    for change in retrieved.causes[item.path]:
+                        start, stop = change[fragment.role]
+                        if start <= stop and ref.line <= stop and end_line >= start:
+                            return ref, change["id"], paired_anchor(change, ref, fragment)
+                        if fragment.role == "head" and start > stop and ref.line <= stop and end_line >= start and change["removed"].strip():
+                            removed = Evidence(path=before_paths[item.path], sha=result.snapshot.merge_base_sha,
+                                               line=change["before"][0], quote=change["removed"])
+                            return removed, change["id"], ""
                 any_edits = retrieved.edits["head:" + item.path] or retrieved.edits["before:" + before_paths[item.path]]
                 if fragment.kind == "file_metadata" and (not any_edits or
                     fragment.role == roles[item.path] and json.loads(fragment.text)["bytes"] == 0):
-                    return ref
+                    return ref, hashlib.sha256((result.snapshot.diff_sha256 + item.path + "metadata").encode()).hexdigest()[:20], ""
             raise ReviewIncomplete("Finding evidence does not intersect the causal change")
 
         expected = {(c["path"], c["rule_id"]) for c in requested}
@@ -125,14 +152,14 @@ def analyze(repository, result, changes, model: JsonModel, limits: Limits):
             if (item.path, item.rule_id) not in expected:
                 raise ReviewIncomplete("Finding does not match requested scope")
             refs = [evidence(c) for c in item.evidence]
-            causal_evidence = changed_cause(item)
+            causal_evidence, cause_id, paired_anchor_id = changed_cause(item)
             rule = rules.get(item.rule_id)
             source = None
             if rule:
                 source_text = repository.read(result.snapshot.base_sha, rule.source.path)
                 source = Evidence(**rule.source.model_dump(), sha=result.snapshot.base_sha,
                                   line=source_text[:source_text.index(rule.source.quote)].count("\n") + 1)
-            findings.append(Finding(rule_id=item.rule_id, blocking=rule.level == "must" if rule else item.severity == "critical",
+            findings.append(Finding(cause_id=cause_id, paired_anchor_id=paired_anchor_id, rule_id=item.rule_id, blocking=rule.level == "must" if rule else item.severity == "critical",
                 category=rule.category if rule else "bug", severity=item.severity, message=item.summary,
                 scenario=item.scenario, impact=item.impact, recommendation=item.recommendation,
                 evidence=causal_evidence, source=source, supporting_evidence=refs))
@@ -149,6 +176,7 @@ def analyze(repository, result, changes, model: JsonModel, limits: Limits):
     except (ValueError, KeyError, StopIteration, RuntimeError, OSError) as error:
         if len(trace["token_usage"]) < trace["model_calls"]:
             trace["token_usage"].append(getattr(model, "last_usage", None))
+            trace["wire_inputs"].append(getattr(model, "last_input", None))
         trace["elapsed_ms"] = round((time.monotonic() - started) * 1000)
         return result.model_copy(update={"status": "error", "execution": "partial", "trace": trace,
             "limitations": [*result.limitations, str(error) if isinstance(error, (ReviewIncomplete, ContextUnavailable, GitError))

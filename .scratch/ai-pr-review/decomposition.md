@@ -3,7 +3,7 @@
 - Дата: 2026-10-13.
 - Основание: [план и Q1–Q11](plan.md), [исследование GitHub](research.md).
 - Trunk: `main`, исследован на `f7a4d1e`.
-- Статус карты: согласована пользователем 2026-10-13; [первый PR №4](https://github.com/CandyRubik/ai-challange-w6/pull/4) слит, [второй PR №5](https://github.com/CandyRubik/ai-challange-w6/pull/5) слит; третий срез в работе от main `dad9f17`.
+- Статус карты: согласована пользователем 2026-10-13; [первый PR №4](https://github.com/CandyRubik/ai-challange-w6/pull/4) слит, [второй PR №5](https://github.com/CandyRubik/ai-challange-w6/pull/5) слит; [PR №6](https://github.com/CandyRubik/ai-challange-w6/pull/6) слит; срез 3b в работе от main `472eaf9`.
 - Бюджет: целевой размер ≤600 reviewable lines (added + removed), максимум 1000 с отдельным обоснованием. Это оценки; при росте срез делится до открытия PR. Документация и большие входные fixtures не входят в кодовый бюджет; prompt/profile, ручные тесты и workflow считаются проверяемой логикой.
 
 ## Последовательность
@@ -12,9 +12,10 @@
 |---|---|---|---|---|---|---|
 | 1 | Ручной профиль и локальный аудит правил | CLI объясняет применимые правила и проверяет первые формализуемые границы на закреплённом Git diff, выводит JSON/Markdown | Новый отдельный CLI, основной чат не вызывает его | 639 фактически | — | merged |
 | 2 | Локальное AI-ревью с code/docs RAG | CLI анализирует PR-снимок через DeepSeek с retrieval и выдаёт bugs/architecture/recommendations с источниками | Явный локальный запуск, без автоматических внешних публикаций | 717 фактически | 1 | merged |
-| 3 | Калибровка блокирующих выводов | Версионированный eval и проверка контраргументов отсекают неподтверждённые finding; видны precision/coverage/cost | Проверяется качество уже работающего CLI; paid eval запускается явно | 504 фактически | 2 | in-review |
-| 3b | Устойчивый формат и повторная калибровка | Единый assessment вместо противоречивых массивов, надёжная привязка evidence, свежий holdout | Исправляет выявленную incomplete-rate до автоматизации; API только явно | 300–550 | 3 | planned |
-| 4 | Автоматический GitHub отчёт и check | Trusted workflow запускается на PR, публикует summary и head-bound status; неполный анализ даёт error | Reviewer только из main; PR data-only; отдельные jobs/permissions | 450–600 | 3b | planned |
+| 3 | Калибровка блокирующих выводов | Версионированный eval и проверка контраргументов отсекают неподтверждённые finding; видны precision/coverage/cost | Проверяется качество уже работающего CLI; paid eval запускается явно | 504 фактически | 2 | merged |
+| 3b | Устойчивый формат и повторная калибровка | Единый assessment вместо противоречивых массивов, надёжная привязка evidence, свежий holdout | Исправляет выявленную incomplete-rate до автоматизации; API только явно | 630 фактически | 3 | in-review |
+| 3c | Восстановление невалидного ответа и оценка дублей | Один явный bounded retry при невалидном ответе, проверяемые аннотации спорных eval-диагнозов, завершение failed cases | Невалидные ответы не дают success; прошлые raw counts сохраняются; без нового полного paid-прогона | 300–500 | 3b | planned |
+| 4 | Автоматический GitHub отчёт и check | Trusted workflow запускается на PR, публикует summary и head-bound status; неполный анализ даёт error | Reviewer только из main; PR data-only; отдельные jobs/permissions | 450–600 | 3c | planned |
 | 5 | Inline и устойчивость публикации | Причинные изменения получают корректные inline anchors, rerun не дублирует результат, старое поколение не заменяет новое | Публикует уже проверенный результат; summary fallback при отсутствии anchor | 350–550 | 4 | planned |
 | 6 | Подтверждённый долг проекта | Активный реестр перепроверяется на head, отдельные общие комментарии влияют на check; fixing PR распознаётся | Реестр из trusted base, изначально пустой; candidates требуют подтверждения | 400–600 | 5 | planned |
 | 7 | Решения владельца | Scoped dismiss/waiver/resolve с причиной и сроком переживают rerun и пересчитывают check | Trusted manual workflow, проверка владельца и provenance журнала | 400–600 | 6 | planned |
@@ -98,3 +99,9 @@
 - 2026-10-13: пользователь разрешил слить PR №5 и последующие PR по карте после зелёного CI и self-review. Разрешение не включает перенос ключей или дополнительные API-запросы.
 
 - 2026-10-13: первый реальный eval (20 cases/27 calls) не прошёл quality gate: 11 incomplete, 0 clean blocked. Добавлен самостоятельный срез 3b: structured output/grounding и повторная калибровка до автоматического workflow. Подробности и source-version caveat — [slice3-review](slice3-review.md). Единственное разрешение на этот eval использовано; новые API calls требуют отдельного разрешения.
+
+- 2026-10-13: PR №6 слит после зелёного CI и self-review (Standards 0 open, Spec 0 open). Срез 3b использует line-assessments-v2; предыдущие 20 cases теперь development, 6 новых holdout. Первый eval не используется как успешная калибровка новой версии.
+
+- 2026-10-13: второй eval дал 11/13 найденных регрессий, 12/13 clean pass, 0 clean blocked, 3 incomplete, 38 API calls. Четыре исходных FP — повтор того же дефекта под must/BUGS; версия 3 разметки отличает duplicates и объединяет одинаковые anchors в Markdown, сохраняя машинные findings. Номера строк/короткие IDs показываются явно; прежние invalid ranges не принимаются и не «чинятся» молча.
+
+- 2026-10-13: срез 3b завершён (630 code lines, 343 tests, обе оси 0 open). Превышение цели на30 — исправления обнаруженных grounding/provenance ошибок и regression tests, ниже cap1000. Последний полный eval: 13/13 clean pass, 3 incomplete из-за невалидного JSON/blank citation. Добавлен самостоятельный 3c для явного bounded format retry и проверяемой adjudication дублей до активации workflow. Источник — [slice3b-review](slice3b-review.md).

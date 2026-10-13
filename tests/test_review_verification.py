@@ -93,3 +93,84 @@ def test_empty_module_can_be_verified_by_its_unchanged_caller(tmp_path):
     base = commit(root, {'app/caller.py': 'from app.state.service import apply\n'})
     head = commit(root, {'app/state/service.py': ''})
     assert review(root, base, head, model=EmptyApi()).status == 'failure'
+
+
+def test_head_profile_cannot_refute_a_runtime_policy_violation(tmp_path):
+    class ProposedPolicy(Model):
+        def generate_json(self, *, messages, **kwargs):
+            payload = json.loads(messages[-1]['content'])
+            profile = next(f for f in payload['fragments'] if f['role'] == 'head' and f['path'] == '.ai-review/profile.json' and f['kind'] == 'text')
+            ref = {'fragment_id': profile['id'], 'quote': profile['text']}
+            if 'candidates' in payload:
+                return json.dumps({'decisions': [{'index': 0, 'verdict': 'rejected', 'reason': 'Proposed profile permits this',
+                    'counterargument': 'The PR changes its own policy', 'evidence': [ref]}]})
+            draft = json.loads(super().generate_json(messages=messages, **kwargs))
+            for criterion in draft['criteria']:
+                if criterion['path'] == '.ai-review/profile.json':
+                    criterion['evidence'] = [ref]
+            return json.dumps(draft)
+    root, base = semantic_repository(tmp_path)
+    proposed = json.loads((root / '.ai-review/profile.json').read_text())
+    proposed['owners'] = ['new-owner']
+    head = commit(root, {'app/state/service.py': 'def apply(state):\n    return None\n',
+                         '.ai-review/profile.json': json.dumps(proposed)})
+    assert review(root, base, head, model=ProposedPolicy()).status == 'error'
+
+
+@pytest.mark.parametrize('whole_context,expected', [(True, 'failure'), (False, 'error')])
+def test_deleted_guard_is_grounded_from_a_head_context_spanning_the_gap(tmp_path, whole_context, expected):
+    class DeletedGuard(Model):
+        def generate_json(self, *, messages, **kwargs):
+            payload = json.loads(messages[-1]['content'])
+            if 'candidates' in payload:
+                return super().generate_json(messages=messages, **kwargs)
+            head = next(f for f in payload['fragments'] if f['role'] == 'head' and f['kind'] == 'text')
+            quote = head['text'] if whole_context else head['text'].splitlines(keepends=True)[0]
+            ref = dict(fragment_id=head['id'], quote=quote)
+            return json.dumps({'criteria': [{**c, 'verdict': 'violation' if c['rule_id'] != 'BUGS' else 'pass',
+                'reason': 'Approval guard removed', 'evidence': [ref]} for c in payload['criteria']],
+                'findings': [dict(path='app/state/service.py', rule_id='ARCH-STATE-PURE', severity='major',
+                    summary='Approval removed', scenario='approved=False', impact='Unapproved publish',
+                    recommendation='Restore guard', evidence=[ref])], 'recommendations': []})
+    root, _ = semantic_repository(tmp_path)
+    profile = json.loads((root / '.ai-review/profile.json').read_text())
+    contract = 'A false approval must never publish.'
+    profile['rules'][0].update(requirement=contract, source=dict(path='README.md', quote=contract))
+    base = commit(root, {'.ai-review/profile.json': json.dumps(profile), 'README.md': contract,
+        'app/state/service.py': 'def apply(approved, publish):\n    if not approved:\n        return\n    publish()\n'})
+    head = commit(root, {'app/state/service.py': 'def apply(approved, publish):\n    publish()\n'})
+    result = review(root, base, head, model=DeletedGuard())
+    assert result.status == expected
+    if whole_context:
+        assert result.findings[0].evidence.sha == base
+        assert result.findings[0].evidence.quote == '    if not approved:\n        return\n'
+
+
+def test_before_and_head_diagnoses_share_a_causal_edit_without_losing_rules(tmp_path):
+    class TwoDiagnoses(Model):
+        def generate_json(self, *, messages, **kwargs):
+            payload = json.loads(messages[-1]['content'])
+            if 'candidates' in payload:
+                head = next(f for f in payload['fragments'] if f['role'] == 'head' and f['kind'] == 'text')
+                return json.dumps({'decisions': [dict(index=c['index'], verdict='confirmed', reason='Input state is lost',
+                    counterargument='The caller still needs state', evidence=[dict(fragment_id=head['id'], quote='return None')])
+                    for c in payload['candidates']]})
+            draft = json.loads(super().generate_json(messages=messages, **kwargs))
+            before = next(f for f in payload['fragments'] if f['role'] == 'before' and f['kind'] == 'text')
+            draft['criteria'][1]['verdict'] = 'violation'
+            draft['findings'].append({**draft['findings'][0], 'rule_id':'BUGS', 'severity':'critical',
+                'evidence':[dict(fragment_id=before['id'], quote='return state')]})
+            return json.dumps(draft)
+    root, base = semantic_repository(tmp_path)
+    head = commit(root, {'app/state/service.py':'def apply(state):\n    return None\n'})
+    result = review(root, base, head, model=TwoDiagnoses())
+    assert result.status == 'failure'
+    assert len(result.findings) == 2
+    assert result.findings[0].evidence.sha != result.findings[1].evidence.sha
+    assert result.findings[0].cause_id == result.findings[1].cause_id
+    assert result.findings[0].paired_anchor_id == result.findings[1].paired_anchor_id != ''
+    from reviewer.report import finding_groups
+    assert len(finding_groups(result.findings)) == 1
+    from reviewer.report import markdown
+    assert 'BUGS evidence:' in markdown(result)
+    assert 'return state' in markdown(result)
