@@ -21,7 +21,10 @@ def main():
     mode.add_argument('--publish', action='store_true')
     mode.add_argument('--inline-plan', type=Path, help='Offline GitHub files JSON: print verified inline anchors')
     parser.add_argument('--repo', type=Path, default=Path.cwd(), help='Pinned Git objects for inline preview')
+    parser.add_argument('--inline', action='store_true', help='Publish verified inline comments; requires --publish and pinned Git objects')
     args = parser.parse_args()
+    if args.inline and not args.publish:
+        parser.error('--inline requires --publish')
     try:
         for path in (args.context, args.artifact, *([args.inline_plan] if args.inline_plan else [])):
             if path.stat().st_size > 2_000_000:
@@ -38,7 +41,7 @@ def main():
             state = rendered['state']
         elif args.publish:
             api = GitHub(os.environ['GITHUB_REPOSITORY'], os.environ['GITHUB_TOKEN'])
-            state = publish(api, context, raw)
+            state = publish(api, context, raw,repository=Repository(args.repo) if args.inline else None)
         else:
             print(rendered['body'])
             state = rendered['state']
