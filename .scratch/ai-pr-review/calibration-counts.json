@@ -1,0 +1,20 @@
+{
+  "original_artifact_sha256": "6fa61f0e37d6867e1b1667c43861f2c4e707bf0b8564df94784e2f606f52b6ed",
+  "case_set_sha256": "a938bc98b6068c85111db28a3ef954b9f17527694ae8b69a8ad714fedd1a88c8",
+  "note": "Offline metric correction for removed guard anchors; no new model calls. Model responses used review-v2 before self-review fixes.",
+  "summary": {
+    "tp": 4,
+    "fp": 3,
+    "fn": 6,
+    "incomplete": 11,
+    "cases": 20,
+    "precision": 0.5714285714285714,
+    "recall": 0.4,
+    "clean_blocked": 0,
+    "clean_passed": 5,
+    "model_calls": 27,
+    "elapsed_ms": 110375
+  },
+  "tokens_total": 85507,
+  "quality_gate_passed": false
+}
