@@ -8,6 +8,7 @@ from typing import Annotated
 from pydantic import Field
 
 from .git import Repository
+from .github import GitHubError, UncertainSummaryPost, bot_authored, raw_body
 from .models import Profile, Record, ReviewResult
 from .report import markdown
 from .retrieval import code
@@ -191,13 +192,25 @@ def fail(api, context, reason='Review did not complete; rerun required'):
 
 def upsert_summary(api, number, body, *, before_write):
     comments = api.items(f'/issues/{number}/comments')
-    existing = [c for c in comments if c.get('user', {}).get('login') == 'github-actions[bot]'
-                and c['user'].get('type') == 'Bot' and c.get('body', '').startswith(SUMMARY_MARKER)]
+    existing = [c for c in comments if bot_authored(c) and raw_body(c).startswith(SUMMARY_MARKER)]
     before_write()
     if existing:
         api.request('PATCH', f'/issues/comments/{existing[-1]["id"]}', {'body': body})
     else:
-        api.request('POST', f'/issues/{number}/comments', {'body': body})
+        try:
+            api.request('POST', f'/issues/{number}/comments', {'body': body})
+        except GitHubError:
+            for _ in range(3):
+                try:
+                    before_write()
+                    recovered = api.items(f'/issues/{number}/comments')
+                except GitHubError:
+                    continue
+                except (ValueError, KeyError, TypeError, OSError):
+                    break
+                if any(bot_authored(c) and raw_body(c) == body for c in recovered):
+                    return
+            raise UncertainSummaryPost('Summary POST could not be confirmed; no blind retry; rerun required') from None
 
 
 def _publish(api, context, rendered):

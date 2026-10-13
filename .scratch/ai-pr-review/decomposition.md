@@ -3,7 +3,7 @@
 - Дата: 2026-10-13.
 - Основание: [план и Q1–Q11](plan.md), [исследование GitHub](research.md).
 - Trunk: `main`, исследован на `f7a4d1e`.
-- Статус карты: согласована пользователем 2026-10-13; PR №4–10 слиты; quality gate пройден. Срез 4c готов от main `2cf7136`:413local tests,actionlint, обе оси0open; credential setup/smoke ещё не выполнены.
+- Статус карты: согласована пользователем 2026-10-13; PR №4–11 слиты; quality gate и реальный CI smoke пройдены. Cloud CI включён по явному разрешению; срез5 в работе от main9fa12b6.
 - Бюджет: целевой размер ≤600 reviewable lines (added + removed), максимум 1000 с отдельным обоснованием. Это оценки; при росте срез делится до открытия PR. Документация и большие входные fixtures не входят в кодовый бюджет; prompt/profile, ручные тесты и workflow считаются проверяемой логикой.
 
 ## Последовательность
@@ -17,9 +17,11 @@
 | 3c | Восстановление невалидного ответа и оценка дублей | Один явный bounded retry при невалидном ответе, проверяемые аннотации спорных eval-диагнозов, завершение failed cases | Невалидные ответы не дают success; прошлые raw counts сохраняются; без нового полного paid-прогона | 471 фактически | 3b | merged |
 | 4a | GitHub-адаптер результата | Закреплённый PR context, проверка provenance готового JSON, summary и head-bound status | Явный CLI; без API key и workflow; snapshot/generation проверяются до публикации | 629 фактически | 3c | merged |
 | 4b | Фактический context budget | Локальный CLI учитывает формат провайдера до вызова, снимает optional chunks и заранее проверяет capacity схемы | Нет новых вызовов/секретов; обязательные источники сохраняются | 81 фактически | 4a | merged |
-| 4c | Автоматический GitHub pipeline | Trusted workflow запускает анализ PR, публикует summary/status, обновляет ревью при main push | Reviewer только из main; PR data-only; отдельные jobs/permissions | 627 фактически | 4b | ready |
-| 5 | Inline и устойчивость публикации | Причинные изменения получают корректные inline anchors, rerun не дублирует результат, старое поколение не заменяет новое | Публикует уже проверенный результат; summary fallback при отсутствии anchor | 350–550 | 4c | planned |
-| 6 | Подтверждённый долг проекта | Активный реестр перепроверяется на head, отдельные общие комментарии влияют на check; fixing PR распознаётся | Реестр из trusted base, изначально пустой; candidates требуют подтверждения | 400–600 | 5 | planned |
+| 4c | Автоматический GitHub pipeline | Trusted workflow запускает анализ PR, публикует summary/status, обновляет ревью при main push | Reviewer только из main; PR data-only; отдельные jobs/permissions | 627 фактически | 4b | merged |
+| 5a | Восстановление summary | Неопределённый POST подтверждается чтением; повторная финализация не создаёт дубль | Только существующий summary/status, без inline | 100 фактически | 4c | in-progress |
+| 5b | Планирование inline | Локальный CLI показывает проверенные anchors и причины summary fallback | Offline preview, без API и публикации | 250–450 | 5a | planned |
+| 5c | Публикация inline | Batch COMMENT, восстановление неопределённого POST и superseded-маркеры старых замечаний | Только закреплённый результат и повторная проверка актуальности | 200–400 | 5b | planned |
+| 6 | Подтверждённый долг проекта | Активный реестр перепроверяется на head, отдельные общие комментарии влияют на check; fixing PR распознаётся | Реестр из trusted base, изначально пустой; candidates требуют подтверждения | 400–600 | 5c | planned |
 | 7 | Решения владельца | Scoped dismiss/waiver/resolve с причиной и сроком переживают rerun и пересчитывают check | Trusted manual workflow, проверка владельца и provenance журнала | 400–600 | 6 | planned |
 | 8 | Интервью по проекту, после MVP | Skill собирает факты, проводит интервью и формирует профиль/preview prompt для утверждения | Отдельный onboarding; CI использует прежний валидированный артефакт | 350–550 | 7 | planned |
 
@@ -64,6 +66,7 @@
 - Входит: diff anchor validator, batch review, run/finding identity, восстановление после неопределённого POST, recheck актуальности, сериализация поколений, summary fallback.
 - Не входит: arbitrary agent tools, автоматическое исправление кода, автоматический APPROVE/merge.
 - Проверка: LEFT/RIGHT, rename/delete, caller вне diff, force-push, два PR одного SHA, rerun и частично успешная публикация.
+- Поставка разделена на 5a (summary recovery), 5b (offline anchors) и 5c (автоматический batch). Общий diff укладывался в кодовый бюджет, но полный обязательный RAG-контекст занимал 130453 байта при согласованном CI-лимите 96000. Разделение сохраняет контекст и лимит без скрытого усечения.
 
 ### 6. Долг проекта
 
@@ -121,3 +124,5 @@
 - 2026-10-13: offline packing на PR9: internal90.7KB не отражал actual103.1KB; transport-aware packing снимает2optional chunks и даёт94.9KB при cap96KB. Все42 сохранённых calibration payloads побайтно прежние (max27018bytes); новых APIcalls нет. Capacity критериев проверяется до paid generation. Workflow требует актуального main в head, чтобы head-only RAG представлял будущий merge result; behind-main даёт error/rebase.
 
 - 2026-10-13: PR №10 слит после396local tests, зелёного CI и обоих subset-review0open. Workflow4c восстановлен без конфликтов на main2cf7136. В полном review закрыты retarget edited, deferred draft и failed-only rerun (same-run older attempt→error; newer run сохраняется). Cloud key/recurring CI ещё не разрешены и не настроены.
+
+- 2026-10-13: PR №11 слит (CIgreen,413local, обе оси0open). Пользователь явно разрешил W5→Actions Secret DEEPSEEK_API_KEY и recurring CI:4requests/PR run,96KB/4000tokens,20PRqueue. Secret настроен после merge, без W6 file/argv/log copy. Bootstrap main run38454906674 success. Temporary PR12: failure/complete для forbidden import(2calls), success/complete для pure helper(1call); тот же summary6153557233 обновлён. PR закрыт без merge, smoke branch удалён. [Evidence](ci-smoke.json). Дополнительных calibration runs нет, прежний бюджет79/104 не менялся.

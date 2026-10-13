@@ -35,3 +35,8 @@ CI требует current main в ancestry head: без этого head-only RAG
 result. Main push инвалидирует open PR, при behind-main нужен rebase. GitHub без CAS;
 при runner/API аварии возможен pending до полного rerun. На текущем private Free тарифе
 status не гарантирует запрет merge, как согласовано Q9.
+
+После merge и отдельного явного разрешения выполнен [real smoke](ci-smoke.json):
+forbidden import →failure/complete, pure helper →success/complete. Тот же bot summary
+обновлён; всего3model requests, каждый≤96KB/4000output. PR12 закрыт без merge, main не
+содержит smoke helper. Actions secret настроен, ключ не записывался в файлы W6.

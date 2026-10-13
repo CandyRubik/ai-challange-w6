@@ -8,7 +8,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from reviewer.ci import (analyze_snapshot, check_code, check_context, mark_unfinished,
                          prepare_snapshot, select_prs)
-from reviewer.github import GitHub, GitHubError
+from reviewer.github import GitHub, GitHubError, UncertainSummaryPost
 from reviewer.publishing import RunContext, StaleReview, publish
 
 
@@ -64,7 +64,7 @@ def main():
         print(reason, file=sys.stderr)
         if args.stage == 'publish' and api is not None and args.pr is not None:
             try:
-                mark_unfinished(api, args.pr, env, reason)
+                mark_unfinished(api, args.pr, env, reason, summary=not isinstance(error,UncertainSummaryPost))
             except (ValueError, KeyError, TypeError, GitHubError):
                 print('GitHub error status could not be written; rerun required', file=sys.stderr)
         return 2

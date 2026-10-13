@@ -133,13 +133,13 @@ def write_state(api, head, env, state, reason):
     return True
 
 
-def mark_unfinished(api, number, env, reason='Review did not complete; inspect workflow and rerun'):
+def mark_unfinished(api, number, env, reason='Review did not complete; inspect workflow and rerun', *, summary=True):
     head = api.pull(number)['head']['sha']
     _, run_id, attempt = identity(env)
     current = generation(api, head)
     if current[0] == run_id and current[1] <= attempt:
         write_state(api, head, env, 'error', 'Review did not complete; inspect workflow and rerun')
-        if generation(api, head) == (run_id, attempt):
+        if summary and generation(api, head) == (run_id, attempt):
             url = workflow_url(api.repository, run_id, attempt)
             body = f'{SUMMARY_MARKER}\n# Project review\nStatus: **error**; execution: **failed**.\n\n{text(reason).replace("@", "@\u200b")}\n\n[Workflow run]({url})'
             def still_ours():

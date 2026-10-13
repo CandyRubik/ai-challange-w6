@@ -1,0 +1,33 @@
+{
+  "pull_request": "https://github.com/CandyRubik/ai-challange-w6/pull/12",
+  "merged": false,
+  "trusted_code_sha": "9fa12b6cc2e71d5f094a3e8afc757d4a5c1492d9",
+  "summary_comment_id": 6153557233,
+  "summary_updated_without_duplicate": true,
+  "cases": [
+    {
+      "run_id": 38455510827,
+      "head_sha": "f05d17f434a943c0d1405186ab5a6178ae4ba0de",
+      "change": "new forbidden sqlite3 import in app/state/review_ci_smoke.py",
+      "status": "failure",
+      "execution": "complete",
+      "finding_rules": ["ARCH-STATE-IMPORTS", "ARCH-STATE-PURE"],
+      "model_calls": 2,
+      "wire_bytes": [49788, 49428],
+      "total_tokens_by_call": [14757, 13878]
+    },
+    {
+      "run_id": 38455912783,
+      "head_sha": "c05ffded439fadf81cd1e2645b65ac6160db7063",
+      "change": "replace import with pure identity function",
+      "status": "success",
+      "execution": "complete",
+      "findings": 0,
+      "model_calls": 1,
+      "wire_bytes": [49340],
+      "total_tokens_by_call": [13949]
+    }
+  ],
+  "credential_configuration": "Explicit owner approval: W5 key -> encrypted repository Actions secret; no W6 file copy",
+  "authorized_ci_limits": {"requests_per_pr_run": 4, "context_bytes": 96000, "output_tokens": 4000, "open_pr_queue": 20}
+}

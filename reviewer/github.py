@@ -8,6 +8,20 @@ class GitHubError(RuntimeError):
     pass
 
 
+class UncertainSummaryPost(GitHubError):
+    """A summary may already exist; failure finalization must not create another."""
+
+
+def bot_authored(record):
+    user = record.get('user') or {}
+    return isinstance(user,dict) and user.get('login') == 'github-actions[bot]' and user.get('type') == 'Bot'
+
+
+def raw_body(record):
+    body = record.get('body')
+    return body if isinstance(body,str) else ''
+
+
 class GitHub:
     def __init__(self, repository, token, *, transport=None):
         if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', repository) or not token:
@@ -35,7 +49,7 @@ class GitHub:
         result = []
         for page in range(1, 21):
             data = self.request('GET', path, params={**(params or {}), 'per_page': 100, 'page': page})
-            if not isinstance(data, list):
+            if not isinstance(data, list) or any(not isinstance(item,dict) for item in data):
                 raise GitHubError('GitHub collection is invalid')
             result.extend(data)
             if len(data) < 100:
