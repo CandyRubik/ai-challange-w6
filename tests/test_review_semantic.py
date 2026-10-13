@@ -5,6 +5,7 @@ import sys
 import pytest
 
 from reviewer import review
+from reviewer.git import Repository
 from reviewer.semantic_models import Limits
 from reviewer.report import markdown
 from tests.test_reviewer import CLI, PROFILE, commit, repository
@@ -67,6 +68,45 @@ def semantic_repository(tmp_path):
     root, _ = repository(tmp_path)
     base = commit(root, {".ai-review/profile.json": json.dumps(profile), "README.md": "State transitions preserve the supplied state.\n"})
     return root, base
+
+
+def test_transport_size_removes_optional_context_before_a_bounded_call(tmp_path):
+    root, _ = semantic_repository(tmp_path)
+    base = commit(root, {'app/related.py': '\n'.join('apply state preserve supplied value ' * 8 for _ in range(500))})
+    head = commit(root, {'app/state/service.py': 'def apply(state):\n    return None\n'})
+    class Capture:
+        name = 'controlled-wire-overhead'
+        def generate_bounded_json(self, **kwargs):
+            self.kwargs = kwargs
+            raise RuntimeError('Offline capture only')
+        def size(self, *, messages, schema):
+            return len(json.dumps(dict(system=messages[0]['content'], schema=schema, input=messages[-1]['content']), ensure_ascii=False).encode())
+    initial = Capture()
+    review(root, base, head, model=initial, limits=Limits(context_bytes=256_000))
+    cap = initial.size(messages=initial.kwargs['messages'], schema=initial.kwargs['schema']) + 1_000
+    measured = Capture()
+    measured.measure_input = lambda **kwargs: measured.size(**kwargs) + 5_000
+    result = review(root, base, head, model=measured, limits=Limits(context_bytes=cap))
+    assert measured.measure_input(messages=measured.kwargs['messages'], schema=measured.kwargs['schema']) <= cap
+    assert result.trace['optional_fragments_omitted'] > 0
+    payload = json.loads(measured.kwargs['messages'][-1]['content'])
+    assert any('return None' in f['text'] for f in payload['fragments'])
+    assert any(f['role'] == 'normative' for f in payload['fragments'])
+
+
+def test_too_many_criteria_fail_before_paid_generation(tmp_path):
+    root, base = semantic_repository(tmp_path)
+    profile = json.loads(Repository(root).read(base, '.ai-review/profile.json'))
+    profile['rules'] = [{**profile['rules'][0], 'id':f'RULE-{i}'} for i in range(101)]
+    base = commit(root, {'.ai-review/profile.json':json.dumps(profile)})
+    head = commit(root, {'app/state/service.py':'def apply(state):\n    return None\n'})
+    class Forbidden:
+        name = 'must-not-call'
+        def generate_json(self, **kwargs):
+            raise AssertionError('Impossible response must be rejected before generation')
+    result = review(root, base, head, model=Forbidden(), limits=Limits(context_bytes=256_000))
+    assert result.status == 'error' and result.trace['model_calls'] == 0
+    assert any('criterion budget' in limitation for limitation in result.limitations)
 
 
 def test_semantic_review_has_commit_pinned_evidence(tmp_path):

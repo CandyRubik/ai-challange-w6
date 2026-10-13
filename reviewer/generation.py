@@ -78,6 +78,15 @@ def response_type(schema):
     return {'DraftReview': ReviewResponse, 'Verification': VerificationResponse}[schema['title']]
 
 
+def prepare_messages(messages, schema):
+    payload = json.loads(messages[-1]['content'])
+    displayed, aliases = display_payload(payload)
+    prepared = [dict(message) for message in messages]
+    prepared[-1]['content'] = json.dumps(displayed, ensure_ascii=False)
+    prepared[0]['content'] += '\n' + protocol(schema) + '\nOUTPUT_JSON_SCHEMA:\n' + json.dumps(response_type(schema).model_json_schema(), ensure_ascii=False)
+    return prepared, payload, aliases
+
+
 def display_payload(payload):
     data = json.loads(json.dumps(payload))
     ordered = sorted(data['fragments'], key=lambda f: {'normative':0, 'before':1, 'head':2}[f['role']])

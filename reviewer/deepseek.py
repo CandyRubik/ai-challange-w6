@@ -5,7 +5,7 @@ import os
 from openai import APIResponseValidationError, OpenAI
 
 from .semantic_models import InvalidModelResponse, REPAIR_MARKER
-from .generation import display_payload, ground_response, protocol, response_type
+from .generation import ground_response, prepare_messages
 
 
 class DeepSeekReviewModel:
@@ -22,14 +22,15 @@ class DeepSeekReviewModel:
     def generate_json(self, *, messages, max_tokens, schema):
         return self.generate_bounded_json(messages=messages, max_tokens=max_tokens, schema=schema, context_bytes=48_000)
 
+    @staticmethod
+    def measure_input(*, messages, schema):
+        prepared, _, _ = prepare_messages(messages, schema)
+        return len(json.dumps(prepared, ensure_ascii=False).encode())
+
     def generate_bounded_json(self, *, messages, max_tokens, schema, context_bytes):
         self.last_usage = None
         self.last_input = None
-        payload = json.loads(messages[-1]["content"])
-        displayed, aliases = display_payload(payload)
-        messages = [dict(m) for m in messages]
-        messages[-1]["content"] = json.dumps(displayed, ensure_ascii=False)
-        messages[0]["content"] += "\n" + protocol(schema) + "\nOUTPUT_JSON_SCHEMA:\n" + json.dumps(response_type(schema).model_json_schema(), ensure_ascii=False)
+        messages, payload, aliases = prepare_messages(messages, schema)
         wire = json.dumps(messages, ensure_ascii=False).encode()
         self.last_input = {"sha256": hashlib.sha256(wire).hexdigest(), "bytes": len(wire), "protocol": "line-assessments-v3", "request_sent": False, "reference_resolutions": []}
         if len(wire) > context_bytes:
