@@ -20,8 +20,9 @@
 | 4c | Автоматический GitHub pipeline | Trusted workflow запускает анализ PR, публикует summary/status, обновляет ревью при main push | Reviewer только из main; PR data-only; отдельные jobs/permissions | 627 фактически | 4b | merged |
 | 5a | Восстановление summary | Неопределённый POST подтверждается чтением; повторная финализация не создаёт дубль | Только существующий summary/status, без inline | 100 фактически | 4c | merged |
 | 5b | Планирование inline | Локальный CLI показывает проверенные anchors и причины summary fallback | Offline preview, без API и публикации | 310 фактически | 5a | merged |
-| 5c | Публикация inline | Batch COMMENT, восстановление неопределённого POST и superseded-маркеры старых замечаний | Только закреплённый результат и повторная проверка актуальности | 200–400 | 5b | in-progress |
-| 6 | Подтверждённый долг проекта | Активный реестр перепроверяется на head, отдельные общие комментарии влияют на check; fixing PR распознаётся | Реестр из trusted base, изначально пустой; candidates требуют подтверждения | 400–600 | 5c | planned |
+| 5c | Публикация inline | Batch COMMENT, восстановление неопределённого POST и superseded-маркеры старых замечаний | Только закреплённый результат и повторная проверка актуальности | 443 фактически | 5b | in-progress |
+| 5d | Причинность на повторяющемся коде | Canonical Git diff для causal evidence вместо неоднозначного текстового matcher | Локальный regression и побайтная проверка прежних calibration inputs; без нового paid eval | 150–350 | 5c | planned |
+| 6 | Подтверждённый долг проекта | Активный реестр перепроверяется на head, отдельные общие комментарии влияют на check; fixing PR распознаётся | Реестр из trusted base, изначально пустой; candidates требуют подтверждения | 400–600 | 5d | planned |
 | 7 | Решения владельца | Scoped dismiss/waiver/resolve с причиной и сроком переживают rerun и пересчитывают check | Trusted manual workflow, проверка владельца и provenance журнала | 400–600 | 6 | planned |
 | 8 | Интервью по проекту, после MVP | Skill собирает факты, проводит интервью и формирует профиль/preview prompt для утверждения | Отдельный onboarding; CI использует прежний валидированный артефакт | 350–550 | 7 | planned |
 
@@ -126,3 +127,5 @@
 - 2026-10-13: PR №10 слит после396local tests, зелёного CI и обоих subset-review0open. Workflow4c восстановлен без конфликтов на main2cf7136. В полном review закрыты retarget edited, deferred draft и failed-only rerun (same-run older attempt→error; newer run сохраняется). Cloud key/recurring CI ещё не разрешены и не настроены.
 
 - 2026-10-13: PR №11 слит (CIgreen,413local, обе оси0open). Пользователь явно разрешил W5→Actions Secret DEEPSEEK_API_KEY и recurring CI:4requests/PR run,96KB/4000tokens,20PRqueue. Secret настроен после merge, без W6 file/argv/log copy. Bootstrap main run38454906674 success. Temporary PR12: failure/complete для forbidden import(2calls), success/complete для pure helper(1call); тот же summary6153557233 обновлён. PR закрыт без merge, smoke branch удалён. [Evidence](ci-smoke.json). Дополнительных calibration runs нет, прежний бюджет79/104 не менялся.
+
+- 2026-10-14: self-review inline выявил неоднозначность SequenceMatcher на повторяющемся хвосте. Inline уже использует Git diff; добавлен5d для общей RAG causality до долга проекта. Проверяется совместимость сохранённых calibration inputs, новые paid eval не запускаются.
