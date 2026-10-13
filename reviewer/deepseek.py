@@ -6,6 +6,7 @@ from openai import APIResponseValidationError, OpenAI
 
 from .semantic_models import InvalidModelResponse, REPAIR_MARKER
 from .generation import ground_response, prepare_messages
+from .response_diagnostics import response_failure
 
 
 class DeepSeekReviewModel:
@@ -42,6 +43,7 @@ class DeepSeekReviewModel:
             response = self.client.chat.completions.create(model=self.name, messages=messages, max_tokens=max_tokens,
                 response_format={"type": "json_object"}, extra_body={"thinking": {"type": "disabled"}}, **options)
         except (APIResponseValidationError, json.JSONDecodeError) as error:
+            self.last_input['validation_failure'] = {'code':'api_envelope'}
             raise InvalidModelResponse("DeepSeek API envelope is invalid") from error
         except Exception as error:
             raise RuntimeError("DeepSeek review request failed") from error
@@ -56,10 +58,13 @@ class DeepSeekReviewModel:
                 raise ValueError("No completion choices")
             choice = choices[0]
             content = getattr(getattr(choice, "message", None), "content", None)
-            if getattr(choice, "finish_reason", None) != "stop" or not isinstance(content, str) or not content:
+            if getattr(choice, "finish_reason", None) != "stop":
                 raise ValueError("Incomplete response")
+            if not isinstance(content, str) or not content:
+                raise ValueError('Missing completion content')
             if len(content.encode()) > max_tokens * 16:
                 raise ValueError("Model response exceeds budget")
             return ground_response(content, schema, payload, aliases, self.last_input["reference_resolutions"])
         except (ValueError, KeyError, IndexError, TypeError, AttributeError) as error:
+            self.last_input['validation_failure'] = response_failure(error)
             raise InvalidModelResponse("DeepSeek structured response is invalid") from error

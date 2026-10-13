@@ -4,6 +4,7 @@ from typing import Literal, Protocol
 from pydantic import Field, model_validator
 
 from .models import Record, Text
+from .response_diagnostics import response_failure
 
 
 class JsonModel(Protocol):
@@ -37,6 +38,12 @@ def generate_json(model, *, messages, max_tokens, schema, context_bytes, trace, 
                     raise ValueError('Invalid response size or type')
                 validate(raw)
             except (ValueError, TypeError) as error:
+                failure = response_failure(error)
+                trace.setdefault('validation_failures', []).append({'after_call':trace['model_calls'],
+                    'stage':'core_schema', **failure})
+                last_input = getattr(model, 'last_input', None)
+                if isinstance(last_input, dict):
+                    last_input['validation_failure'] = failure
                 raise InvalidModelResponse('Structured response validation failed') from error
             return raw
         except InvalidModelResponse:
