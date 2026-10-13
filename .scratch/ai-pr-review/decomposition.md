@@ -26,7 +26,7 @@
 | 5e1 | Безопасная диагностика model response | Trace отличает schema, references, ranges, blank evidence и envelope errors | Только фиксированные коды и allowlisted имена; prompt/verdict/retries прежние | 109 фактически | 5d | merged |
 | 5e2 | Смежные mandatory spans | Уже выбранные смежные окна кода объединяются, evidence может пересекать старый seam | Точный текст/path/SHA/role; gaps, normative и optional не меняются | 60 фактически | 5e1 | merged |
 | 6a | Локальный реестр долга | CLI проверяет active debt на head отдельно от PR findings и предлагает статические candidates | Явный локальный opt-in, пустой реестр; текущий CI не включает долг | 422 фактически | 5e2 | merged |
-| 6b0 | Trusted debt context | Registry/hash из base закреплены в Actions context; старые raw artifacts читаются с прежним digest | Metadata/provenance; автоматический debt gate пока не активен | 80–150 | 6a | in-progress |
+| 6b0 | Trusted debt context | Registry/hash из base закреплены в Actions context; старые raw artifacts читаются с прежним digest | Metadata/provenance; автоматический debt gate пока не активен | 85 фактически | 6a | in-progress |
 | 6b1 | Долг в CI gate | Покрытие и actual head валидируются, active долг влияет на check/summary | Registry из base, повторный expiry guard вокруг writes | 150–300 | 6b0 | planned |
 | 6b2 | Общий комментарий долга | Один обновляемый project-level comment отдельно от inline новых дефектов | Snapshot/lifecycle guards и восстановление uncertain POST | 100–250 | 6b1 | planned |
 | 7 | Решения владельца | Scoped dismiss/waiver/resolve с причиной и сроком переживают rerun и пересчитывают check | Trusted manual workflow, проверка владельца и provenance журнала | 400–600 | 6b2 | planned |
