@@ -42,7 +42,11 @@ class RunContext(Record):
 
     @property
     def run_url(self):
-        return f'https://github.com/{self.repository}/actions/runs/{self.run_id}/attempts/{self.run_attempt}'
+        return workflow_url(self.repository, self.run_id, self.run_attempt)
+
+
+def workflow_url(repository, run_id, run_attempt):
+    return f'https://github.com/{repository}/actions/runs/{run_id}/attempts/{run_attempt}'
 
 
 class ReviewArtifact(Record):
@@ -147,11 +151,11 @@ def preview(context, raw):
     return {'state': result.status, 'body': f'{SUMMARY_MARKER}\n{body}\n[Workflow run]({context.run_url})'}
 
 
-def generation(api, context):
+def generation(api, head_sha):
     generations = [(0, 0)]
-    for status in api.items(f'/commits/{context.head_sha}/statuses'):
+    for status in api.items(f'/commits/{head_sha}/statuses'):
         if status.get('context') == STATUS_CONTEXT:
-            match = re.fullmatch(re.escape(f'https://github.com/{context.repository}/actions/runs/') + r'(\d+)/attempts/(\d+)', status.get('target_url') or '')
+            match = re.fullmatch(re.escape(f'https://github.com/{api.repository}/actions/runs/') + r'(\d+)/attempts/(\d+)', status.get('target_url') or '')
             if match:
                 generations.append(tuple(map(int, match.groups())))
     return max(generations)
@@ -165,7 +169,7 @@ def assert_current(api, context, *, started=True, unique=True):
         raise StaleReview('PR revision, base or repository changed; rerun required')
     if unique and any(p['number'] != context.pr_number and p['head']['sha'] == context.head_sha for p in api.open_pulls()):
         raise StaleReview('Multiple open PRs share this head; one status cannot represent both')
-    current, ours = generation(api, context), (context.run_id, context.run_attempt)
+    current, ours = generation(api, context.head_sha), (context.run_id, context.run_attempt)
     if current > ours or started and current != ours:
         raise StaleReview('A newer or different workflow generation owns this status')
 
@@ -185,17 +189,21 @@ def fail(api, context, reason='Review did not complete; rerun required'):
     set_status(api, context, 'error', reason)
 
 
-def _publish(api, context, rendered):
-    assert_current(api, context)
-    comments = api.items(f'/issues/{context.pr_number}/comments')
+def upsert_summary(api, number, body, *, before_write):
+    comments = api.items(f'/issues/{number}/comments')
     existing = [c for c in comments if c.get('user', {}).get('login') == 'github-actions[bot]'
                 and c['user'].get('type') == 'Bot' and c.get('body', '').startswith(SUMMARY_MARKER)]
-    # Recheck immediately before the write; the result itself never chooses a target.
-    assert_current(api, context)
+    before_write()
     if existing:
-        api.request('PATCH', f'/issues/comments/{existing[-1]["id"]}', {'body': rendered['body']})
+        api.request('PATCH', f'/issues/comments/{existing[-1]["id"]}', {'body': body})
     else:
-        api.request('POST', f'/issues/{context.pr_number}/comments', {'body': rendered['body']})
+        api.request('POST', f'/issues/{number}/comments', {'body': body})
+
+
+def _publish(api, context, rendered):
+    assert_current(api, context)
+    # Per-PR workflow serialization covers writes; snapshot is rechecked around the operation.
+    upsert_summary(api, context.pr_number, rendered['body'], before_write=lambda: assert_current(api, context))
     assert_current(api, context)
     set_status(api, context, rendered['state'], f'AI review: {rendered["state"]}')
     assert_current(api, context)

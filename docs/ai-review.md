@@ -238,7 +238,7 @@ python scripts/publish_review.py --context context.json --artifact result.json -
 SHA результата, profile origin и отсутствие противоречивого success. `start` создаёт
 pending. Publisher сверяет полный snapshot, применённые правила, покрытие и допустимые
 ревизии evidence; неизвестные правила и небезопасные metadata отклоняются. Digest проверяет
-целостность, аутентификация источника artifact обеспечивается workflow следующего среза.
+целостность, аутентификация источника artifact обеспечивается trusted workflow.
 `publish` обновляет bot summary и head-bound commit status. Нормативный
 inconclusive требует error; только необязательные непроверенные критерии могут остаться
 советующими, как в локальном CLI. `fail` завершает незавершённый запуск отдельным error.
@@ -254,8 +254,61 @@ Base/head проверяются до/после записи; поколени�
 комментариев/statuses; отказ freshness GET также вызывает best-effort инвалидацию нашего
 результата. Если GitHub недоступен и для error write, CLI/workflow остаётся неуспешным;
 при восстановлении API нужен rerun.
-Полноценная workflow-сериализация и recovery неопределённого POST
-добавляются следующими срезами. Пока workflow не подключён, автоматических запросов нет.
+Workflow сериализует jobs одного PR; recovery неопределённого POST добавляется срезом5.
+До настройки API key модель не вызывается, проверка сообщает configuration error.
+
+### GitHub Actions
+
+`AI Review` реагирует на PR в main (opened/synchronize/reopened/ready_for_review/retarget), push main
+и ручной workflow_dispatch с номером PR. Main push заново ставит pending на открытые PR;
+старый вердикт не считается проверкой новой policy. На push выбираются максимум20 PR,
+два параллельно; превышение очереди даёт error всем выбранным heads без paid analysis.
+Pagination не обрезает успешный результат. Изменения title/body не вызывают AI.
+Draft сохраняет неуспешную проверку без cloud-analysis до ready либо owner manual dispatch.
+
+CI требует, чтобы current main был предком head. Иначе данные head не представляют будущий
+merge result: новая реализация callers из main могла отсутствовать в RAG. Такой PR получает
+error с просьбой rebase. Локальный CLI сохраняет сравнение с merge-base; нормативная policy
+всегда из указанного base. Strict-up-to-date проверка CI уменьшает неоднозначность анализа.
+
+Root workflow выбирает PR; reusable workflow сериализует все jobs одного PR. Prepare
+проверяет GitHub identity и Git snapshot. Analyze имеет только contents/PR/statuses read,
+а DeepSeek key доступен только его шагу. Publish получает PR/statuses write без DeepSeek key.
+Checkout всегда на github.workflow_sha из main; actual HEAD, workflow SHA и captured base
+должны совпадать. PR ref только fetch-ится по фиксированному HTTPS URL; head никогда не
+checkout/install/import/execute. Git token передаётся через env+askpass, не через argv/file.
+
+Context/result artifacts скачиваются только из текущего trusted run, с PR и run_attempt в
+имени. Проверяются repository/run/attempt/code/profile и PR identity; artifact размером
+больше2МБ отклоняется. Ошибка/отсутствие artifact дают error status и summary с причиной;
+для повторного анализа выбирайте **Re-run all jobs** или новый dispatch. Failed-only rerun
+не использует артефакты старого attempt: он инвалидирует прежний success своего run и
+просит полный повтор. Более новое поколение другого run не затрагивается.
+API failure не превращается в success. Pending возможен после аварии runner/API до finalize:
+нужен повтор. GitHub statuses/comments не имеют CAS; branch protection тут недоступна,
+поэтому реального запрета merge на текущем тарифе по-прежнему нет.
+
+Fork/Dependabot PR не отправляются в DeepSeek автоматически. Owner запускает `AI Review`
+вручную на main с номером PR; original actor и triggering actor должны быть владельцами
+из профиля. Ручной rerun старого workflow после изменения main нужно заменить новым dispatch.
+Модель фиксирована: deepseek-v4-flash, api.deepseek.com, максимум4 requests на один PR run,
+по96КБ messages и4000 output tokens; 30 файлов,500 corpus files/2МБ,10 минут на job.
+Фактический формат провайдера измеряется до запроса: снимаются только optional fragments,
+обязательный контекст не обрезается. SDK retries отключены; daily spending cap не заявлен.
+Количество критериев также проверяется по лимиту схемы до платной генерации.
+
+[Offline-замер](../.scratch/ai-pr-review/ci-context-evidence.json) на реальном PR9: прежний
+packer пропускал внутренний90.7КБ bundle, но actual messages103.1КБ не помещались в96КБ.
+Теперь сняты2optional chunks, actual94.9КБ; обязательные источники сохранены. Все42
+сохранённых wire payloads последней калибровки побайтно совпали и помещаются в32КБ
+(максимум27018bytes). Измерения выполнены без real API calls и не являются новым eval.
+
+Настройка владельцем: Actions secret `DEEPSEEK_API_KEY` в этом репозитории. Значение не
+записывается в checkout. После настройки можно сделать workflow_dispatch на main и указать PR.
+До появления ключа модель не вызывается: публикуется configuration error. Доступ write к
+репозиторию остаётся доверенным; этот workflow изолирует недоверенный PR content.
+См. [GitHub о privileged triggers](https://docs.github.com/en/actions/reference/security/secure-use)
+и [same-commit reusable workflows](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows).
 
 `evaluate_review.py --resume REPORT --split all` планирует и повторяет только incomplete
 случаи того же case-set, split и лимитов. Прошлые запросы/токены и снимки сохраняются.

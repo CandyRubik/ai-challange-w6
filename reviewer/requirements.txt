@@ -1,0 +1,3 @@
+pydantic>=2.10,<3
+openai>=1.60,<2
+httpx>=0.28,<1

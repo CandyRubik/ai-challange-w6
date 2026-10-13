@@ -410,6 +410,12 @@ python scripts/review_pr.py --base origin/main --head HEAD --format json
 в окружении процесса. Bootstrap, формат профиля и коды выхода:
 [аудит PR](docs/ai-review.md).
 
+GitHub workflow `AI Review` запускает тот же reviewer на PR и после обновления main.
+Код PR читается как Git-данные; анализ и публикация выполняются в отдельных jobs.
+Нужен Actions secret `DEEPSEEK_API_KEY`; без него проверка завершится error.
+Ветки PR должны включать текущий main. Настройка, лимиты и ручной повтор:
+[AI-ревью в CI](docs/ai-review.md#github-actions).
+
 ```bash
 python -m pytest -q
 python -m compileall -q app reviewer tests scripts

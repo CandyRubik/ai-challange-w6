@@ -1,0 +1,122 @@
+name: AI Review PR
+
+on:
+  workflow_call:
+    inputs:
+      pr:
+        required: true
+        type: number
+    secrets:
+      DEEPSEEK_API_KEY:
+        required: false
+
+concurrency:
+  group: ai-review-${{ github.repository }}-pr-${{ inputs.pr }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  PR_NUMBER: ${{ inputs.pr }}
+
+jobs:
+  prepare:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+      statuses: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.workflow_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -r reviewer/requirements.txt
+      - env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python scripts/github_review.py prepare --pr "$PR_NUMBER"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: context-${{ inputs.pr }}-${{ github.run_attempt }}
+          path: |
+            .review/context.json
+            .review/error.json
+          include-hidden-files: true
+          retention-days: 14
+          if-no-files-found: error
+  analyze:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+      statuses: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.workflow_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -r reviewer/requirements.txt
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: context-${{ inputs.pr }}-${{ github.run_attempt }}
+          path: .review
+      - env:
+          GITHUB_TOKEN: ${{ github.token }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          DEEPSEEK_MODEL: deepseek-v4-flash
+          DEEPSEEK_BASE_URL: https://api.deepseek.com
+        run: python scripts/github_review.py analyze --pr "$PR_NUMBER"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: result-${{ inputs.pr }}-${{ github.run_attempt }}
+          path: .review/result.json
+          include-hidden-files: true
+          retention-days: 14
+          if-no-files-found: error
+  publish:
+    if: always() && github.ref == 'refs/heads/main'
+    needs: [prepare, analyze]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+      statuses: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.workflow_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -r reviewer/requirements.txt
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        continue-on-error: true
+        with:
+          name: context-${{ inputs.pr }}-${{ github.run_attempt }}
+          path: .review
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        continue-on-error: true
+        with:
+          name: result-${{ inputs.pr }}-${{ github.run_attempt }}
+          path: .review
+      - env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python scripts/github_review.py publish --pr "$PR_NUMBER"
