@@ -3,7 +3,7 @@
 - Дата: 2026-10-13.
 - Основание: [план и Q1–Q11](plan.md), [исследование GitHub](research.md).
 - Trunk: `main`, исследован на `f7a4d1e`.
-- Статус карты: согласована пользователем 2026-10-13; PR №4–11 и №13 слиты; quality gate и реальный CI smoke пройдены. Cloud CI включён по явному разрешению; срез5b в работе от mainb65b311.
+- Статус карты: согласована пользователем 2026-10-13; PR №4–11 и №13–14 слиты; quality gate и реальный CI smoke пройдены. Cloud CI включён по явному разрешению; срез5c0 в работе от main6591d02.
 - Бюджет: целевой размер ≤600 reviewable lines (added + removed), максимум 1000 с отдельным обоснованием. Это оценки; при росте срез делится до открытия PR. Документация и большие входные fixtures не входят в кодовый бюджет; prompt/profile, ручные тесты и workflow считаются проверяемой логикой.
 
 ## Последовательность
@@ -19,9 +19,11 @@
 | 4b | Фактический context budget | Локальный CLI учитывает формат провайдера до вызова, снимает optional chunks и заранее проверяет capacity схемы | Нет новых вызовов/секретов; обязательные источники сохраняются | 81 фактически | 4a | merged |
 | 4c | Автоматический GitHub pipeline | Trusted workflow запускает анализ PR, публикует summary/status, обновляет ревью при main push | Reviewer только из main; PR data-only; отдельные jobs/permissions | 627 фактически | 4b | merged |
 | 5a | Восстановление summary | Неопределённый POST подтверждается чтением; повторная финализация не создаёт дубль | Только существующий summary/status, без inline | 100 фактически | 4c | merged |
-| 5b | Планирование inline | Локальный CLI показывает проверенные anchors и причины summary fallback | Offline preview, без API и публикации | 310 фактически | 5a | in-progress |
-| 5c | Публикация inline | Batch COMMENT, восстановление неопределённого POST и superseded-маркеры старых замечаний | Только закреплённый результат и повторная проверка актуальности | 200–400 | 5b | planned |
-| 6 | Подтверждённый долг проекта | Активный реестр перепроверяется на head, отдельные общие комментарии влияют на check; fixing PR распознаётся | Реестр из trusted base, изначально пустой; candidates требуют подтверждения | 400–600 | 5c | planned |
+| 5b | Планирование inline | Локальный CLI показывает проверенные anchors и причины summary fallback | Offline preview, без API и публикации | 310 фактически | 5a | merged |
+| 5c0 | Общий нормализатор комментариев | Повторно используемая нормализация без усечения; прежний presentation cap сохраняется | Чистая локальная функция, wire protocol не меняется | 20 фактически | 5b | in-progress |
+| 5c | Публикация inline | Batch COMMENT, восстановление неопределённого POST и superseded-маркеры старых замечаний | Только закреплённый результат и повторная проверка актуальности | 400–550 | 5c0 | planned |
+| 5d | Причинность на повторяющемся коде | Git diff определяет causal ranges и не относит неизменённый хвост к новой ошибке | Offline regression/replay сохранённых ответов; новые paid eval не запускаются | 150–350 | 5c | planned |
+| 6 | Подтверждённый долг проекта | Активный реестр перепроверяется на head, отдельные общие комментарии влияют на check; fixing PR распознаётся | Реестр из trusted base, изначально пустой; candidates требуют подтверждения | 400–600 | 5d | planned |
 | 7 | Решения владельца | Scoped dismiss/waiver/resolve с причиной и сроком переживают rerun и пересчитывают check | Trusted manual workflow, проверка владельца и provenance журнала | 400–600 | 6 | planned |
 | 8 | Интервью по проекту, после MVP | Skill собирает факты, проводит интервью и формирует профиль/preview prompt для утверждения | Отдельный onboarding; CI использует прежний валидированный артефакт | 350–550 | 7 | planned |
 
@@ -126,3 +128,5 @@
 - 2026-10-13: PR №10 слит после396local tests, зелёного CI и обоих subset-review0open. Workflow4c восстановлен без конфликтов на main2cf7136. В полном review закрыты retarget edited, deferred draft и failed-only rerun (same-run older attempt→error; newer run сохраняется). Cloud key/recurring CI ещё не разрешены и не настроены.
 
 - 2026-10-13: PR №11 слит (CIgreen,413local, обе оси0open). Пользователь явно разрешил W5→Actions Secret DEEPSEEK_API_KEY и recurring CI:4requests/PR run,96KB/4000tokens,20PRqueue. Secret настроен после merge, без W6 file/argv/log copy. Bootstrap main run38454906674 success. Temporary PR12: failure/complete для forbidden import(2calls), success/complete для pure helper(1call); тот же summary6153557233 обновлён. PR закрыт без merge, smoke branch удалён. [Evidence](ci-smoke.json). Дополнительных calibration runs нет, прежний бюджет79/104 не менялся.
+
+- 2026-10-14: полный inline self-review0open и455localtests, но CIдал2InvalidModelResponseпри92KB. Разделён общий formatter5c0 и inline5c, чтобы уменьшить mandatory context без ослабления validation/caps. Полныйdiffсохранён, PR15сужендоformatter.
