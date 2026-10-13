@@ -3,7 +3,7 @@
 - Дата: 2026-10-13.
 - Основание: [план и Q1–Q11](plan.md), [исследование GitHub](research.md).
 - Trunk: `main`, исследован на `f7a4d1e`.
-- Статус карты: согласована пользователем 2026-10-13; PR №4–11, №13–16 и №18 слиты; quality gate и реальные summary/inline CI smoke пройдены. PR №19 (локальный долг) в draft после двух невалидных AI ответов; prerequisite5e1 добавляет безопасную диагностику.
+- Статус карты: согласована пользователем 2026-10-13; PR №4–11, №13–16, №18 и №20 слиты; quality gate и реальные summary/inline CI smoke пройдены. PR №19 (локальный долг) в draft после двух невалидных AI ответов; prerequisite5e2 устраняет доказанный seam смежных обязательных окон.
 - Бюджет: целевой размер ≤600 reviewable lines (added + removed), максимум 1000 с отдельным обоснованием. Это оценки; при росте срез делится до открытия PR. Документация и большие входные fixtures не входят в кодовый бюджет; prompt/profile, ручные тесты и workflow считаются проверяемой логикой.
 
 ## Последовательность
@@ -23,8 +23,9 @@
 | 5c0 | Общий нормализатор комментариев | Повторно используемая нормализация без усечения; прежний presentation cap сохраняется | Чистая локальная функция, wire protocol не меняется | 20 фактически | 5b | merged |
 | 5c | Публикация inline | Batch COMMENT, восстановление неопределённого POST и superseded-маркеры старых замечаний | Только закреплённый результат и повторная проверка актуальности | 434 фактически | 5c0 | merged |
 | 5d | Причинность на повторяющемся коде | Git diff определяет causal ranges и не относит неизменённый хвост к новой ошибке | Offline regression/replay сохранённых ответов; новые paid eval не запускаются | 118 фактически | 5c | merged |
-| 5e1 | Безопасная диагностика model response | Trace отличает schema, references, ranges, blank evidence и envelope errors | Только фиксированные коды и allowlisted имена; prompt/verdict/retries прежние | 109 фактически | 5d | in-progress |
-| 6a | Локальный реестр долга | CLI проверяет active debt на head отдельно от PR findings и предлагает статические candidates | Явный локальный opt-in, пустой реестр; текущий CI не включает долг | 422 фактически | 5e1 | draft |
+| 5e1 | Безопасная диагностика model response | Trace отличает schema, references, ranges, blank evidence и envelope errors | Только фиксированные коды и allowlisted имена; prompt/verdict/retries прежние | 109 фактически | 5d | merged |
+| 5e2 | Смежные mandatory spans | Уже выбранные смежные окна кода объединяются, evidence может пересекать старый seam | Точный текст/path/SHA/role; gaps, normative и optional не меняются | 60–100 | 5e1 | in-progress |
+| 6a | Локальный реестр долга | CLI проверяет active debt на head отдельно от PR findings и предлагает статические candidates | Явный локальный opt-in, пустой реестр; текущий CI не включает долг | 422 фактически | 5e2 | draft |
 | 6b | Долг в CI и общих комментариях | Trusted registry/hash закреплены в context, покрытие валидируется, общий комментарий влияет на check | Реестр из trusted base; actual head перепроверяется до записи | 300–550 | 6a | planned |
 | 7 | Решения владельца | Scoped dismiss/waiver/resolve с причиной и сроком переживают rerun и пересчитывают check | Trusted manual workflow, проверка владельца и provenance журнала | 400–600 | 6b | planned |
 | 8 | Интервью по проекту, после MVP | Skill собирает факты, проводит интервью и формирует профиль/preview prompt для утверждения | Отдельный onboarding; CI использует прежний валидированный артефакт | 350–550 | 7 | planned |

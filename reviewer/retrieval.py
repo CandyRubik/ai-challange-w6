@@ -64,9 +64,19 @@ def windows(path, sha, text, role, spans=None):
                     spans.append((beginning, node.end_lineno))
         except (SyntaxError, RecursionError):
             pass
-    return [fragment(path, sha, "".join(lines[offset:offset + 60]), role, offset + 1)
+    selected = [fragment(path, sha, "".join(lines[offset:offset + 60]), role, offset + 1)
         for offset in range(0, len(lines), 60) if spans is None or offset == 0
         or any(start < offset + 60 and max(stop, start + 1) > offset for start, stop in spans)]
+    if spans is None or role == 'normative':
+        return selected  # Optional ranking keeps bounded windows, not whole files.
+    groups = []
+    for current in selected:
+        if groups and groups[-1][-1].line + len(groups[-1][-1].text.splitlines()) == current.line:
+            groups[-1].append(current)
+        else:
+            groups.append([current])
+    return [group[0] if len(group) == 1 else fragment(path,sha,''.join(f.text for f in group),role,group[0].line)
+            for group in groups]
 
 
 def retrieve(repository, result: ReviewResult, changes, limits) -> Retrieved:
