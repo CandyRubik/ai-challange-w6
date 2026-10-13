@@ -161,3 +161,21 @@ def test_complete_review_preserves_human_replies_and_foreign_review_comments(tmp
     publish_inline(api,context,result.model_copy(update={'findings':[]}),repo,guard=guard)
     assert [c['body'] for c in comments[1:]]==bodies
     assert 'superseded' in comments[0]['body']
+
+
+def test_error_even_with_complete_execution_keeps_existing_inline_current(tmp_path):
+    api, context, result, repo, files, comments, reviews, writes, guard, pr = setup(tmp_path)
+    publish_inline(api,context,result,repo,guard=guard)
+    current = result.model_copy(update={'status':'error','execution':'complete','findings':[]})
+    publish_inline(api,context,current,repo,guard=guard)
+    assert 'superseded' not in comments[0]['body']
+
+
+def test_retirement_preserves_large_original_body_without_truncation(tmp_path):
+    api, context, result, repo, files, comments, reviews, writes, guard, pr = setup(tmp_path)
+    large = result.model_copy(update={'findings':[result.findings[0].model_copy(update={'message':'x'*57_000})]})
+    publish_inline(api,context,large,repo,guard=guard)
+    original = comments[0]['body']
+    assert len(original.encode())>57_000
+    publish_inline(api,context,result.model_copy(update={'findings':[]}),repo,guard=guard)
+    assert comments[0]['body'].endswith(original) and len(comments[0]['body'].encode())<64_000

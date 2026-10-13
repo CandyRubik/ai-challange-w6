@@ -69,7 +69,7 @@ def publish_inline(api, context, result, repository, *, guard):
         else:
             raise GitHubError('Inline POST could not be confirmed; no blind retry; rerun required')
     guard()
-    if result.execution == 'complete':
+    if result.execution == 'complete' and result.status != 'error':
         active = {group['marker'] for group in groups}
         for comment in comments:
             body = raw_body(comment)
@@ -81,8 +81,12 @@ def publish_inline(api, context, result, repository, *, guard):
             if note in body:
                 continue
             original = body.split('\n\n--- Original report ---\n\n')[-1]
-            retired = safe_comment(marker+'\n'+note+'\nSuperseded by the latest complete review; check its summary for current findings. This does not prove a fix.\n'
+            retired = (marker+'\n'+note+'\nSuperseded by the latest complete review; check its summary for current findings. This does not prove a fix.\n'
                 +f'[Current run]({context.run_url})\n\n--- Original report ---\n\n'+original)
+            if len(retired.encode()) > 64_000:
+                fallback.append('Existing inline is too large to mark superseded without losing its original text')
+                continue
+            retired = safe_comment(retired,limit=64_000)
             guard()
             api.request('PATCH',f'/pulls/comments/{comment["id"]}',{'body':retired})
             guard()
