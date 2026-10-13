@@ -267,6 +267,11 @@ Primary evidence связывается с causal path по head либо before
 workflow должен отдельно подтвердить, что выполняет именно этот code SHA. Адаптер не
 исполняет head и не использует адреса/номера PR из ответа модели.
 
+Actions context также закрепляет trusted base registry/hash долга; check_context
+сверяет их с Git до анализа. Автоматический debt gate подключается отдельным срезом.
+Digest артефакта проверяется по исходному JSON result: новые optional defaults модели
+не меняют сохранённый digest; строгая схема и все проверки происхождения сохраняются.
+
 ```bash
 python scripts/publish_review.py --context context.json --artifact result.json
 # Offline: GitHub files JSON + доступные pinned Git objects, без credentials:

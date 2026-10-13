@@ -7,6 +7,7 @@ from typing import Annotated
 
 from pydantic import Field
 
+from .debt import DebtRegistry, load_registry
 from .git import Repository
 from .github import GitHubError, UncertainSummaryPost, bot_authored, raw_body
 from .models import Profile, Record, ReviewResult
@@ -34,6 +35,8 @@ class RunContext(Record):
     diff_sha256: DIGEST
     profile_sha256: DIGEST
     profile: Profile
+    debt_sha256: DIGEST = hashlib.sha256(b'').hexdigest()
+    debt_registry: DebtRegistry = Field(default_factory=lambda: DebtRegistry(schema_version=1))
     checks: dict[str, list[str]]
     before_paths: dict[str, str]
     change_status: dict[str, str]
@@ -69,6 +72,7 @@ def capture(api, root, number, *, run_id, run_attempt):
     base = pr['base']['sha']
     raw = repository.read(base, '.ai-review/profile.json')
     profile = Profile.model_validate_json(raw)
+    debt_registry, debt_sha256 = load_registry(repository, base, profile)
     for rule in profile.rules:
         if rule.source.quote not in repository.read(base, rule.source.path):
             raise ValueError('Normative source is missing from trusted base')
@@ -80,6 +84,7 @@ def capture(api, root, number, *, run_id, run_attempt):
         merge_base_sha=snapshot.merge_base_sha, diff_sha256=snapshot.diff_sha256, checks=checks, profile=profile,
         before_paths={c.path: c.before_path for c in changes}, change_status={c.path: c.status for c in changes},
         profile_sha256=hashlib.sha256(raw.encode()).hexdigest(), run_id=run_id, run_attempt=run_attempt,
+        debt_registry=debt_registry, debt_sha256=debt_sha256,
         external=not pr['head']['repo'] or pr['head']['repo']['id'] != repo['id'] or pr['user']['login'] == 'dependabot[bot]')
 
 
@@ -91,7 +96,7 @@ def make_artifact(context, result):
 def preview(context, raw):
     artifact = ReviewArtifact.model_validate(raw)
     result = artifact.result
-    if artifact.context != context or digest(result.model_dump()) != artifact.result_sha256:
+    if artifact.context != context or digest(raw['result']) != artifact.result_sha256:
         raise ValueError('Review artifact identity or digest mismatch')
     if context.code_sha != context.base_sha or result.profile_origin != 'base':
         raise ValueError('CI requires code and profile from trusted base')
