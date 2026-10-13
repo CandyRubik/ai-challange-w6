@@ -110,4 +110,3 @@ def plan_inline(context, result, files, repository):
         group['marker'] = f'{PREFIX}{context.head_sha}:{group["key"]} -->'
         group['body'] = safe_comment(group['marker']+'\n'+'\n\n'.join(finding_details(group['findings']))+f'\n\n[Workflow run]({context.run_url})')
     return selected, fallback
-

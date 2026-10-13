@@ -10,7 +10,7 @@ import pytest
 from reviewer.git import Repository
 from reviewer.inline import plan_inline
 from reviewer.models import Evidence, ReviewResult
-from reviewer.publishing import capture
+from reviewer.publishing import capture, make_artifact
 from tests.test_review_publishing import fixture
 from tests.test_reviewer import commit, git
 
@@ -130,10 +130,8 @@ def test_inline_limit_keeps_remaining_findings_in_summary(tmp_path):
 
 
 def test_cli_shows_verified_plan_without_credentials_or_network(tmp_path):
-    api, context, artifact, pr, calls, statuses, root = fixture(tmp_path)
-    other = tmp_path/'other'
-    other.mkdir()
-    _, _, _, _, files, _ = setup(other)
+    api, context, result, repo, files, pr = setup(tmp_path)
+    artifact, root = make_artifact(context,result), repo.root
     for name,data in [('context.json',context.model_dump()),('result.json',artifact),('files.json',files)]:
         (tmp_path/name).write_text(json.dumps(data))
     command = [sys.executable,str(Path(__file__).resolve().parents[1]/'scripts/publish_review.py'),
