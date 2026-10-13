@@ -5,8 +5,8 @@ import httpx
 import pytest
 
 from reviewer import review
-from reviewer.github import GitHub, GitHubError
-from reviewer.publishing import capture, make_artifact, preview, publish, start, StaleReview, STATUS_CONTEXT
+from reviewer.github import GitHub, GitHubError, UncertainSummaryPost
+from reviewer.publishing import capture, make_artifact, preview, publish, start, StaleReview, STATUS_CONTEXT, upsert_summary, SUMMARY_MARKER
 from tests.test_reviewer import repository, commit
 
 
@@ -316,3 +316,24 @@ def test_cli_previews_a_failure_without_credentials_or_network(tmp_path):
     result = subprocess.run(command, env=env, capture_output=True, text=True)
     assert result.returncode == 1 and context.head_sha in result.stdout
     assert not result.stderr
+
+
+@pytest.mark.parametrize('accepted', [True, False])
+def test_summary_unknown_post_never_creates_a_second_comment(tmp_path, accepted):
+    api, context, artifact, pr, calls, statuses, root = fixture(tmp_path)
+    original = api.request
+    posts = []
+    def uncertain(method, path, body=None, **kwargs):
+        if method=='POST' and path.endswith('/comments'):
+            posts.append(body)
+            if accepted:
+                original(method,path,body,**kwargs)
+            raise GitHubError('Unknown write outcome')
+        return original(method,path,body,**kwargs)
+    api.request = uncertain
+    if accepted:
+        upsert_summary(api,4,SUMMARY_MARKER+'\nVerified review',before_write=lambda:None)
+    else:
+        with pytest.raises(UncertainSummaryPost):
+            upsert_summary(api,4,SUMMARY_MARKER+'\nVerified review',before_write=lambda:None)
+    assert len(posts)==1

@@ -140,6 +140,14 @@ def test_failed_only_rerun_invalidates_an_earlier_success_of_the_same_run(tmp_pa
     assert statuses[0]['state'] == 'error' and statuses[0]['target_url'].endswith('/runs/10/attempts/2')
 
 
+def test_uncertain_summary_failure_finalizes_status_without_another_comment(tmp_path):
+    api, context, env, pr, calls, statuses, root = setup(tmp_path)
+    select_prs(api, {'number':4}, env)
+    mark_unfinished(api,4,env,'Summary POST uncertain',summary=False)
+    assert statuses[0]['state']=='error'
+    assert not any(method=='POST' and path.endswith('/comments') for method,path,body in calls)
+
+
 @pytest.mark.parametrize('failed', [False, True])
 def test_git_fetch_keeps_token_out_of_argv_and_files(tmp_path, monkeypatch, failed):
     import subprocess
