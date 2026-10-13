@@ -259,6 +259,11 @@ Candidate ничего не блокирует. Для остальных сос
 
 ### GitHub-адаптер
 
+`reviewer.contracts` хранит pinned context/artifact records, digest и run URL;
+`reviewer.artifacts` упаковывает и проверяет результат без внешних эффектов;
+`reviewer.publishing` отвечает за GitHub freshness/generation и запись комментариев
+и status. Прежние импорты из publishing сохранены для CLI и workflow.
+
 `reviewer.publishing` фиксирует repository ID/PR/base/head/merge-base/diff/profile/code SHA и номер
 Actions run/attempt. `capture` читает профиль и нормативные источники из immutable base;
 в контексте закрепляются список правил и все ожидаемые path/rule проверки по Git diff.
