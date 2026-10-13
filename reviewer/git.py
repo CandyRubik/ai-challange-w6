@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 import hashlib
 from pathlib import Path, PurePosixPath
+import re
 import subprocess
+import tempfile
 
 from .models import Snapshot
 
@@ -10,6 +12,41 @@ MAX_BYTES = 512_000
 
 class GitError(ValueError):
     pass
+
+
+def validate_line_separators(text):
+    if re.search(r'[\v\f\x1c-\x1e\x85\u2028\u2029]|\r(?!\n)',text):
+        raise GitError('Review coordinates support LF/CRLF; escape other line separators')
+
+
+def line_edits(before: str, after: str) -> list[tuple]:
+    """Git Myers over pinned blob text; content is data and never executed."""
+    validate_line_separators(before)
+    validate_line_separators(after)
+    if before == after:
+        return []
+    try:
+        with tempfile.TemporaryDirectory(prefix='review-lines-') as directory:
+            left, right = Path(directory)/'before', Path(directory)/'after'
+            left.write_bytes(before.encode('utf-8'))
+            right.write_bytes(after.encode('utf-8'))
+            result = subprocess.run(['git','--no-pager','-c','core.attributesFile=/dev/null','diff',
+                '--no-index','--no-ext-diff','--no-textconv','--no-color','--text','--diff-algorithm=myers',
+                '--no-indent-heuristic','--unified=0','--inter-hunk-context=0','--',str(left),str(right)],
+                stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=30)
+        if result.returncode not in (0,1):
+            raise GitError('Git line comparison failed')
+        edits = []
+        for match in re.finditer(r'^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@',result.stdout.decode('utf-8'),re.M):
+            old,n,new,m = match.groups()
+            old,n,new,m = int(old),int(n or 1),int(new),int(m or 1)
+            i,j = old-int(n>0),new-int(m>0)
+            edits.append(('replace' if n and m else 'delete' if n else 'insert',i,i+n,j,j+m))
+        if not edits:
+            raise GitError('Git did not produce line changes')
+        return edits
+    except (OSError,subprocess.SubprocessError,UnicodeError) as error:
+        raise GitError('Git line comparison failed') from error
 
 
 @dataclass(frozen=True)
@@ -71,6 +108,7 @@ class Repository:
             text = self.run("cat-file", "blob", oid.decode()).decode("utf-8")
             if "\0" in text:
                 raise ValueError("binary")
-            return text
         except (UnicodeError, ValueError) as error:
             raise GitError(f"Source is not UTF-8 text: {path}") from error
+        validate_line_separators(text)
+        return text

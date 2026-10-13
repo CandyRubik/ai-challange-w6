@@ -12,3 +12,10 @@ Base0110f36; Standards0open, Spec0open на436d9c2 после проверки �
 Новая write-точка только trusted Actions publisher с Bot token; локальный CLI предоставляет offline inline-plan. Неприменимый к обычному personal token флаг локальной inline-публикации исключён из среза.
 
 После переноса95focused checks прошли; после HTML framing20writer cases прошли. Metadata скрыто в HTML comment; parser проверяет wrapper и прежние identities.
+
+PR №16 слит в `4960646` после зелёных CI и AI Review. Реальный временный PR №17
+закрыт без слияния: на `aa58c5f` статическое нарушение в `app/state/inline_review_probe.py`
+дало failure, execution complete, 3 model calls; один COMMENTED review `5510392259`
+и один inline `4264383463` сохранили оба правила. На исправленном `dc2cac8` CI и
+AI Review успешны, execution complete, 1 model call / 50478 wire bytes. Новых inline
+не создано; старый отмечен superseded, исходный текст сохранён. Лимиты не менялись.

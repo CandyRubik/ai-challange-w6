@@ -1,6 +1,5 @@
 import ast
 from dataclasses import dataclass
-from difflib import SequenceMatcher
 import hashlib
 import json
 from pathlib import PurePosixPath
@@ -8,6 +7,7 @@ import re
 import time
 
 from .models import ReviewResult
+from .git import line_edits
 from .semantic_models import Fragment
 
 
@@ -86,7 +86,7 @@ def retrieve(repository, result: ReviewResult, changes, limits) -> Retrieved:
             raise ContextUnavailable("Before/head source is outside the review corpus; provenance cannot be assessed")
         after = repository.read(snapshot.head_sha, change.path) if change.status != "D" else ""
         before = repository.read(snapshot.merge_base_sha, change.before_path) if change.status != "A" else ""
-        edits = [op for op in SequenceMatcher(None, before.splitlines(), after.splitlines()).get_opcodes() if op[0] != "equal"]
+        edits = line_edits(before,after)
         causes[change.path] = [{"id": hashlib.sha256((snapshot.diff_sha256 + change.path + repr(op)).encode()).hexdigest()[:20],
             "before_path": change.before_path, "before": [op[1] + 1, op[2]], "head": [op[3] + 1, op[4]],
             "removed": "".join(before.splitlines(keepends=True)[op[1]:op[2]])} for op in edits]
