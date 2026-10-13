@@ -18,7 +18,7 @@
 | 4a | GitHub-адаптер результата | Закреплённый PR context, проверка provenance готового JSON, summary и head-bound status | Явный CLI; без API key и workflow; snapshot/generation проверяются до публикации | 629 фактически | 3c | merged |
 | 4b | Фактический context budget | Локальный CLI учитывает формат провайдера до вызова, снимает optional chunks и заранее проверяет capacity схемы | Нет новых вызовов/секретов; обязательные источники сохраняются | 81 фактически | 4a | merged |
 | 4c | Автоматический GitHub pipeline | Trusted workflow запускает анализ PR, публикует summary/status, обновляет ревью при main push | Reviewer только из main; PR data-only; отдельные jobs/permissions | 627 фактически | 4b | merged |
-| 5a | Восстановление summary | Неопределённый POST подтверждается чтением; повторная финализация не создаёт дубль | Только существующий summary/status, без inline | 86 фактически | 4c | in-progress |
+| 5a | Восстановление summary | Неопределённый POST подтверждается чтением; повторная финализация не создаёт дубль | Только существующий summary/status, без inline | 81 фактически | 4c | in-progress |
 | 5b | Планирование inline | Локальный CLI показывает проверенные anchors и причины summary fallback | Offline preview, без API и публикации | 250–450 | 5a | planned |
 | 5c | Публикация inline | Batch COMMENT, восстановление неопределённого POST и superseded-маркеры старых замечаний | Только закреплённый результат и повторная проверка актуальности | 200–400 | 5b | planned |
 | 6 | Подтверждённый долг проекта | Активный реестр перепроверяется на head, отдельные общие комментарии влияют на check; fixing PR распознаётся | Реестр из trusted base, изначально пустой; candidates требуют подтверждения | 400–600 | 5c | planned |
