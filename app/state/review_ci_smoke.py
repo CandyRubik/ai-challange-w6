@@ -1,1 +1,2 @@
-import sqlite3
+def preserve(value):
+    return value
