@@ -11,14 +11,14 @@ from tests.test_review_publishing import fixture
 
 
 def setup(tmp_path):
-    api, context, artifact, pr, calls, statuses, root = fixture(tmp_path)
+    api, context, artifact, pr, calls, statuses, root = fixture(tmp_path,code='import sqlite3\n# @maintainer\n# additional\n')
     from reviewer.models import ReviewResult
     result = ReviewResult.model_validate(artifact['result'])
     repository = Repository(root)
     contents = repository.read(context.head_sha, 'app/state/service.py').encode()
     blob = hashlib.sha1(b'blob '+str(len(contents)).encode()+b'\0'+contents).hexdigest()
     files = [dict(filename='app/state/service.py', status='modified', sha=blob,
-        patch='@@ -1,2 +1,2 @@\n-def apply(state):\n-    return state\n+import sqlite3\n+# @maintainer')]
+        patch='@@ -1,2 +1,3 @@\n-def apply(state):\n-    return state\n+import sqlite3\n+# @maintainer\n+# additional')]
     comments, reviews, writes = [], [], []
     original = api.request
     def request(method, path, body=None, **kwargs):
@@ -190,9 +190,10 @@ def test_retirement_preserves_large_original_body_without_truncation(tmp_path, e
         assert comments[0]['body'].endswith(original) and len(comments[0]['body'].encode())<64_000
 
 
-def test_partial_visibility_rerun_reconciles_full_batch_without_duplicates(tmp_path):
+@pytest.mark.parametrize('changed_plan', [False, True])
+def test_partial_visibility_rerun_reconciles_full_batch_without_duplicates(tmp_path, changed_plan):
     api, context, result, repo, files, comments, reviews, writes, guard, pr = setup(tmp_path)
-    second = result.findings[0].model_copy(update={'rule_id':'BUGS','source':None,'blocking':False,
+    second = result.findings[0].model_copy(update={'rule_id':'BUGS','source':None,'blocking':True,'severity':'critical',
         'evidence':result.findings[0].evidence.model_copy(update={'line':2,'quote':'# @maintainer'})})
     result = result.model_copy(update={'findings':[*result.findings,second]})
     original, visibility = api.request, {'hidden_reads':4}
@@ -208,7 +209,11 @@ def test_partial_visibility_rerun_reconciles_full_batch_without_duplicates(tmp_p
     with pytest.raises(GitHubError,match='confirmed'):
         publish_inline(api,context,result,repo,guard=guard)
     rerun = context.model_copy(update={'run_attempt':2})
+    result = result.model_copy(update={'findings':[result.findings[0],second.model_copy(update={'blocking':False,'severity':'minor'})]})
+    if changed_plan:
+        third = second.model_copy(update={'evidence':second.evidence.model_copy(update={'line':3,'quote':'# additional'})})
+        result = result.model_copy(update={'findings':[*result.findings,third]})
     start(api,rerun)
     publish_inline(api,rerun,result,repo,guard=lambda:assert_current(api,rerun))
-    assert len(writes)==1 and len(comments)==2
+    assert len(writes)==(2 if changed_plan else 1) and len(comments)==(3 if changed_plan else 2)
     assert all('/attempts/2' in c['body'] for c in comments)
