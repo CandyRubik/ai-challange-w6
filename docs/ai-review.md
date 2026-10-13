@@ -210,6 +210,46 @@ Raw ответы и ключи в trace не попадают. `.ai-review/` и�
 прогоны не повторялись после успеха; continuation завершил только три incomplete случая.
 Это небольшой уже просмотренный набор; дальнейшие изменения требуют свежего holdout.
 
+### GitHub-адаптер
+
+`reviewer.publishing` фиксирует repository ID/PR/base/head/merge-base/diff/profile/code SHA и номер
+Actions run/attempt. `capture` читает профиль и нормативные источники из immutable base;
+в контексте закрепляются список правил и все ожидаемые path/rule проверки по Git diff.
+Primary evidence связывается с causal path по head либо before SHA и закреплённой
+карте rename; supporting callers не заменяют отдельный диагноз другого файла.
+workflow должен отдельно подтвердить, что выполняет именно этот code SHA. Адаптер не
+исполняет head и не использует адреса/номера PR из ответа модели.
+
+```bash
+python scripts/publish_review.py --context context.json --artifact result.json
+# Явная публикация подготовленного trusted-run artifact, GITHUB_TOKEN только в env:
+python scripts/publish_review.py --context context.json --artifact result.json --publish
+```
+
+По умолчанию CLI только показывает Markdown и возвращает 0/1/2 по verdict; credentials
+и сеть для preview не нужны. Перед записью проверяются точная context identity, digest,
+SHA результата, profile origin и отсутствие противоречивого success. `start` создаёт
+pending. Publisher сверяет полный snapshot, применённые правила, покрытие и допустимые
+ревизии evidence; неизвестные правила и небезопасные metadata отклоняются. Digest проверяет
+целостность, аутентификация источника artifact обеспечивается workflow следующего среза.
+`publish` обновляет bot summary и head-bound commit status. Нормативный
+inconclusive требует error; только необязательные непроверенные критерии могут остаться
+советующими, как в локальном CLI. `fail` завершает незавершённый запуск отдельным error.
+
+API фиксирован на api.github.com; redirects и скрытые повторы POST отключены. Pagination
+обязательна, её предел даёт ошибку без частичного успешного результата. 403/429/503
+отображаются как transport error без тела ответа/токена в диагностике. Summary экранирует
+Markdown/HTML и mentions; сокращение длинного представления помечается, JSON сохраняется
+в run artifact. При неоднозначности двух open PR с одним SHA success запрещён.
+
+Base/head проверяются до/после записи; поколение run/attempt нельзя понизить. Обнаруженная
+гонка после status write инвалидирует наш status. GitHub не предоставляет CAS для
+комментариев/statuses; отказ freshness GET также вызывает best-effort инвалидацию нашего
+результата. Если GitHub недоступен и для error write, CLI/workflow остаётся неуспешным;
+при восстановлении API нужен rerun.
+Полноценная workflow-сериализация и recovery неопределённого POST
+добавляются следующими срезами. Пока workflow не подключён, автоматических запросов нет.
+
 `evaluate_review.py --resume REPORT --split all` планирует и повторяет только incomplete
 случаи того же case-set, split и лимитов. Прошлые запросы/токены и снимки сохраняются.
 Для старого формата используйте `prepare_report(report, corpus)`; отсутствующие лимиты
