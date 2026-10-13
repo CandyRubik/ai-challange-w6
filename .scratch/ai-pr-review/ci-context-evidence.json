@@ -1,0 +1,45 @@
+{
+  "base": "06afa6b30fc9b78d2e68742bb30de6c00af91a91",
+  "head": "3f78168a1fb5e7e003f680ec9cf1aa8dc37004cf",
+  "purpose": "Offline packing measurement, empty mock assessments are not a quality verdict",
+  "comparison": [
+    {
+      "mode": "legacy-packer",
+      "context_limit": 96000,
+      "bundle_bytes": 90735,
+      "wire_messages_bytes": 103101,
+      "optional_omitted": 0,
+      "mock_http_calls": 0,
+      "real_api_calls": 0,
+      "limitations": [
+        "reviewer/github.py [SEC-CAPABILITIES]: Semantic analysis is not available in this audit",
+        "reviewer/github.py [SEC-LOGGING]: Semantic analysis is not available in this audit",
+        "reviewer/publishing.py [SEC-CAPABILITIES]: Semantic analysis is not available in this audit",
+        "reviewer/publishing.py [SEC-LOGGING]: Semantic analysis is not available in this audit",
+        "Semantic call, context or response invalid (RuntimeError)"
+      ]
+    },
+    {
+      "mode": "transport-aware",
+      "context_limit": 96000,
+      "bundle_bytes": 83153,
+      "wire_messages_bytes": 94949,
+      "optional_omitted": 2,
+      "mock_http_calls": 1,
+      "real_api_calls": 0,
+      "limitations": [
+        "reviewer/github.py [SEC-CAPABILITIES]: Semantic analysis is not available in this audit",
+        "reviewer/github.py [SEC-LOGGING]: Semantic analysis is not available in this audit",
+        "reviewer/publishing.py [SEC-CAPABILITIES]: Semantic analysis is not available in this audit",
+        "reviewer/publishing.py [SEC-LOGGING]: Semantic analysis is not available in this audit",
+        "Model did not assess each requested criterion exactly once"
+      ]
+    }
+  ],
+  "calibration_compatibility": {
+    "saved_calls_checked": 42,
+    "unchanged_wire_layout": true,
+    "max_wire_bytes": 27018,
+    "real_api_calls": 0
+  }
+}

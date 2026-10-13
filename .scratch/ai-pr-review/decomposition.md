@@ -3,7 +3,7 @@
 - Дата: 2026-10-13.
 - Основание: [план и Q1–Q11](plan.md), [исследование GitHub](research.md).
 - Trunk: `main`, исследован на `f7a4d1e`.
-- Статус карты: согласована пользователем 2026-10-13; PR №4–8 слиты; quality gate пройден. Срез 4a готов от main `06afa6b`, обе оси self-review — 0 open.
+- Статус карты: согласована пользователем 2026-10-13; PR №4–9 слиты; quality gate пройден. Срез 4b (context budget) готов от main `6d7e66b`; workflow выделен в 4c и сохранён для следующего PR.
 - Бюджет: целевой размер ≤600 reviewable lines (added + removed), максимум 1000 с отдельным обоснованием. Это оценки; при росте срез делится до открытия PR. Документация и большие входные fixtures не входят в кодовый бюджет; prompt/profile, ручные тесты и workflow считаются проверяемой логикой.
 
 ## Последовательность
@@ -15,14 +15,15 @@
 | 3 | Калибровка блокирующих выводов | Версионированный eval и проверка контраргументов отсекают неподтверждённые finding; видны precision/coverage/cost | Проверяется качество уже работающего CLI; paid eval запускается явно | 504 фактически | 2 | merged |
 | 3b | Устойчивый формат и повторная калибровка | Единый assessment вместо противоречивых массивов, надёжная привязка evidence, свежий holdout | Исправляет выявленную incomplete-rate до автоматизации; API только явно | 630 фактически | 3 | merged |
 | 3c | Восстановление невалидного ответа и оценка дублей | Один явный bounded retry при невалидном ответе, проверяемые аннотации спорных eval-диагнозов, завершение failed cases | Невалидные ответы не дают success; прошлые raw counts сохраняются; без нового полного paid-прогона | 471 фактически | 3b | merged |
-| 4a | GitHub-адаптер результата | Закреплённый PR context, проверка provenance готового JSON, summary и head-bound status | Явный CLI; без API key и workflow; snapshot/generation проверяются до публикации | 629 фактически | 3c | ready |
-| 4b | Автоматический GitHub pipeline | Trusted workflow запускает анализ PR, публикует summary/status, обновляет ревью при main push | Reviewer только из main; PR data-only; отдельные jobs/permissions | 450–600 | 4a | planned |
-| 5 | Inline и устойчивость публикации | Причинные изменения получают корректные inline anchors, rerun не дублирует результат, старое поколение не заменяет новое | Публикует уже проверенный результат; summary fallback при отсутствии anchor | 350–550 | 4b | planned |
+| 4a | GitHub-адаптер результата | Закреплённый PR context, проверка provenance готового JSON, summary и head-bound status | Явный CLI; без API key и workflow; snapshot/generation проверяются до публикации | 629 фактически | 3c | merged |
+| 4b | Фактический context budget | Локальный CLI учитывает формат провайдера до вызова, снимает optional chunks и заранее проверяет capacity схемы | Нет новых вызовов/секретов; обязательные источники сохраняются | 81 фактически | 4a | ready |
+| 4c | Автоматический GitHub pipeline | Trusted workflow запускает анализ PR, публикует summary/status, обновляет ревью при main push | Reviewer только из main; PR data-only; отдельные jobs/permissions | 627 фактически | 4b | queued |
+| 5 | Inline и устойчивость публикации | Причинные изменения получают корректные inline anchors, rerun не дублирует результат, старое поколение не заменяет новое | Публикует уже проверенный результат; summary fallback при отсутствии anchor | 350–550 | 4c | planned |
 | 6 | Подтверждённый долг проекта | Активный реестр перепроверяется на head, отдельные общие комментарии влияют на check; fixing PR распознаётся | Реестр из trusted base, изначально пустой; candidates требуют подтверждения | 400–600 | 5 | planned |
 | 7 | Решения владельца | Scoped dismiss/waiver/resolve с причиной и сроком переживают rerun и пересчитывают check | Trusted manual workflow, проверка владельца и provenance журнала | 400–600 | 6 | planned |
 | 8 | Интервью по проекту, после MVP | Skill собирает факты, проводит интервью и формирует профиль/preview prompt для утверждения | Отдельный onboarding; CI использует прежний валидированный артефакт | 350–550 | 7 | planned |
 
-День 32 минимально закрывается после среза 4b. Согласованный MVP с inline, долгом и решениями владельца закрывается после среза 7. Интервью и последующее выделение репозитория не задерживают первую версию.
+День 32 минимально закрывается после среза 4c. Согласованный MVP с inline, долгом и решениями владельца закрывается после среза 7. Интервью и последующее выделение репозитория не задерживают первую версию.
 
 ## Границы срезов
 
@@ -114,3 +115,7 @@
 - 2026-10-13: PR №8 слит после зелёного CI и обеих осей 0 open. Срез 4 разделён до реализации: 4a поставляет самостоятельный GitHub publisher готового результата, 4b подключает trusted workflow и разрешённый cloud-анализ. Это удерживает API/provenance и инфраструктуру в отдельных review-sized PR; поведение MVP не меняется.
 
 - 2026-10-13: срез 4a — 629 code lines, на29 выше цели600 и ниже cap1000. Дополнение — исправления обнаруженных self-review false-green/false-rejection: pinned policy/coverage, допустимые SHA, advisory BUGS, stale/HTTP cleanup и rename identity. Отделение оставило бы известные ошибки проверки результата в уже поставленном publisher. Workflow/inline/debt в срез не включены.
+
+- 2026-10-13: PR №9 слит после зелёного CI (394tests), обе оси0open. Полный CI diff вырос до708code lines; до открытия PR выделен самостоятельный packing-срез4b (81строка), полезный локальному CLI. Reviewed workflow4c сохранён отдельным patch и применяется после merge4b. В нём627строк: превышение цели27 — обязательные trusted-job/provenance/failure guards и regression cases retarget/draft/rerun, без независимой будущей функции.
+
+- 2026-10-13: offline packing на PR9: internal90.7KB не отражал actual103.1KB; transport-aware packing снимает2optional chunks и даёт94.9KB при cap96KB. Все42 сохранённых calibration payloads побайтно прежние (max27018bytes); новых APIcalls нет. Capacity критериев проверяется до paid generation. Workflow требует актуального main в head, чтобы head-only RAG представлял будущий merge result; behind-main даёт error/rebase.

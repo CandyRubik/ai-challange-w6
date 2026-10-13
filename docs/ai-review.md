@@ -107,6 +107,13 @@ Allowlist применяется к head и before: перенос из искл
 thinking и скрытые SDK retries отключены. Лимиты доступны через `Limits`, два
 основных лимита — также через CLI. Обязательные фрагменты не обрезаются: превышение
 даёт error до платного вызова. Необязательные фрагменты снимаются с конца ранжирования.
+Упаковка учитывает optional `measure_input` провайдера: DeepSeek измеряет тот же формат
+messages/line references/schema, который отправляет в API. Generic JsonModel сохраняет
+прежний интерфейс. Capacity критериев по output-схеме проверяется до генерации; невозможный
+полный ответ даёт error без запросов. `trace.input_budget_bytes` и `input_packer_version`
+отмечают эту проверку. [Offline evidence](../.scratch/ai-pr-review/ci-context-evidence.json)
+показывает исправление на реальном diff и побайтную совместимость42 calibration payloads;
+измерение через mock не является новым quality eval.
 
 Модель оценивает каждую пару path/rule и общий критерий BUGS. Проверяются строгая
 схема, полнота критериев, согласованность violations/findings, существование

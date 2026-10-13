@@ -31,10 +31,12 @@ def analyze(repository, result, changes, model: JsonModel, limits: Limits):
     requested += [{"path": change.path, "rule_id": "BUGS"} for change in changes if code(change.path)]
     if not requested:
         return result
-    trace = {"model": model.name, "prompt_version": "review-v5", "retriever_version": "review-v2", "model_calls": 0, "token_usage": [], "wire_inputs": []}
+    trace = {"model": model.name, "prompt_version": "review-v5", "retriever_version": "review-v2", "input_packer_version": "wire-v1", "model_calls": 0, "token_usage": [], "wire_inputs": []}
     try:
         if "BUGS" in rules:
             raise ReviewIncomplete("BUGS is reserved for the general bug criterion")
+        if len(requested) > DraftReview.model_json_schema()['properties']['criteria']['maxItems']:
+            raise ReviewIncomplete('Model criterion budget exceeded')
         selected = {c["path"] for c in requested}
         if any(not readable(path) for path in selected):
             raise ReviewIncomplete("Required source is outside the allowlist")
@@ -59,13 +61,24 @@ def analyze(repository, result, changes, model: JsonModel, limits: Limits):
         def bundle(payload):
             return json.dumps({"system": SYSTEM, "schema": schema, "input": payload}, ensure_ascii=False).encode()
 
+        def input_size(payload):
+            size = len(bundle(payload))
+            measure = getattr(model, 'measure_input', None)
+            if callable(measure):
+                measured = measure(messages=[{'role': 'system', 'content': SYSTEM}, {'role': 'user', 'content': payload}], schema=schema)
+                if type(measured) is not int or measured < 0:
+                    raise ReviewIncomplete('Invalid transport input measurement')
+                size = max(size, measured)
+            return size
+
         payload = serialize()
-        while len(bundle(payload)) > limits.context_bytes and len(fragments) > retrieved.required_count:
+        while input_size(payload) > limits.context_bytes and len(fragments) > retrieved.required_count:
             fragments.pop()
             payload = serialize()
         trace["optional_fragments_omitted"] = len(retrieved.fragments) - len(fragments)
         trace.update(context_sha256=hashlib.sha256(bundle(payload)).hexdigest(), context_bytes=len(bundle(payload)), fragments=len(fragments))
-        if trace["context_bytes"] > limits.context_bytes:
+        trace['input_budget_bytes'] = input_size(payload)
+        if trace['input_budget_bytes'] > limits.context_bytes:
             raise ReviewIncomplete("Required context exceeds budget")
         raw = generate_json(model, messages=[{"role": "system", "content": SYSTEM}, {"role": "user", "content": payload}],
                                   max_tokens=limits.output_tokens, schema=schema, context_bytes=limits.context_bytes, trace=trace, validate=DraftReview.model_validate_json)
