@@ -21,10 +21,14 @@ def evidence_text(ref):
     return f"{text(ref.path)}:{location} @ `{ref.sha}` — {text(ref.quote)}"
 
 
-def safe_comment(body, *, limit=58_000):
-    body = ''.join(c for c in re.sub('@(?!\u200b)', '@\u200b', body) if c in '\n\t' or ord(c) >= 32)
-    if len(body.encode()) > limit:
-        body = body.encode()[:limit].decode('utf-8', errors='ignore') + '\n\nPresentation shortened; full result is in the run artifact.'
+def normalize_comment(body):
+    return ''.join(c for c in re.sub('@(?!\u200b)', '@\u200b', body) if c in '\n\t' or ord(c) >= 32)
+
+
+def safe_comment(body):
+    body = normalize_comment(body)
+    if len(body.encode()) > 58_000:
+        body = body.encode()[:58_000].decode('utf-8', errors='ignore') + '\n\nPresentation shortened; full result is in the run artifact.'
     return body
 
 

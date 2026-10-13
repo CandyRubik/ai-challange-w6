@@ -173,15 +173,16 @@ def test_error_even_with_complete_execution_keeps_existing_inline_current(tmp_pa
     assert 'superseded' not in comments[0]['body']
 
 
-@pytest.mark.parametrize('edited_oversize', [False, True])
+@pytest.mark.parametrize('edited_oversize', [False, True, 'mentions'])
 def test_retirement_preserves_large_original_body_without_truncation(tmp_path, edited_oversize):
     api, context, result, repo, files, comments, reviews, writes, guard, pr = setup(tmp_path)
     large = result.model_copy(update={'findings':[result.findings[0].model_copy(update={'message':'x'*58_000})]})
     publish_inline(api,context,large,repo,guard=guard)
     if edited_oversize:
-        comments[0]['body'] = comments[0]['body'].split('\n',1)[0]+'\n'+'x'*64_000
+        edited = '@'*23_000+'TAIL_SENTINEL' if edited_oversize=='mentions' else 'x'*64_000
+        comments[0]['body'] = comments[0]['body'].split('\n',1)[0]+'\n'+edited
     original = comments[0]['body']
-    assert len(original.encode())>58_000
+    assert len(original.encode())>58_000 or edited_oversize=='mentions'
     fallback = publish_inline(api,context,result.model_copy(update={'findings':[]}),repo,guard=guard)
     if edited_oversize:
         assert comments[0]['body']==original and fallback

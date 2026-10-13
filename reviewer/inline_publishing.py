@@ -6,7 +6,7 @@ import time
 
 from .github import GitHubError, bot_authored, raw_body
 from .inline import PREFIX, plan_inline
-from .report import safe_comment
+from .report import normalize_comment
 
 BATCH = '<!-- ai-review:batch:v1:'
 
@@ -83,10 +83,10 @@ def publish_inline(api, context, result, repository, *, guard):
             original = body.split('\n\n--- Original report ---\n\n')[-1]
             retired = (marker+'\n'+note+'\nSuperseded by the latest complete review; check its summary for current findings. This does not prove a fix.\n'
                 +f'[Current run]({context.run_url})\n\n--- Original report ---\n\n'+original)
-            if len(retired.encode()) > 64_000:
-                fallback.append('Existing inline is too large to mark superseded without losing its original text')
+            retired = normalize_comment(retired)
+            if len(retired.encode()) > 64_000 or not retired.endswith(original):
+                fallback.append('Existing inline cannot be marked superseded while preserving its original text')
                 continue
-            retired = safe_comment(retired,limit=64_000)
             guard()
             api.request('PATCH',f'/pulls/comments/{comment["id"]}',{'body':retired})
             guard()
