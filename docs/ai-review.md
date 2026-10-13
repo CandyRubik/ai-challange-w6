@@ -236,6 +236,27 @@ generic JsonModel получает эту диагностику без изме
 прогоны не повторялись после успеха; continuation завершил только три incomplete случая.
 Это небольшой уже просмотренный набор; дальнейшие изменения требуют свежего holdout.
 
+### Подтверждённый долг проекта
+
+`.ai-review/debt.json` из base хранит `candidate`, `active`, `resolved`, `waived`.
+Candidate ничего не блокирует. Для остальных состояний нужны текущий владелец
+профиля и причина; waiver ограничен UTC-сроком. Блокирующий долг ссылается на must
+правило либо подтверждённый critical BUGS. Historical evidence проверяется по Git.
+
+```bash
+# Только предложение кандидатов, без записи или активации:
+.venv/bin/python scripts/review_debt.py --suggest --head HEAD
+# Локальный opt-in до подключения долга в CI:
+.venv/bin/python scripts/review_debt.py --base origin/main --head HEAD
+```
+
+Для `python-import-boundary` перепроверяется полный scope правила на head, до 500
+файлов / 2 МБ / 30 секунд. Перенос импорта в другой файл scope не снимает долг.
+Отсутствие запрещённых импортов даёт `fixed`; динамический импорт, невалидный или
+нечитаемый исходник даёт error. Для `owner-attestation` требуется явное закрытие
+владельцем, даже если код изменился. Project debt имеет отдельные assessments,
+не становится новой inline-находкой PR. Правки реестра в head не ослабляют base.
+
 ### GitHub-адаптер
 
 `reviewer.publishing` фиксирует repository ID/PR/base/head/merge-base/diff/profile/code SHA и номер

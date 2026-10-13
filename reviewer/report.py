@@ -58,6 +58,13 @@ def markdown(result: ReviewResult, *, explain_policy: bool = False) -> str:
         lines += finding_details(group)
     if not result.findings:
         lines.append("No new violations found by the configured checks.")
+    if result.debt_sha256 or result.project_debt:
+        lines += ['', '## Project debt', f'Registry: `{result.debt_sha256}`.']
+        for item in result.project_debt:
+            lines += [f'- **{text(item.debt_id)}** / {text(item.rule_id)}: **{item.verdict}** '
+                      f'({"blocking" if item.blocking else "advisory"}) — {text(item.title)}; {text(item.reason)}; '
+                      f'checked files: {len(item.checked_paths)}, violations: {item.violation_count}.']
+            lines += [f'  Evidence: {evidence_text(ref)}' for ref in item.evidence]
     lines += ["", "## Coverage"]
     lines += [f"- {text(c.path)} / {text(c.rule_id)}: **{c.verdict}** — {text(c.reason)}" for c in result.criteria]
     lines += [f"- {text(path)}: outside rule scope (not assessed)." for path in result.not_applicable]

@@ -52,7 +52,7 @@ def boundaries(text: str, path: str, forbidden: list[str]) -> tuple[dict[str, in
 
 
 def review(root: Path, base: str, head: str, *, profile_path: Path | None = None,
-           model: JsonModel | None = None, limits: Limits | None = None) -> ReviewResult:
+           model: JsonModel | None = None, limits: Limits | None = None, project_debt: bool = False) -> ReviewResult:
     repository = Repository(root)
     metadata = {"profile_origin": "explicit_local" if profile_path else "base"}
     sources, findings, criteria, not_applicable = {}, [], [], []
@@ -114,5 +114,8 @@ def review(root: Path, base: str, head: str, *, profile_path: Path | None = None
         limitations=[f"{c.path} [{c.rule_id}]: {c.reason}" for c in incomplete])
     if model is not None:
         from .semantic import analyze
-        return analyze(repository, result, changes, model, limits or Limits())
+        result = analyze(repository, result, changes, model, limits or Limits())
+    if project_debt:
+        from .debt import include_debt
+        result = include_debt(repository, result, profile)
     return result
