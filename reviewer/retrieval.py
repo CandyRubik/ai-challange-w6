@@ -167,6 +167,8 @@ def retrieve(repository, result: ReviewResult, changes, limits) -> Retrieved:
     candidates.sort(key=lambda item: (-item[0], item[1].path, item[1].line))
     priority = []
     for _,path,refs in sorted(groups,key=lambda g:(g[0],g[1],g[2][-1].line)):
+        if len(priority) == 8:
+            break
         refs = [f for f in refs if not covered(f,priority)]
         if len(priority)+len(refs) <= 8:
             priority += refs

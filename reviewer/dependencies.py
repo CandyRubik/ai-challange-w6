@@ -49,20 +49,21 @@ def function_contexts(text, names):
         tree = ast.parse(text)
     except (SyntaxError, RecursionError):
         return []
-    lines, contexts = text.splitlines(keepends=True), []
+    lines, contexts, file_bytes = text.splitlines(keepends=True), [], len(text.encode())
     imports = [n for n in tree.body if isinstance(n,(ast.Import,ast.ImportFrom))]
     for node in tree.body:
         if not isinstance(node,(ast.FunctionDef,ast.AsyncFunctionDef)) or node.name not in names:
             continue
         first = min([node.lineno,*[d.lineno for d in node.decorator_list]])
         body = ''.join(lines[first-1:node.end_lineno])
-        if len(text.encode()) <= 1500:
+        if file_bytes <= 1500:
             contexts.append(FunctionContext(priority=len(body.encode()),spans=[(1,text)]))
             continue
-        prefix = ''.join(lines[:node.end_lineno])
-        if first <= 30 and len(prefix.encode()) <= 1500:
-            contexts.append(FunctionContext(priority=len(body.encode()),spans=[(1,prefix)]))
-            continue
+        if first <= 30:
+            prefix = ''.join(lines[:node.end_lineno])
+            if len(prefix.encode()) <= 1500:
+                contexts.append(FunctionContext(priority=len(body.encode()),spans=[(1,prefix)]))
+                continue
         used = {n.id for n in ast.walk(node) if isinstance(n,ast.Name) and isinstance(n.ctx,ast.Load)}
         bound = {n.arg for n in ast.walk(node) if isinstance(n,ast.arg)} | {
             n.id for n in ast.walk(node) if isinstance(n,ast.Name) and isinstance(n.ctx,ast.Store)}
