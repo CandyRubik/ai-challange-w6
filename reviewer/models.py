@@ -95,6 +95,18 @@ class Criterion(Record):
     evidence: list[Evidence] = Field(default_factory=list)
 
 
+class DebtAssessment(Record):
+    debt_id: str
+    rule_id: str
+    title: str
+    blocking: bool
+    verdict: Literal['candidate', 'open', 'fixed', 'waived', 'resolved', 'inconclusive']
+    reason: str
+    evidence: list[Evidence] = Field(default_factory=list)
+    checked_paths: list[str] = Field(default_factory=list)
+    violation_count: int = Field(default=0, ge=0)
+
+
 class ReviewResult(Record):
     snapshot: Snapshot | None = None
     profile_sha256: str = ""
@@ -107,4 +119,6 @@ class ReviewResult(Record):
     limitations: list[str] = Field(default_factory=list)
     policy: list[Rule] = Field(default_factory=list)
     recommendations: list[str] = Field(default_factory=list)
+    debt_sha256: str = ''
+    project_debt: list[DebtAssessment] = Field(default_factory=list)
     trace: dict = Field(default_factory=dict)
