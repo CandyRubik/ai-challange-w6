@@ -19,3 +19,6 @@ Base `12bd84b`; Standards 0 open, Spec 0 open на `b4868b1` до механич
   точная причина неизвестна. После исправлений baseline mock wire91201bytes,
   все mandatory сохранены, optional8 сняты. Это не свежий paid quality eval.
 - Автоматическое включение долга и отдельный GitHub comment остаются в6b.
+
+Финальный AI run38480405087 на0267d7e: success/complete,1call,91290wirebytes,
+без validation failure. PR19 слит в26366e1 после зелёного CI и self-review.

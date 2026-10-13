@@ -7,6 +7,7 @@ import subprocess
 import tempfile
 
 from . import review
+from .debt import load_registry
 from .git import Repository
 from .models import Profile
 from .publishing import (STATUS_CONTEXT, SUMMARY_MARKER, StaleReview, assert_current, capture, generation,
@@ -38,6 +39,9 @@ def check_context(root, context, env):
     raw = Repository(root).read(context.base_sha, '.ai-review/profile.json')
     if hashlib.sha256(raw.encode()).hexdigest() != context.profile_sha256 or Profile.model_validate_json(raw) != context.profile:
         raise ValueError('Context profile differs from trusted Git base')
+    registry, registry_hash = load_registry(Repository(root), context.base_sha, context.profile)
+    if registry != context.debt_registry or registry_hash != context.debt_sha256:
+        raise ValueError('Context debt registry differs from trusted Git base')
 
 
 def fetch_head(root, number, repository, token):
