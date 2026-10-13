@@ -26,7 +26,9 @@ def owned_batches(reviews):
         try:
             if not match or len(body)>2_000:
                 raise ValueError('Invalid batch marker')
-            record = json.loads(data)
+            if not data.startswith('<!--\n') or not data.endswith('\n-->'):
+                raise ValueError('Invalid hidden batch metadata')
+            record = json.loads(data[5:-4])
             if not isinstance(record,dict) or set(record) != {'keys','plan_keys'}:
                 raise ValueError('Invalid batch metadata')
             for keys in record.values():
@@ -110,7 +112,7 @@ def publish_inline(api, context, result, repository, *, guard):
     if missing:
         plan_keys = sorted(group['key'] for group in groups)
         marker = f'{BATCH}{context.head_sha}:{key_digest(plan_keys)} -->'
-        body = marker+'\n'+json.dumps(dict(keys=sorted(g['key'] for g in missing),plan_keys=plan_keys))
+        body = marker+'\n<!--\n'+json.dumps(dict(keys=sorted(g['key'] for g in missing),plan_keys=plan_keys))+'\n-->'
         guard()
         try:
             api.request('POST',f'/pulls/{context.pr_number}/reviews',dict(commit_id=context.head_sha,event='COMMENT',
