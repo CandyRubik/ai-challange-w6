@@ -25,6 +25,13 @@ def matches(comment, group, head, published):
             and all(comment.get(key) == value for key,value in group['anchor'].items()))
 
 
+def update_comment(api, comment, body, guard):
+    if raw_body(comment) != body:
+        guard()
+        api.request('PATCH',f'/pulls/comments/{comment["id"]}',{'body':body})
+        guard()
+
+
 def publish_inline(api, context, result, repository, *, guard):
     guard()
     files = api.items(f'/pulls/{context.pr_number}/files')
@@ -36,14 +43,11 @@ def publish_inline(api, context, result, repository, *, guard):
     for group in groups:
         existing = next((c for c in comments if matches(c,group,context.head_sha,published)), None)
         if existing:
-            if raw_body(existing) != group['body']:
-                guard()
-                api.request('PATCH',f'/pulls/comments/{existing["id"]}',{'body':group['body']})
-                guard()
+            update_comment(api,existing,group['body'],guard)
         else:
             missing.append(group)
     if missing:
-        batch_id = hashlib.sha256(json.dumps([group['key'] for group in missing]).encode()).hexdigest()
+        batch_id = hashlib.sha256(json.dumps([group['key'] for group in groups]).encode()).hexdigest()
         marker = f'{BATCH}{context.head_sha}:{batch_id} -->'
         already = any(bot_authored(r) and r.get('commit_id') == context.head_sha and raw_body(r) == marker for r in reviews)
         if not already:
@@ -64,7 +68,11 @@ def publish_inline(api, context, result, repository, *, guard):
                 continue
             published = published_reviews(reviews)
             batch = {r['id'] for r in reviews if r.get('id') in published and r.get('commit_id') == context.head_sha and raw_body(r) == marker}
-            if batch and all(any(matches(c,g,context.head_sha,batch) and raw_body(c) == g['body'] for c in comments) for g in missing):
+            if batch and all(any(matches(c,g,context.head_sha,batch) and (already or raw_body(c) == g['body']) for c in comments) for g in missing):
+                if already:
+                    for group in missing:
+                        comment = next(c for c in comments if matches(c,group,context.head_sha,batch))
+                        update_comment(api,comment,group['body'],guard)
                 break
         else:
             raise GitHubError('Inline POST could not be confirmed; no blind retry; rerun required')

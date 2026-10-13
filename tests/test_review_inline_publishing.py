@@ -31,7 +31,7 @@ def setup(tmp_path):
         if method == 'POST' and path == '/pulls/4/reviews':
             writes.append(body)
             assert body['event'] == 'COMMENT' and body['commit_id'] == context.head_sha
-            review = dict(id=20, commit_id=context.head_sha, state='COMMENTED', body=body['body'], user=dict(login='github-actions[bot]', type='Bot'))
+            review = dict(id=20+len(reviews), commit_id=context.head_sha, state='COMMENTED', body=body['body'], user=dict(login='github-actions[bot]', type='Bot'))
             reviews.append(review)
             for entry in body['comments']:
                 comments.append(dict(id=100+len(comments), pull_request_review_id=review['id'], commit_id=context.head_sha, user=review['user'], **entry))
@@ -188,3 +188,27 @@ def test_retirement_preserves_large_original_body_without_truncation(tmp_path, e
         assert comments[0]['body']==original and fallback
     else:
         assert comments[0]['body'].endswith(original) and len(comments[0]['body'].encode())<64_000
+
+
+def test_partial_visibility_rerun_reconciles_full_batch_without_duplicates(tmp_path):
+    api, context, result, repo, files, comments, reviews, writes, guard, pr = setup(tmp_path)
+    second = result.findings[0].model_copy(update={'rule_id':'BUGS','source':None,'blocking':False,
+        'evidence':result.findings[0].evidence.model_copy(update={'line':2,'quote':'# @maintainer'})})
+    result = result.model_copy(update={'findings':[*result.findings,second]})
+    original, visibility = api.request, {'hidden_reads':4}
+    def partial(method,path,body=None,**kwargs):
+        response = original(method,path,body,**kwargs)
+        if method=='POST' and path.endswith('/reviews'):
+            raise GitHubError('Accepted batch response lost')
+        if method=='GET' and path=='/pulls/4/comments' and comments and visibility['hidden_reads']:
+            visibility['hidden_reads'] -= 1
+            return comments[:1]
+        return response
+    api.request = partial
+    with pytest.raises(GitHubError,match='confirmed'):
+        publish_inline(api,context,result,repo,guard=guard)
+    rerun = context.model_copy(update={'run_attempt':2})
+    start(api,rerun)
+    publish_inline(api,rerun,result,repo,guard=lambda:assert_current(api,rerun))
+    assert len(writes)==1 and len(comments)==2
+    assert all('/attempts/2' in c['body'] for c in comments)
