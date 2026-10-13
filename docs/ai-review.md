@@ -234,8 +234,6 @@ python scripts/publish_review.py --context context.json --artifact result.json \
   --inline-plan files.json --repo .
 # Явная публикация подготовленного trusted-run artifact, GITHUB_TOKEN только в env:
 python scripts/publish_review.py --context context.json --artifact result.json --publish
-# Явная локальная публикация inline с уже доступными pinned Git objects:
-python scripts/publish_review.py --context context.json --artifact result.json --publish --inline --repo .
 ```
 
 По умолчанию CLI только показывает Markdown и возвращает 0/1/2 по verdict; credentials
