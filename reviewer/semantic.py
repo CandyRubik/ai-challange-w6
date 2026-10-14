@@ -18,6 +18,8 @@ Assess every requested path/rule pair exactly once. Cite exact substrings from s
 Findings need unique quotes intersecting supplied changed lines. Metadata supports empty files,
 renames or mode-only changes; otherwise cite actual causal code.
 For a violation give a finding; for uncertainty use inconclusive. Recommendations are advisory.
+Write all human-facing summaries, reasons, scenarios, impacts and recommendations in Russian.
+Preserve evidence quotes, code, paths, rule IDs and schema enum values exactly; never translate them.
 You have no tools, credentials or authority to change policy or publish anything."""
 
 
@@ -33,7 +35,7 @@ def analyze(repository, result, changes, model: JsonModel, limits: Limits):
     requested += [{"path": change.path, "rule_id": "BUGS"} for change in changes if code(change.path)]
     if not requested:
         return result
-    trace = {"model": model.name, "prompt_version": "review-v6", "retriever_version": "review-v2", "input_packer_version": "wire-v1", "model_calls": 0, "token_usage": [], "wire_inputs": []}
+    trace = {"model": model.name, "prompt_version": "review-v7", "retriever_version": "review-v2", "input_packer_version": "wire-v1", "model_calls": 0, "token_usage": [], "wire_inputs": []}
     try:
         if "BUGS" in rules:
             raise ReviewIncomplete("BUGS is reserved for the general bug criterion")
@@ -187,7 +189,7 @@ def analyze(repository, result, changes, model: JsonModel, limits: Limits):
             "execution": "partial" if incomplete or uncertain else "complete", "status": status,
             "not_applicable": [p for p in result.not_applicable if p not in selected], "recommendations": draft.recommendations,
             "limitations": [*[f"{c.path} [{c.rule_id}]: {c.reason}" for c in incomplete],
-                *[f"{v['path']} [{v['rule_id']}]: Additional candidate inconclusive: {v['reason']}" for v in uncertain
+                *[f"{v['path']} [{v['rule_id']}]: Дополнительная гипотеза не проверена: {v['reason']}" for v in uncertain
                   if (v['path'],v['rule_id']) not in {(c.path,c.rule_id) for c in incomplete}]]})
     except (ValueError, KeyError, StopIteration, RuntimeError, OSError) as error:
         if len(trace["token_usage"]) < trace["model_calls"]:
@@ -196,4 +198,4 @@ def analyze(repository, result, changes, model: JsonModel, limits: Limits):
         trace["elapsed_ms"] = round((time.monotonic() - started) * 1000)
         return result.model_copy(update={"status": "error", "execution": "partial", "trace": trace,
             "limitations": [*result.limitations, str(error) if isinstance(error, (ReviewIncomplete, ContextUnavailable, GitError))
-                            else f"Semantic call, context or response invalid ({type(error).__name__})"]})
+                            else f"Не удалось завершить семантический анализ, чтение контекста или проверку ответа ({type(error).__name__})"]})
