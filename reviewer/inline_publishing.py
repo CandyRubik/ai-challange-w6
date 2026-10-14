@@ -89,11 +89,21 @@ def reconcile(api, context, groups, batches, comments, guard, observed):
     return missing, delayed
 
 
-def publish_inline(api, context, result, repository, *, guard):
+def publish_inline(api, context, result, repository, *, guard, owner_note=None):
     guard()
     files = api.items(f'/pulls/{context.pr_number}/files')
     guard()
     groups, fallback = plan_inline(context,result,files,repository)
+    if owner_note:
+        for group in groups:
+            note = owner_note(group['findings'])
+            if note:
+                original = group['body'].partition('\n')[2]
+                body = normalize_comment(group['marker']+'\n'+note+'\n\n--- Original report ---\n\n'+original)
+                if len(body.encode())<=64_000:
+                    group['body'] = body
+                else:
+                    fallback.append('Owner inline note exceeds presentation budget; see summary/journal')
     comments = api.items(f'/pulls/{context.pr_number}/comments')
     batches = owned_batches(api.items(f'/pulls/{context.pr_number}/reviews'))
     observed = set()

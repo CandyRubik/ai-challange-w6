@@ -9,6 +9,7 @@ from .report import debt_details, normalize_comment, text
 
 DEBT_MARKER = '<!-- ai-review:debt:v1 -->'
 ASSESSMENT_MARKER = '<!-- ai-review:debt:assessment:v1 -->'
+OWNER_DEBT_MARKER = '<!-- ai-review:debt:owner:v1 -->'
 
 
 
@@ -60,14 +61,14 @@ def verify_debt(repository, context, result):
         raise ValueError('Publishing debt assessment differs from the actual pinned head')
 
 
-def publish_debt(api, context, result, *, guard):
+def publish_debt(api, context, result, *, guard, owner_notes=None):
     from .publishing import upsert_comment
     existing = [c for c in api.items(f'/issues/{context.pr_number}/comments')
                 if bot_authored(c) and raw_body(c).startswith(DEBT_MARKER)]
     if not context.debt_registry.entries and not existing:
         return
     complete = result.status != 'error' and result.execution == 'complete'
-    previous = raw_body(existing[-1]).partition(ASSESSMENT_MARKER)[2] if existing else ''
+    previous = raw_body(existing[-1]).partition(ASSESSMENT_MARKER)[2].partition(OWNER_DEBT_MARKER)[0].rstrip() if existing else ''
     if complete:
         details = normalize_comment('\n\n'.join([*debt_details(result)[1:], *[
             f'Owner: {text(e.confirmed_by or "unconfirmed")}; {text(e.id)}: {text(e.reason or "candidate")}.'
@@ -83,6 +84,10 @@ def publish_debt(api, context, result, *, guard):
     body = normalize_comment('\n\n'.join([DEBT_MARKER, '# Project debt',
         f'Current head: `{context.head_sha}`; review status: **{result.status}**.', note,
         f'[Current workflow run]({context.run_url})', ASSESSMENT_MARKER, assessment.strip()]))
+    if owner_notes and complete:
+        notes = normalize_comment('\n\n'.join(owner_notes.values()))
+        addition = '\n\n'+OWNER_DEBT_MARKER+'\n## Current owner decisions\n'+notes
+        body += addition if len((body+addition).encode())<=58_000 else '\n\n'+OWNER_DEBT_MARKER+'\nOwner decisions are in the current summary/journal.'
     if len(body.encode()) > 58_000:
         raise GitHubError('Project debt comment cannot preserve the prior assessment within the presentation budget')
     upsert_comment(api,context.pr_number,body,marker=DEBT_MARKER,before_write=guard)
