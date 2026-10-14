@@ -128,7 +128,7 @@ def test_inline_limit_keeps_remaining_findings_in_summary(tmp_path):
     findings = [result.findings[0].model_copy(update={'evidence':Evidence(path=path,sha=context.head_sha,line=i+1,quote=line)})
                 for i,line in enumerate(contents.splitlines())]
     groups,fallback = plan_inline(context,result.model_copy(update={'findings':findings}),files,repo)
-    assert len(groups)==10 and fallback==['Достигнут лимит inline-комментариев']
+    assert len(groups)==10 and fallback==['Inline comment limit reached']
 
 
 def test_cli_shows_verified_plan_without_credentials_or_network(tmp_path):
