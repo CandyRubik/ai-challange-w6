@@ -76,9 +76,9 @@ def expire(api,root,number,env,*,fetcher,now=None):
         records = read_journal(actions,repository,current,now=now)
         after = effects(current,artifact.result,{key:record.decision for key,record in records.items()},now=now)
         if after.state=='success': return 'unchanged'
-        reason = 'Owner exception expired or no longer applies; rerun AI Review'
+        reason = 'Исключение владельца истекло или неприменимо; повторите AI Review'
     except (ValueError,KeyError,TypeError,AttributeError,GitHubError):
-        reason = 'Accepted review could not be validated; rerun AI Review'
+        reason = 'Принятое ревью не удалось подтвердить; повторите AI Review'
     guard()
     set_status(api,current,'error',reason)
     assert_current(api,current)
@@ -95,7 +95,7 @@ def select(api,event,env,*,capacity=20):
         rows = api.open_pulls()
     rows = [pr for pr in rows if pr['state']=='open' and pr['base']['ref']=='main']
     if len(rows)>capacity:
-        for pr in rows: write_state(api,pr['head']['sha'],env,'error','Expiry queue capacity exceeded; manual review required')
+        for pr in rows: write_state(api,pr['head']['sha'],env,'error','Очередь проверки сроков переполнена; нужна ручная проверка')
         raise ValueError('Expiry queue capacity exceeded; no analysis started')
     numbers = [pr['number'] for pr in rows]
     if any(type(n) is not int or n<1 for n in numbers):
