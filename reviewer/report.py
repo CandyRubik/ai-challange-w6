@@ -51,14 +51,14 @@ def finding_details(group):
 
 
 def debt_details(result):
-    lines = [f'Реестр: `{result.debt_sha256}`.']
+    lines = [f'Registry: `{result.debt_sha256}`.']
     for item in result.project_debt:
         lines += [f'- **{text(item.debt_id)}** / {text(item.rule_id)}: **{item.verdict}** '
-                  f'({"блокирует" if item.blocking else "совет"}) — {text(item.title)}; {text(item.reason)}; '
-                  f'проверено файлов: {len(item.checked_paths)}, нарушений: {item.violation_count}.']
-        lines += [f'  Доказательство: {evidence_text(ref)}' for ref in item.evidence]
+                  f'({"blocking" if item.blocking else "advisory"}) — {text(item.title)}; {text(item.reason)}; '
+                  f'checked files: {len(item.checked_paths)}, violations: {item.violation_count}.']
+        lines += [f'  Evidence: {evidence_text(ref)}' for ref in item.evidence]
     if not result.project_debt:
-        lines.append('В доверенном реестре нет записей о долге проекта.')
+        lines.append('The trusted registry contains no project debt entries.')
     return lines
 
 
