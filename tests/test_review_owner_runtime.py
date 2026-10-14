@@ -44,13 +44,14 @@ def test_explicit_fresh_request_skips_automatic_cache(tmp_path,monkeypatch):
     assert ctx.analysis_source is None and ctx.analysis_origin is None and ctx.owner_records
 
 
-@pytest.mark.parametrize('change',['stamp','id','source','fresh'])
+@pytest.mark.parametrize('change',['stamp','id','source','fresh','removed_source'])
 def test_captured_authority_or_source_tampering_is_rejected(tmp_path,monkeypatch,change):
     api,ctx,env,root,records,proofs = captured(tmp_path,monkeypatch)
     if change=='stamp': ctx=ctx.model_copy(update={'owner_sha256':'0'*64})
     elif change=='id': ctx=ctx.model_copy(update={'owner_records':{'21-1':records['20-1']},'owner_sha256':stamp({'21-1':records['20-1']})})
     elif change=='source': ctx=ctx.model_copy(update={'analysis_source':ctx.analysis_source.model_copy(update={'run_id':11})})
-    else: env['REVIEW_FRESH']='true'
+    elif change=='fresh': env['REVIEW_FRESH']='true'
+    else: ctx=ctx.model_copy(update={'analysis_source':None,'analysis_origin':None})
     with pytest.raises(ValueError): check_owners(Repository(root),ctx,env)
 
 
@@ -69,6 +70,7 @@ def test_other_snapshot_uses_fresh_analysis_and_manual_source_has_priority(tmp_p
     records['20-1']=records['20-1'].model_copy(update={'decision':records['20-1'].decision.model_copy(update={'head_sha':'0'*40})})
     assert capture_owners(api,Repository(root),clean,env).analysis_source is None
     manual = ctx.model_copy(update={'analysis_origin':'manual'})
+    env.update(SOURCE_REVIEW_RUN='10',SOURCE_REVIEW_ATTEMPT='1')
     assert capture_owners(api,Repository(root),manual,env).analysis_origin=='manual'
 
 

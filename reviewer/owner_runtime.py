@@ -3,6 +3,7 @@ from .actions import Actions
 from .owner_journal import OWNER_WORKFLOW,read_journal
 from .owner_publishing import record_digest as stamp
 from .publishing import StaleReview
+from .reuse import source_inputs
 
 
 def enabled(repository,context):
@@ -41,7 +42,14 @@ def check_owners(repository,context,env):
             raise ValueError('Captured owner journal digest/identity mismatch')
     elif context.owner_records or context.owner_sha256 or context.analysis_origin=='owner_journal':
         raise ValueError('Owner authority is unavailable in the trusted base')
-    if context.analysis_origin=='owner_journal' and (fresh or cache_source(context,context.owner_records)!=context.analysis_source):
+    manual = source_inputs(env)
+    source = context.analysis_source
+    if manual:
+        valid = context.analysis_origin=='manual' and source and (source.run_id,source.run_attempt)==manual
+    else:
+        expected = None if fresh else cache_source(context,context.owner_records)
+        valid = source==expected and context.analysis_origin==('owner_journal' if expected else None)
+    if not valid:
         raise ValueError('Captured owner analysis source differs from its journal')
 
 
