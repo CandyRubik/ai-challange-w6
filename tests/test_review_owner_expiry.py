@@ -1,3 +1,4 @@
+from copy import deepcopy
 from datetime import timedelta
 
 import pytest
@@ -10,11 +11,13 @@ from reviewer.owner_runtime import stamp
 from reviewer.publishing import STATUS_CONTEXT,StaleReview,make_artifact
 from tests.test_review_owner_journal import NOW,Proofs
 from tests.test_review_publishing import fixture
-from tests.test_reviewer import git
+from tests.test_reviewer import PROFILE,git
 
 
-def setup(tmp_path,monkeypatch,*,plain=False,owner=False):
-    api,ctx,raw,pr,calls,statuses,root = fixture(tmp_path,code='pass\n' if plain else 'import sqlite3\n')
+def setup(tmp_path,monkeypatch,*,plain=False,owner=False,advisory=False):
+    profile=deepcopy(PROFILE)
+    if advisory: profile['rules'][0]['level']='should'
+    api,ctx,raw,pr,calls,statuses,root = fixture(tmp_path,profile=profile,code='pass\n' if plain else 'import sqlite3\n')
     git(root,'checkout','--detach',ctx.base_sha)
     proposal = OwnerProposal(action='waive_rule',targets=['ARCH-STATE-PURE'],scope=['app/state/*.py'],reason='Explicit temporary rule exception',expires_at=(NOW+timedelta(days=1)).isoformat())
     decision = propose(ctx,ReviewResult.model_validate(raw['result']),proposal,'maintainer',now=NOW) if plain else None
@@ -82,6 +85,15 @@ def test_malformed_owner_metadata_invalidates_unprovable_success(tmp_path,monkey
     proofs.owner_run['actor']['login']=None
     assert expire(api,root,4,env,fetcher=lambda *args:ctx.head_sha,now=NOW+timedelta(days=2))=='invalidated'
     assert statuses[0]['state']=='error'
+
+
+def test_advisory_acceptance_does_not_make_plain_green_depend_on_journal(tmp_path,monkeypatch):
+    from reviewer.github import GitHubError
+    api,ctx,env,root,records,proofs,statuses,pr=setup(tmp_path,monkeypatch,advisory=True)
+    def unavailable(*args,**kwargs): raise GitHubError('Journal unavailable')
+    monkeypatch.setattr('reviewer.owner_expiry.read_journal',unavailable)
+    assert expire(api,root,4,env,fetcher=lambda *args:ctx.head_sha,now=NOW+timedelta(days=2))=='unchanged'
+    assert len(statuses)==1 and statuses[0]['state']=='success'
 
 
 def test_queue_overflow_is_error_without_model_or_worker_dispatch(tmp_path,monkeypatch):

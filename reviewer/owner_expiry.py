@@ -72,7 +72,7 @@ def expire(api,root,number,env,*,fetcher,now=None):
         bodies = {key:record.decision for key,record in artifact.context.owner_records.items()}
         before = effects(artifact.context,artifact.result,bodies,now=expiry(prior['created_at']))
         if before.state!='success': raise ValueError('Published green verdict is inconsistent')
-        if not before.expires_at: return 'unchanged'
+        if artifact.result.status=='success' or not before.expires_at: return 'unchanged'
         records = read_journal(actions,repository,current,now=now)
         after = effects(current,artifact.result,{key:record.decision for key,record in records.items()},now=now)
         if after.state=='success': return 'unchanged'
