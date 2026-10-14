@@ -73,10 +73,10 @@ def set_status(api, context, state, description):
 
 def start(api, context):
     assert_current(api, context, started=False)
-    set_status(api, context, 'pending', 'AI review in progress')
+    set_status(api, context, 'pending', 'AI-ревью выполняется')
 
 
-def fail(api, context, reason='Review did not complete; rerun required'):
+def fail(api, context, reason='Ревью не завершено; нужен повторный запуск'):
     assert_current(api, context, started=False, unique=False)
     set_status(api, context, 'error', reason)
 
@@ -129,12 +129,12 @@ def _publish(api, context, rendered, raw, repository, *, owner_guard=None, findi
         fallback = publish_inline(api,context,ReviewResult.model_validate(raw['result']),repository,
                                   guard=guard,owner_note=finding_note)
         if fallback:
-            rendered = {**rendered,'body':safe_comment(rendered['body']+'\n\n## Inline coverage\n'+
+            rendered = {**rendered,'body':safe_comment(rendered['body']+'\n\n## Покрытие inline-комментариев\n'+
                 '\n'.join('- '+text(reason) for reason in fallback))}
     # Per-PR workflow serialization covers writes; snapshot is rechecked around the operation.
     upsert_summary(api, context.pr_number, rendered['body'], before_write=guard)
     guard()
-    set_status(api, context, rendered['state'], f'AI review: {rendered["state"]}')
+    set_status(api, context, rendered['state'], f'AI-ревью: {rendered["state"]}')
     guard()
     return rendered['state']
 
@@ -157,4 +157,4 @@ def publish(api, context, raw, *, repository=None):
 def invalidate_own_status(api, context):
     latest = next((s for s in api.items(f'/commits/{context.head_sha}/statuses') if s.get('context') == STATUS_CONTEXT), {})
     if latest.get('target_url') == context.run_url:
-        set_status(api, context, 'error', 'Publication or freshness check failed; rerun required')
+        set_status(api, context, 'error', 'Сбой публикации или проверки актуальности; нужен повторный запуск')
