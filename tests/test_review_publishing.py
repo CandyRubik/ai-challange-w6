@@ -214,6 +214,7 @@ def test_complete_major_bug_remains_advisory(tmp_path):
     class MajorBug(Model):
         def generate_json(self, **kwargs):
             draft = json.loads(super().generate_json(**kwargs))
+            if 'decisions' in draft: return json.dumps(draft)
             for criterion in draft['criteria']:
                 criterion['verdict'] = 'violation' if criterion['rule_id'] == 'BUGS' else 'pass'
             draft['findings'][0].update(rule_id='BUGS', severity='major')
