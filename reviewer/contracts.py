@@ -2,8 +2,9 @@
 import hashlib
 import json
 from typing import Annotated
-from pydantic import Field
+from pydantic import Field,model_validator
 from .debt import DebtRegistry
+from .decision_records import AnalysisSource
 from .models import Profile, Record, ReviewResult
 
 SHA = Annotated[str, Field(pattern=r'^[0-9a-f]{40}$')]
@@ -32,6 +33,14 @@ class RunContext(Record):
     run_id: int = Field(gt=0)
     run_attempt: int = Field(gt=0)
     external: bool
+    analysis_source: AnalysisSource | None = None
+    analysis_origin: Annotated[str,Field(pattern=r'^manual$')] | None = None
+
+    @model_validator(mode='after')
+    def source_origin(self):
+        if (self.analysis_source is None)!=(self.analysis_origin is None):
+            raise ValueError('Analysis source and origin must be captured together')
+        return self
 
     @property
     def run_url(self):

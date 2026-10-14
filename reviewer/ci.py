@@ -15,6 +15,8 @@ from .publishing import (STATUS_CONTEXT, SUMMARY_MARKER, StaleReview, assert_cur
 from .report import text
 from .retrieval import document
 from .semantic_models import Limits
+from .owner_journal import same_snapshot
+from .reuse import capture_source,check_source,reuse_result
 
 CI_LIMITS = Limits(context_bytes=96_000, output_tokens=4_000)
 
@@ -30,7 +32,7 @@ def check_code(root, sha):
         raise ValueError('Executing checkout differs from trusted workflow SHA')
 
 
-def check_context(root, context, env):
+def check_context(root, context, env, *, captured_source=True):
     if identity(env) != (context.repository, context.run_id, context.run_attempt):
         raise ValueError('Context repository/run/attempt mismatch')
     if env['GITHUB_WORKFLOW_SHA'] != context.code_sha or context.code_sha != context.base_sha:
@@ -42,6 +44,8 @@ def check_context(root, context, env):
     registry, registry_hash = load_registry(Repository(root), context.base_sha, context.profile)
     if registry != context.debt_registry or registry_hash != context.debt_sha256:
         raise ValueError('Context debt registry differs from trusted Git base')
+    if captured_source:
+        check_source(context,env)
 
 
 def fetch_head(root, number, repository, token):
@@ -78,7 +82,7 @@ def prepare_snapshot(api, root, number, env, *, fetcher=fetch_head):
     check_code(root, env['GITHUB_WORKFLOW_SHA'])
     fetched = fetcher(root, number, repository, env.get('GITHUB_TOKEN', ''))
     context = capture(api, root, number, run_id=run_id, run_attempt=attempt)
-    check_context(root, context, env)
+    check_context(root, context, env,captured_source=False)
     if fetched != context.head_sha:
         raise StaleReview('PR changed during fetch; rerun required')
     if context.merge_base_sha != context.base_sha:
@@ -89,6 +93,8 @@ def prepare_snapshot(api, root, number, env, *, fetcher=fetch_head):
         raise ValueError('Draft review is deferred; mark ready or use owner manual dispatch')
     if context.external and not owner_dispatch(context, env):
         raise ValueError('Fork/Dependabot requires owner manual dispatch on main')
+    context = capture_source(api,Repository(root),context,env)
+    check_context(root,context,env)
     start(api, context)
     return context
 
@@ -105,7 +111,7 @@ def analyze_snapshot(api, root, context, env, *, model_factory=None, fetcher=fet
     check_context(root, context, env)
     fetched = fetcher(root, context.pr_number, context.repository, env.get('GITHUB_TOKEN', ''))
     current = capture(api, root, context.pr_number, run_id=context.run_id, run_attempt=context.run_attempt)
-    if current != context or fetched != context.head_sha:
+    if not same_snapshot(current,context) or fetched != context.head_sha:
         raise StaleReview('Captured PR context changed; rerun required')
     if context.merge_base_sha != context.base_sha:
         raise ValueError('PR is behind current main; rebase before AI review')
@@ -113,6 +119,9 @@ def analyze_snapshot(api, root, context, env, *, model_factory=None, fetcher=fet
     if (context.external or env['GITHUB_EVENT_NAME'] == 'workflow_dispatch') and not owner_dispatch(context, env):
         raise ValueError('External PR analysis requires owner manual dispatch')
     validate_proposed_profile(Repository(root), context.head_sha)
+    if context.analysis_source:
+        check_source(context,env)
+        return make_artifact(context,reuse_result(api,Repository(root),context))
     try:
         if model_factory is None:
             from .deepseek import DeepSeekReviewModel

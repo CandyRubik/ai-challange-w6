@@ -6,6 +6,12 @@ on:
       pr:
         required: true
         type: number
+      reuse_run:
+        type: string
+        default: ''
+      reuse_attempt:
+        type: string
+        default: '1'
     secrets:
       DEEPSEEK_API_KEY:
         required: false
@@ -19,6 +25,8 @@ permissions:
 
 env:
   PR_NUMBER: ${{ inputs.pr }}
+  SOURCE_REVIEW_RUN: ${{ inputs.reuse_run }}
+  SOURCE_REVIEW_ATTEMPT: ${{ inputs.reuse_attempt }}
 
 jobs:
   prepare:
@@ -29,6 +37,7 @@ jobs:
       contents: read
       pull-requests: read
       statuses: write
+      actions: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -60,6 +69,7 @@ jobs:
       contents: read
       pull-requests: read
       statuses: read
+      actions: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:

@@ -12,6 +12,15 @@ on:
         description: PR number to review from current main
         required: true
         type: string
+      reuse_run:
+        description: Optional completed AI run to reuse on the exact same snapshot (owner only)
+        required: false
+        type: string
+      reuse_attempt:
+        description: Source attempt (1–20)
+        required: false
+        default: '1'
+        type: string
 
 permissions:
   contents: read
@@ -57,5 +66,7 @@ jobs:
     uses: ./.github/workflows/ai-review-pr.yml
     with:
       pr: ${{ matrix.pr }}
+      reuse_run: ${{ github.event.inputs.reuse_run || '' }}
+      reuse_attempt: ${{ github.event.inputs.reuse_attempt || '1' }}
     secrets:
       DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
