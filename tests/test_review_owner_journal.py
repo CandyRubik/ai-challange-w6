@@ -23,7 +23,7 @@ class Proofs:
         self.context,self.review = ctx,raw
         self.owner_run = dict(id=20,run_attempt=1,repository=dict(id=1),workflow_id=101,path=OWNER_WORKFLOW,
             head_sha=ctx.base_sha,head_branch='main',head_repository=dict(id=1),event='workflow_dispatch',
-            actor=dict(login='maintainer'),triggering_actor=dict(login='maintainer'),conclusion='failure')
+            actor=dict(login='maintainer'),triggering_actor=dict(login='maintainer'),conclusion='failure',created_at=NOW.isoformat())
         self.review_run = {**self.owner_run,'id':10,'workflow_id':100,'path':REVIEW_WORKFLOW,
                            'head_sha':ctx.head_sha,'head_branch':'feature','event':'pull_request_target'}
         self.rows = [dict(id=20,run_attempt=1,display_title='Review decision PR #4')]
@@ -141,7 +141,7 @@ def test_unauthorized_job_and_other_pr_title_are_ignored_before_download(tmp_pat
     assert not any(c[0]=='artifact' for c in actions.calls)
     actions.rows[0]['display_title'] = 'Review decision PR #5'
     actions.calls.clear()
-    assert read_journal(actions,repo,ctx,now=NOW)=={} and len(actions.calls)==1
+    assert read_journal(actions,repo,ctx,now=NOW)=={} and all(c[0]=='collection' for c in actions.calls)
 
 
 def test_attempt_overflow_fails_closed(tmp_path):
@@ -158,3 +158,27 @@ def test_historical_source_uses_remote_main_instead_of_local_feature_head(tmp_pa
     with pytest.raises(GitHubError): read_review(actions,repo,10,1,4)
     actions.review = raw
     assert read_review(actions,repo,10,1,4).result.status=='failure'
+
+
+def test_new_attempt_during_journal_read_requires_retry(tmp_path):
+    actions,repo,ctx,raw = setup(tmp_path)
+    original = actions.run_attempt
+    def run_attempt(identity,attempt):
+        run = original(identity,attempt)
+        actions.rows[0]['run_attempt'] = 2
+        return run
+    actions.run_attempt = run_attempt
+    with pytest.raises(GitHubError,match='attempts changed'): read_journal(actions,repo,ctx,now=NOW)
+
+
+def test_authorize_job_completing_during_read_requires_retry(tmp_path):
+    actions,repo,ctx,raw = setup(tmp_path)
+    proofs = [False,True]
+    actions.successful_job = lambda *args:proofs.pop(0)
+    with pytest.raises(GitHubError,match='authorization changed'): read_journal(actions,repo,ctx,now=NOW)
+
+
+def test_decision_cannot_outlive_queried_run_creation_window(tmp_path):
+    actions,repo,ctx,raw = setup(tmp_path)
+    actions.owner_run['created_at'] = (NOW-timedelta(days=7)).isoformat()
+    with pytest.raises(GitHubError): read_journal(actions,repo,ctx,now=NOW)

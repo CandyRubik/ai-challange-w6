@@ -47,6 +47,11 @@ def pinned_profile(repository,sha,expected_hash):
     return Profile.model_validate_json(raw)
 
 
+def journal_version(rows,number):
+    return sorted((positive(row['id']),positive(row['run_attempt'])) for row in rows
+                  if row.get('display_title')==f'Review decision PR #{number}')
+
+
 def read_review(actions,repository,run_id,attempt,number,*,context=None):
     """Verify a complete original AI artifact; optionally require current snapshot."""
     try:
@@ -100,39 +105,44 @@ def read_journal(actions,repository,context,*,now=None):
         now = now or datetime.now(timezone.utc)
         canonical = workflow_id(actions,OWNER_WORKFLOW)
         cutoff = (now-timedelta(days=7)).isoformat()
-        runs = actions.collection(f'/actions/workflows/{canonical}/runs','workflow_runs',params={
-            'event':'workflow_dispatch','branch':'main','created':'>='+cutoff})
-        records,checked = {},0
-        for row in runs:
-            if row.get('display_title')!=f'Review decision PR #{context.pr_number}':
-                continue
-            count = positive(row['run_attempt'])
+        path,params = f'/actions/workflows/{canonical}/runs',dict(event='workflow_dispatch',branch='main',created='>='+cutoff)
+        version = journal_version(actions.collection(path,'workflow_runs',params=params),context.pr_number)
+        records,checked,proofs = {},0,{}
+        for identity,count in version:
             if count>20 or checked+count>100:
                 raise GitHubError('Owner decision attempt budget exceeded')
             checked += count
             for attempt in range(1,count+1):
-                run = actions.run_attempt(positive(row['id']),attempt)
-                if not run_identity(run,context.repository_id,OWNER_WORKFLOW,canonical,row['id'],attempt):
+                run = actions.run_attempt(identity,attempt)
+                if not run_identity(run,context.repository_id,OWNER_WORKFLOW,canonical,identity,attempt):
                     raise GitHubError('Owner workflow run identity is invalid')
                 if (run['event']!='workflow_dispatch' or run['head_branch']!='main'
                     or positive(run['head_repository']['id'])!=context.repository_id or not owner_actors(run,context.profile)):
                     continue
-                if not actions.successful_job(run['id'],attempt,AUTHORIZE_JOB):
+                proofs[(identity,attempt)] = actions.successful_job(identity,attempt,AUTHORIZE_JOB)
+                if not proofs[(identity,attempt)]:
                     continue
                 repository.run('merge-base','--is-ancestor',run['head_sha'],context.base_sha)
                 raw = actions.artifact_json(run,attempt,f'decision-{run["id"]}-{attempt}','decision.json')
                 envelope = DecisionEnvelope.model_validate(raw)
                 decision = envelope.decision
                 historical = pinned_profile(repository,envelope.code_sha,decision.profile_sha256)
+                created = expiry(run['created_at'])
                 if ((envelope.run_id,envelope.run_attempt,envelope.code_sha)!=(run['id'],attempt,run['head_sha'])
                     or envelope.triggering_actor.casefold()!=run['triggering_actor']['login'].casefold()
                     or decision.actor.casefold()!=run['actor']['login'].casefold()
                     or (decision.repository_id,decision.pr_number)!=(context.repository_id,context.pr_number)
-                    or expiry(decision.created_at)>now or not owner_actors(run,historical)):
+                    or not created<=expiry(decision.created_at)<=min(now,created+timedelta(days=7))
+                    or decision.proposal.expires_at and expiry(decision.proposal.expires_at)>created+timedelta(days=7)
+                    or not owner_actors(run,historical)):
                     raise GitHubError('Owner decision differs from its authenticated workflow origin')
                 records[envelope.id] = envelope
                 if len(records)>100:
                     raise GitHubError('Owner decision journal budget exceeded')
+        if journal_version(actions.collection(path,'workflow_runs',params=params),context.pr_number)!=version:
+            raise GitHubError('Owner decision attempts changed during reading; retry required')
+        if any(actions.successful_job(identity,attempt,AUTHORIZE_JOB)!=known for (identity,attempt),known in proofs.items()):
+            raise GitHubError('Owner authorization changed during reading; retry required')
         return records
     except GitHubError:
         raise
