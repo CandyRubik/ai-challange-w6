@@ -66,5 +66,7 @@ jobs:
     uses: ./.github/workflows/ai-review-pr.yml
     with:
       pr: ${{ matrix.pr }}
+      reuse_run: ${{ github.event.inputs.reuse_run || '' }}
+      reuse_attempt: ${{ github.event.inputs.reuse_attempt || '1' }}
     secrets:
       DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}

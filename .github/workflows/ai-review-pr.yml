@@ -6,6 +6,12 @@ on:
       pr:
         required: true
         type: number
+      reuse_run:
+        type: string
+        default: ''
+      reuse_attempt:
+        type: string
+        default: '1'
     secrets:
       DEEPSEEK_API_KEY:
         required: false
@@ -19,8 +25,8 @@ permissions:
 
 env:
   PR_NUMBER: ${{ inputs.pr }}
-  SOURCE_REVIEW_RUN: ${{ github.event.inputs.reuse_run || '' }}
-  SOURCE_REVIEW_ATTEMPT: ${{ github.event.inputs.reuse_attempt || '1' }}
+  SOURCE_REVIEW_RUN: ${{ inputs.reuse_run }}
+  SOURCE_REVIEW_ATTEMPT: ${{ inputs.reuse_attempt }}
 
 jobs:
   prepare:
