@@ -3,7 +3,7 @@
 - Дата: 2026-10-13.
 - Основание: [план и Q1–Q11](plan.md), [исследование GitHub](research.md).
 - Trunk: `main`, исследован на `f7a4d1e`.
-- Статус карты: согласована пользователем 2026-10-13; PR №4–11, №13–16, №18–39 слиты (№33 — временный smoke, закрыт без merge). Project-debt gate включён в CI; чистый artifact module готов. Все26paired offline inputs калибровочных сценариев сохранены.
+- Статус карты: согласована пользователем 2026-10-13; PR №4–11, №13–16, №18–41 слиты (№40 — активный временный smoke) (№33 — временный smoke, закрыт без merge). Project-debt gate включён в CI; чистый artifact module готов. Все26paired offline inputs калибровочных сценариев сохранены.
 - Бюджет: целевой размер ≤600 reviewable lines (added + removed), максимум 1000 с отдельным обоснованием. Это оценки; при росте срез делится до открытия PR. Документация и большие входные fixtures не входят в кодовый бюджет; prompt/profile, ручные тесты и workflow считаются проверяемой логикой.
 
 ## Последовательность
@@ -43,8 +43,8 @@
 | 7d3b | CI wiring | Prepare/analyze/publish подключают проверенный owner context | Включается только при ownerworkflow вtrustedbase | 48 фактически | 7d3a | merged |
 | 7d3c | Owner dispatch | Authorize/apply workflow на main, без LLM | Owner actor+trigger, source freshness/provenance, perPR concurrency | 360 фактически | 7d3b | merged |
 | 7e | Истечение решений | Zero-LLM sweeper инвалидирует success с истёкшим exception | Bounded20PR, отдельный error до rerun; schedule best effort | 353 фактически | 7d3c | merged |
-| 5f1 | Verification budget | Actualwire pack сохраняет mandatory/cited sources, проверяеткаждыйcitation | Прежнийblocker-onlystage, noextraAPI | 88 фактически | 7e | in-progress |
-| 5f2 | Опровержение advisory findings | Всеsemanticfindings/counterproof; scopedcriteria+consistentuncertainty | Прежние4calls/96KB/4000tokens; historicalcountsсохранены | 100–300 | 5f1 | planned |
+| 5f1 | Verification budget | Actualwire pack сохраняет mandatory/cited sources, проверяеткаждыйcitation | Прежнийblocker-onlystage, noextraAPI | 88 фактически | 7e | merged |
+| 5f2 | Опровержение advisory findings | Всеsemanticfindings/counterproof; scopedcriteria+consistentuncertainty | Прежние4calls/96KB/4000tokens; historicalcountsсохранены | 77 фактически | 5f1 | in-progress |
 | 8 | Интервью по проекту, после MVP | Skill собирает факты, проводит интервью и формирует профиль/preview prompt для утверждения | Отдельный onboarding; CI использует прежний валидированный артефакт | 350–550 | 5f2 | planned |
 
 День 32 минимально закрывается после среза 4c. Согласованный MVP с inline, долгом и решениями владельца закрывается после среза 7. Интервью и последующее выделение репозитория не задерживают первую версию.
