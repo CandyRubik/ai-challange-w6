@@ -67,6 +67,8 @@ def preview(context, raw):
             raise ValueError('Invalid numeric trace metadata')
     if 'context_sha256' in result.trace and not re.fullmatch(r'[0-9a-f]{64}', str(result.trace['context_sha256'])):
         raise ValueError('Invalid context digest')
+    from .debt_publishing import validate_debt
+    validate_debt(context, result)
     body = markdown(result).replace('@', '@\u200b')
     body = ''.join(c for c in body if c in '\n\t' or ord(c) >= 32)
     if len(body.encode()) > 58_000:
