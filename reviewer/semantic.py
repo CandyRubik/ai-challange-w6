@@ -173,7 +173,8 @@ def analyze(repository, result, changes, model: JsonModel, limits: Limits):
                 category=rule.category if rule else "bug", severity=item.severity, message=item.summary,
                 scenario=item.scenario, impact=item.impact, recommendation=item.recommendation,
                 evidence=causal_evidence, source=source, supporting_evidence=refs))
-        semantic_findings, criteria = verify(draft, findings[len(result.findings):], criteria, payload, model, limits, trace, evidence, roles)
+        semantic_findings, criteria = verify(draft, findings[len(result.findings):], criteria, payload, model, limits, trace, evidence, roles,
+                                           required_count=retrieved.required_count)
         findings = [*result.findings, *semantic_findings]
         incomplete = [c for c in criteria if c.verdict == "inconclusive"]
         status = "error" if any(c.rule_id == "BUGS" or rules[c.rule_id].level == "must" for c in incomplete) else (
