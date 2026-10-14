@@ -157,3 +157,22 @@ def test_corrupt_deflate_stream_is_sanitized_before_json():
     content[offset:offset+2] = b'\xff\xff'
     actions,run,_ = client(zip_bytes=bytes(content))
     with pytest.raises(GitHubError): actions.artifact_json(run,1,'decision-10-1','decision.json')
+
+
+@pytest.mark.parametrize('origin',[
+    dict(id=10.0,repository_id=1,head_sha='a'*40),
+    dict(id=10,repository_id=True,head_sha='a'*40),
+    dict(id=10,repository_id=1,head_sha=None),
+])
+def test_origin_requires_strict_identifiers_and_head(origin):
+    actions,run,_ = client(metadata={'workflow_run':origin})
+    if origin['head_sha'] is None: run['head_sha'] = None
+    with pytest.raises(GitHubError): actions.artifact_json(run,1,'decision-10-1','decision.json')
+
+
+def test_unsupported_archive_decoder_is_rejected_before_read():
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer,'w',zipfile.ZIP_LZMA) as zipped:
+        zipped.writestr('decision.json','{}')
+    actions,run,_ = client(zip_bytes=buffer.getvalue())
+    with pytest.raises(GitHubError): actions.artifact_json(run,1,'decision-10-1','decision.json')

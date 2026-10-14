@@ -69,14 +69,20 @@ class Actions:
         if type(member_limit) is not int or not 0<member_limit<=2_000_000:
             raise GitHubError('Actions member budget is invalid')
         run_id = positive(run['id'])
+        repository_id = positive(run['repository']['id'])
+        head = run.get('head_sha')
+        if not isinstance(head,str) or not re.fullmatch(r'[0-9a-f]{40}',head):
+            raise GitHubError('Actions run head is invalid')
         artifacts = self.collection(f'/actions/runs/{run_id}/artifacts','artifacts')
         matches = [a for a in artifacts if a.get('name')==name]
         if len(matches)!=1:
             raise GitHubError('Actions artifact is missing or ambiguous')
         artifact = matches[0]
-        origin = artifact.get('workflow_run') or {}
-        if (artifact.get('expired') is not False or origin.get('id')!=run_id
-            or origin.get('repository_id')!=run['repository']['id'] or origin.get('head_sha')!=run['head_sha']
+        origin = artifact.get('workflow_run')
+        if not isinstance(origin,dict):
+            raise GitHubError('Actions artifact origin is invalid')
+        if (artifact.get('expired') is not False or positive(origin.get('id'))!=run_id
+            or positive(origin.get('repository_id'))!=repository_id or origin.get('head_sha')!=head
             or type(artifact.get('size_in_bytes')) is not int or not 0<artifact['size_in_bytes']<=2_000_000
             or not re.fullmatch(r'sha256:[0-9a-f]{64}',artifact.get('digest') or '')):
             raise GitHubError('Actions artifact metadata does not prove its origin or bounds')
@@ -88,6 +94,8 @@ class Actions:
                 entries = zipped.infolist()
                 if len(entries)!=1 or entries[0].filename!=member or entries[0].file_size>member_limit:
                     raise GitHubError('Actions archive must contain one bounded expected JSON member')
+                if entries[0].compress_type not in (zipfile.ZIP_STORED,zipfile.ZIP_DEFLATED):
+                    raise GitHubError('Actions archive compression is unsupported')
                 with zipped.open(entries[0]) as stream:
                     raw = stream.read(member_limit+1)
                 if len(raw)>member_limit:
