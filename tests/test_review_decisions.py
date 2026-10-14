@@ -165,3 +165,21 @@ def test_invalid_cli_input_never_echoes_unknown_fields_or_values(tmp_path):
     process = subprocess.run([sys.executable,'scripts/preview_review_decision.py','--artifact',str(path)],capture_output=True,text=True)
     assert process.returncode == 2 and not process.stdout
     assert 'PRIVATE_UNKNOWN_FIELD' not in process.stderr and 'PRIVATE_SENTINEL' not in process.stderr
+
+
+def test_cli_new_proposal_supersedes_known_decision_for_same_finding(tmp_path):
+    ctx,result,raw = finding_review(tmp_path)
+    now = datetime.now(timezone.utc)
+    fid = fingerprint(result.findings[0])
+    old_proposal = OwnerProposal(action='dismiss',targets=[fid],reason='Older',expires_at=(now+timedelta(hours=1)).isoformat())
+    known = propose(ctx,result,old_proposal,'maintainer',now=now)
+    new = old_proposal.model_copy(update={'reason':'Newer','expires_at':(now+timedelta(days=1)).isoformat()})
+    paths = [tmp_path/name for name in ('artifact.json','known.json','proposal.json')]
+    for path,value in zip(paths,(raw,{'10-1':known.model_dump()},new.model_dump())):
+        path.write_text(json.dumps(value))
+    process = subprocess.run([sys.executable,'scripts/preview_review_decision.py','--artifact',str(paths[0]),
+        '--known-decisions',str(paths[1]),'--proposal',str(paths[2]),'--actor','maintainer'],capture_output=True,text=True)
+    assert process.returncode == 0
+    output = json.loads(process.stdout)
+    assert output['effects']['accepted_findings'][fid] == output['preview_decision_id'] == '11-1'
+    assert output['effects']['expires_at'] == new.expires_at and output['decision']['proposal']['reason'] == 'Newer'
