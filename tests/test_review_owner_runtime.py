@@ -2,7 +2,7 @@ from copy import deepcopy
 
 import pytest
 
-from reviewer.ci import prepare_snapshot
+from reviewer.ci import analyze_snapshot,check_context,prepare_snapshot
 from reviewer.decision_records import DecisionEnvelope
 from reviewer.github import GitHubError
 from reviewer.owner_runtime import assert_owners,capture_owners,check_owners,stamp
@@ -35,13 +35,20 @@ def test_owner_journal_selects_same_snapshot_source_and_analyzes_without_model(t
     assert ctx.analysis_origin=='owner_journal' and ctx.owner_sha256==stamp(records)
     check_owners(Repository(root),ctx,env)
     assert_owners(api,Repository(root),ctx)
-    result = reuse_result(api,Repository(root),ctx)
-    assert result.trace['model_calls']==0 and [f.model_dump() for f in result.findings]==proofs.review['result']['findings']
+    def forbidden(): raise AssertionError('No model on authenticated cache')
+    raw = analyze_snapshot(api,root,ctx,env,model_factory=forbidden,fetcher=lambda *args:ctx.head_sha)
+    assert raw['result']['trace']['model_calls']==0 and raw['result']['findings']==proofs.review['result']['findings']
+    missing = ctx.model_copy(update={'analysis_source':None,'analysis_origin':None})
+    with pytest.raises(ValueError): analyze_snapshot(api,root,missing,env,model_factory=forbidden,fetcher=lambda *args:ctx.head_sha)
 
 
 def test_explicit_fresh_request_skips_automatic_cache(tmp_path,monkeypatch):
     api,ctx,env,root,records,proofs = captured(tmp_path,monkeypatch,fresh=True)
     assert ctx.analysis_source is None and ctx.analysis_origin is None and ctx.owner_records
+    created = []
+    def factory(): created.append(True);raise ValueError('No configured test model')
+    raw = analyze_snapshot(api,root,ctx,env,model_factory=factory,fetcher=lambda *args:ctx.head_sha)
+    assert len(created)==1 and raw['result']['status']=='error'
 
 
 @pytest.mark.parametrize('change',['stamp','id','source','fresh','removed_source'])

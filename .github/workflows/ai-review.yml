@@ -21,6 +21,10 @@ on:
         required: false
         default: '1'
         type: string
+      fresh:
+        description: Ignore automatic owner source cache and run a fresh bounded analysis
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -68,5 +72,6 @@ jobs:
       pr: ${{ matrix.pr }}
       reuse_run: ${{ github.event.inputs.reuse_run || '' }}
       reuse_attempt: ${{ github.event.inputs.reuse_attempt || '1' }}
+      fresh: ${{ github.event.inputs.fresh == 'true' }}
     secrets:
       DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}

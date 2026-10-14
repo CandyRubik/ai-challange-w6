@@ -12,6 +12,9 @@ on:
       reuse_attempt:
         type: string
         default: '1'
+      fresh:
+        type: boolean
+        default: false
     secrets:
       DEEPSEEK_API_KEY:
         required: false
@@ -27,6 +30,7 @@ env:
   PR_NUMBER: ${{ inputs.pr }}
   SOURCE_REVIEW_RUN: ${{ inputs.reuse_run }}
   SOURCE_REVIEW_ATTEMPT: ${{ inputs.reuse_attempt }}
+  REVIEW_FRESH: ${{ inputs.fresh && 'true' || 'false' }}
 
 jobs:
   prepare:
@@ -107,6 +111,7 @@ jobs:
       contents: read
       pull-requests: write
       statuses: write
+      actions: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:

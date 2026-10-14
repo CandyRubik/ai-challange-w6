@@ -29,6 +29,8 @@ def capture_source(api,repository,context,env):
 
 def check_source(context,env):
     selected = source_inputs(env)
+    if context.analysis_origin=='owner_journal' and selected is None:
+        return  # The authenticated captured journal is checked by owner_runtime.
     actual = (context.analysis_source.run_id,context.analysis_source.run_attempt) if context.analysis_source else None
     if selected!=actual or context.analysis_origin!=('manual' if selected else None):
         raise ValueError('Captured analysis source differs from the manual request')

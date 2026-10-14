@@ -11,6 +11,8 @@ from reviewer.ci import (analyze_snapshot, check_code, check_context, mark_unfin
 from reviewer.git import Repository
 from reviewer.github import GitHub, GitHubError, UncertainSummaryPost
 from reviewer.publishing import RunContext, StaleReview, publish, assert_current
+from reviewer.owner_runtime import enabled
+from reviewer.owner_publishing import publish_owned
 
 
 def load(path):
@@ -50,7 +52,9 @@ def main():
                 assert_current(api,context)
                 if fetch_head(root,args.pr,context.repository,env['GITHUB_TOKEN']) != context.head_sha:
                     raise StaleReview('PR changed during publisher fetch')
-                state = publish(api, context, load(result_path),repository=Repository(root))
+                repository = Repository(root)
+                state = (publish_owned(api,context,load(result_path),repository,expected=context.owner_sha256)
+                         if enabled(repository,context) else publish(api,context,load(result_path),repository=repository))
                 print(f'AI review: {state} @ {context.head_sha}')
                 return {'success':0, 'failure':1, 'error':2}[state]
         return 0
