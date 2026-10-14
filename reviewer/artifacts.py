@@ -72,6 +72,6 @@ def preview(context, raw):
     body = markdown(result).replace('@', '@\u200b')
     body = ''.join(c for c in body if c in '\n\t' or ord(c) >= 32)
     if len(body.encode()) > 58_000:
-        body = body.encode()[:58_000].decode('utf-8', errors='ignore') + '\n\nPresentation shortened; full result is in the run artifact.'
-    return {'state': result.status, 'body': f'{SUMMARY_MARKER}\n{body}\n[Workflow run]({context.run_url})'}
+        body = body.encode()[:58_000].decode('utf-8', errors='ignore') + '\n\nОтчёт сокращён; полный результат доступен в артефакте запуска.'
+    return {'state': result.status, 'body': f'{SUMMARY_MARKER}\n{body}\n[Запуск проверки]({context.run_url})'}
 
