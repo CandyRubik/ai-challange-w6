@@ -3,7 +3,7 @@
 - Дата: 2026-10-13.
 - Основание: [план и Q1–Q11](plan.md), [исследование GitHub](research.md).
 - Trunk: `main`, исследован на `f7a4d1e`.
-- Статус карты: согласована пользователем 2026-10-13; PR №4–11, №13–16, №18–37 слиты (№33 — временный smoke, закрыт без merge). Project-debt gate включён в CI; чистый artifact module готов. Все26paired offline inputs калибровочных сценариев сохранены.
+- Статус карты: согласована пользователем 2026-10-13; PR №4–11, №13–16, №18–38 слиты (№33 — временный smoke, закрыт без merge). Project-debt gate включён в CI; чистый artifact module готов. Все26paired offline inputs калибровочных сценариев сохранены.
 - Бюджет: целевой размер ≤600 reviewable lines (added + removed), максимум 1000 с отдельным обоснованием. Это оценки; при росте срез делится до открытия PR. Документация и большие входные fixtures не входят в кодовый бюджет; prompt/profile, ручные тесты и workflow считаются проверяемой логикой.
 
 ## Последовательность
@@ -41,8 +41,8 @@
 | 7d2 | Сервис применения решений | Проверенный journal меняет effective check и оформляет owner notes | Journal/expiry guard вокруг writes; original неизменён | 264 фактически | 7d2a | merged |
 | 7d3a | Owner context module | Typed journal/hash/cache selection и строгий replay guard | Самостоятельный API; CI activation отдельно | 144 фактически | 7d2 | merged |
 | 7d3b | CI wiring | Prepare/analyze/publish подключают проверенный owner context | Включается только при ownerworkflow вtrustedbase | 48 фактически | 7d3a | merged |
-| 7d3c | Owner dispatch | Authorize/apply workflow на main, без LLM | Owner actor+trigger, source freshness/provenance, perPR concurrency | 356 фактически | 7d3b | in-progress |
-| 7e | Истечение решений | Zero-LLM sweeper инвалидирует success с истёкшим exception | Bounded20PR, отдельный error до rerun; schedule best effort | 200–400 | 7d3c | planned |
+| 7d3c | Owner dispatch | Authorize/apply workflow на main, без LLM | Owner actor+trigger, source freshness/provenance, perPR concurrency | 360 фактически | 7d3b | merged |
+| 7e | Истечение решений | Zero-LLM sweeper инвалидирует success с истёкшим exception | Bounded20PR, отдельный error до rerun; schedule best effort | 335 фактически | 7d3c | in-progress |
 | 5f | Опровержение advisory findings | Советующие semantic findings также проходят adversarial verification | Прежние4calls/96KB/4000tokens; raw historical counts сохранены | 100–300 | 7e | planned |
 | 8 | Интервью по проекту, после MVP | Skill собирает факты, проводит интервью и формирует профиль/preview prompt для утверждения | Отдельный onboarding; CI использует прежний валидированный артефакт | 350–550 | 5f | planned |
 
@@ -175,3 +175,5 @@
 - 2026-10-14: Fullreplay mandatory103619bytes потребовал разделитьcontext module иCI wiring. Source deletion теперь проверяется как mismatch ожидаемогоcache/origin, безpaidfallback. Limitsнерасширены.
 
 - 2026-10-14: PR36 merged4a65c06, CIgreen/two-axis0. PR37 firstAI38500918480 incomplete: test helper отсутствовалвсnapshot. Existingreplay/freshcases теперьпроверяютactualCI, requiredhelpersвfirst60; offline95569bytes. CorrectedAI38501572277 complete/success1call95569bytes/findings0; PR37 merged7cd1119 послеCIgreen/two-axis0. Dispatcher17tests и55547wire offline, no realcalls.
+
+- 2026-10-14: PR38 merged734ecb3 после readyCI38502364050green/Standards0/Spec0.17authorize/apply checks; AI complete/success2calls55990/56326(formatretry), findings0. Expiry11tests, malformedactor/advisory-only falsegate/post-writegenerationcases fixed.
