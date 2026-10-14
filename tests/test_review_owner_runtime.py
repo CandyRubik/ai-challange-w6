@@ -2,7 +2,7 @@ from copy import deepcopy
 
 import pytest
 
-from reviewer.ci import prepare_snapshot
+from reviewer.ci import analyze_snapshot,check_context,prepare_snapshot
 from reviewer.decision_records import DecisionEnvelope
 from reviewer.github import GitHubError
 from reviewer.owner_runtime import assert_owners,capture_owners,check_owners,stamp
@@ -78,3 +78,22 @@ def test_absent_owner_workflow_cannot_accept_forged_authority(tmp_path,monkeypat
     api,ctx,env,root,records,proofs = captured(tmp_path,monkeypatch)
     monkeypatch.setattr('reviewer.owner_runtime.enabled',lambda *args:False)
     with pytest.raises(ValueError,match='unavailable'): check_owners(Repository(root),ctx,env)
+
+
+def test_prepared_owner_source_reaches_analyze_without_model_factory(tmp_path,monkeypatch):
+    api,ctx,env,root,records,proofs = captured(tmp_path,monkeypatch)
+    def forbidden(): raise AssertionError('No model on authenticated cache')
+    raw = analyze_snapshot(api,root,ctx,env,model_factory=forbidden,fetcher=lambda *args:ctx.head_sha)
+    assert raw['result']['trace']['model_calls']==0
+    missing = ctx.model_copy(update={'analysis_source':None,'analysis_origin':None})
+    with pytest.raises(ValueError): check_context(root,missing,env)
+    with pytest.raises(ValueError): analyze_snapshot(api,root,missing,env,model_factory=forbidden,fetcher=lambda *args:ctx.head_sha)
+
+
+def test_explicit_fresh_reaches_normal_factory_and_fails_closed_if_unconfigured(tmp_path,monkeypatch):
+    api,ctx,env,root,records,proofs = captured(tmp_path,monkeypatch,fresh=True)
+    created = []
+    def factory(): created.append(True);raise ValueError('No configured test model')
+    raw = analyze_snapshot(api,root,ctx,env,model_factory=factory,fetcher=lambda *args:ctx.head_sha)
+    assert len(created)==1 and raw['result']['status']=='error'
+    assert 'no cloud request sent' in raw['result']['limitations'][-1]
