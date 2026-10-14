@@ -149,21 +149,21 @@ def assess(repository, head, registry, profile, *, now=None):
     for entry in registry.entries:
         verdict, reason, refs, paths, count = entry.status, entry.reason, entry.evidence, [], 0
         if entry.status == 'candidate':
-            reason = 'Candidate is not approved and does not affect the check'
+            reason = 'Кандидат не утверждён и не влияет на проверку'
         elif entry.status == 'resolved':
-            reason = 'Owner-confirmed closure: '+entry.reason
+            reason = 'Закрытие подтверждено владельцем: '+entry.reason
         elif entry.status == 'waived' and expiry(entry.expires_at) > now:
-            reason = 'Owner waiver until '+entry.expires_at+': '+entry.reason
+            reason = 'Исключение владельца до '+entry.expires_at+': '+entry.reason
         elif entry.closure == 'owner-attestation':
-            verdict, reason = 'open', 'Owner-confirmed debt; explicit closure required: '+entry.reason
+            verdict, reason = 'open', 'Долг подтверждён владельцем; требуется явное закрытие: '+entry.reason
         else:
             try:
                 if entry.rule_id not in scans:
                     scans[entry.rule_id] = scan(repository, head, rules[entry.rule_id])
                 refs, paths, count = scans[entry.rule_id]
-                verdict, reason = ('open', 'Forbidden dependency remains') if count else ('fixed', 'Full rule scope has no forbidden imports')
+                verdict, reason = ('open', 'Запрещённая зависимость сохраняется') if count else ('fixed', 'Во всей области правила нет запрещённых импортов')
             except (ValueError, SyntaxError, RecursionError):
-                verdict, reason, refs = 'inconclusive', 'Debt scope could not be checked completely', []
+                verdict, reason, refs = 'inconclusive', 'Область долга не удалось проверить полностью', []
         assessments.append(DebtAssessment(debt_id=entry.id, rule_id=entry.rule_id, title=entry.title,
             blocking=entry.blocking, verdict=verdict, reason=reason, evidence=refs, checked_paths=paths, violation_count=count))
     return assessments
@@ -178,10 +178,10 @@ def include_debt(repository, result, profile):
             any(a.blocking and a.verdict == 'open' for a in assessments) else result.status)
         return result.model_copy(update={'debt_sha256':registry_hash, 'project_debt':assessments, 'status':status,
             'execution':'partial' if incomplete and result.execution != 'failed' else result.execution,
-            'limitations':[*result.limitations, *(['Project debt was not fully checked'] if incomplete else [])]})
+            'limitations':[*result.limitations, *(['Долг проекта проверен не полностью'] if incomplete else [])]})
     except (ValueError, SyntaxError, RecursionError):
         return result.model_copy(update={'status':'error', 'execution':'failed',
-            'limitations':[*result.limitations, 'Trusted project debt registry is invalid or unavailable']})
+            'limitations':[*result.limitations, 'Доверенный реестр долга невалиден или недоступен']})
 
 
 def suggest(repository, sha, profile):
