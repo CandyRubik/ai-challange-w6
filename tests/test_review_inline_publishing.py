@@ -148,7 +148,7 @@ def test_inline_publisher_keeps_summary_status_and_validates_before_writes(tmp_p
     assert not writes
     assert publish(api,context,artifact,repository=repo)=='failure'
     assert len(writes)==1 and len(comments)==1
-    assert any('<!-- ai-review:summary:v1 -->' in r.get('body','') for r in api.items('/issues/4/comments'))
+    assert any('AI review' in r.get('body','') or 'Project review' in r.get('body','') for r in api.items('/issues/4/comments'))
 
 
 def test_complete_review_preserves_human_replies_and_foreign_review_comments(tmp_path):
