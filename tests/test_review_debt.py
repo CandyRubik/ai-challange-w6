@@ -34,7 +34,7 @@ def test_active_debt_blocks_unrelated_change_without_becoming_a_pr_finding(tmp_p
     item, = result.project_debt
     assert (item.verdict, item.violation_count, item.checked_paths) == ('open', 1, ['app/state/service.py'])
     assert item.evidence[0].sha == head and item.evidence[0].line == 1
-    assert 'Project debt' in markdown(result)
+    assert 'Долг проекта' in markdown(result)
     assert review(root, base, head).status == 'success'  # local opt-in until CI integration
 
 
