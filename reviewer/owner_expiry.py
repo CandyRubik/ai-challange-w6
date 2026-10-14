@@ -97,4 +97,7 @@ def select(api,event,env,*,capacity=20):
     if len(rows)>capacity:
         for pr in rows: write_state(api,pr['head']['sha'],env,'error','Expiry queue capacity exceeded; manual review required')
         raise ValueError('Expiry queue capacity exceeded; no analysis started')
-    return [pr['number'] for pr in rows]
+    numbers = [pr['number'] for pr in rows]
+    if any(type(n) is not int or n<1 for n in numbers):
+        raise ValueError('Expiry matrix requires positive numeric PR identifiers')
+    return numbers

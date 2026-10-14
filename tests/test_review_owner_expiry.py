@@ -103,6 +103,19 @@ def test_queue_overflow_is_error_without_model_or_worker_dispatch(tmp_path,monke
     assert statuses[0]['state']=='error'
 
 
+def test_expiry_selector_guarantees_numeric_reusable_workflow_input(tmp_path,monkeypatch):
+    api,ctx,env,root,records,proofs,statuses,pr=setup(tmp_path,monkeypatch)
+    assert select(api,{},env)==[4]
+    pr['number']='4'
+    with pytest.raises(ValueError,match='numeric'): select(api,{},env)
+
+
+def test_expire_cli_requires_pr_before_reading_credentials():
+    import subprocess,sys
+    result=subprocess.run([sys.executable,'scripts/github_review_expiry.py','expire'],capture_output=True,text=True)
+    assert result.returncode==2 and '--pr is required' in result.stderr
+
+
 def test_new_generation_during_status_write_is_detected_without_overwriting_it(tmp_path,monkeypatch):
     api,ctx,env,root,records,proofs,statuses,pr=setup(tmp_path,monkeypatch)
     original=api.request

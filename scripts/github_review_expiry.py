@@ -15,6 +15,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('stage',choices=['select','expire']);parser.add_argument('--pr',type=int)
     args=parser.parse_args();env=dict(os.environ)
+    if args.stage=='expire' and args.pr is None: parser.error('--pr is required for expire')
     try:
         check_code(Path.cwd(),env['GITHUB_WORKFLOW_SHA'])
         api=GitHub(env['GITHUB_REPOSITORY'],env['GITHUB_TOKEN'])
