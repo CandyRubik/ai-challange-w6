@@ -5,8 +5,7 @@ import pytest
 from reviewer.ci import analyze_snapshot,check_context,prepare_snapshot
 from reviewer.contracts import ReviewArtifact
 from reviewer.github import GitHubError
-from reviewer.reuse import check_source,reuse_result,source_inputs
-from tests.test_review_ci import setup
+from reviewer.reuse import reuse_result,source_inputs
 from tests.test_review_owner_journal import Proofs
 from tests.test_review_publishing import fixture
 
@@ -68,10 +67,12 @@ def test_repeated_reuse_does_not_nest_original_trace(tmp_path,monkeypatch):
     api,ctx,env,raw,proofs,root = reused(tmp_path,monkeypatch)
     from reviewer.git import Repository
     first = reuse_result(api,Repository(root),ctx)
-    proofs.review['result'] = first.model_dump()
-    from reviewer.contracts import digest
-    proofs.review['result_sha256']=digest(proofs.review['result'])
-    second_ctx = ctx.model_copy(update={'analysis_source':ctx.analysis_source.model_copy(update={'result_sha256':proofs.review['result_sha256']})})
+    from reviewer.artifacts import make_artifact
+    proofs.review = make_artifact(ctx,first)
+    proofs.owner_run.update(id=20,workflow_id=100,path=proofs.review_run['path'],head_sha=ctx.base_sha)
+    proofs.jobs[(20,1,'review (4) / analyze')] = True
+    second_ctx = ctx.model_copy(update={'run_id':30,'analysis_source':ctx.analysis_source.model_copy(
+        update={'run_id':20,'result_sha256':proofs.review['result_sha256']})})
     second = reuse_result(api,Repository(root),second_ctx)
     assert second.trace['original_analysis']==first.trace['original_analysis']
     assert 'original_analysis' not in second.trace['original_analysis'] and second.trace['model_calls']==0
