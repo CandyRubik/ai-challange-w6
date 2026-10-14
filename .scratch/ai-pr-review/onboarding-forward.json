@@ -1,0 +1,101 @@
+{
+  "authority": "offline-artifact-validation-not-adoption",
+  "revision": "af734968d4f4ba870277f98fac3cf58f40f96d6e",
+  "profile_schema": "reviewer.models.Profile v1; valid",
+  "profile_sha256_normalized": "079772cb2f0320dcb7a1c3c59fc5095949a62ffba46bf8ef603fcb6b50816130",
+  "preview_deterministic": true,
+  "unresolved_normative_rules": [],
+  "generation_template_bytes": 9356,
+  "runtime_context_limit_reference": 96000,
+  "complete_pr_payload": false,
+  "coverage_by_current_path": {
+    "app/api.py": [
+      "ARCH-HTTP-PYDANTIC",
+      "BP-PUBLIC-TYPE-HINTS"
+    ],
+    "app/state/service.py": [
+      "FORBID-STATE-SQLITE",
+      "ARCH-STATE-NO-IO",
+      "INV-STATE-DETERMINISM",
+      "BP-PUBLIC-TYPE-HINTS"
+    ]
+  },
+  "static_examples": {
+    "clean": "pass",
+    "violating": "violation"
+  },
+  "canonical_profile_exists": false,
+  "tracked_target_files_changed": false,
+  "engineer_answers_preserved": true,
+  "network_calls": 0,
+  "api_calls": 0,
+  "program_execution": false,
+  "artifacts": [
+    {
+      "path": ".ai-review/drafts/answers.json",
+      "sha256": "2eeedadd924e5b8dba27e0debf849bb3b9c31da500eaa41aea16cb720b6f7f9f",
+      "bytes": 25331
+    },
+    {
+      "path": ".ai-review/drafts/engineer-answers.snapshot.json",
+      "sha256": "43c87363b66d922edc18652164dfb6c98ff6b35b49e59a75d4e4270814856133",
+      "bytes": 802
+    },
+    {
+      "path": ".ai-review/drafts/examples/cases.json",
+      "sha256": "0e0fde84a4d0280b76a752e0b5fb7363901785b86160f49209f6ddfbfe53ce69",
+      "bytes": 4726
+    },
+    {
+      "path": ".ai-review/drafts/examples/clean.diff",
+      "sha256": "c0b5c04c35126ea5b6ed1c318eb91488080cdb88cb5ddfd2f30db70549d8ba24",
+      "bytes": 183
+    },
+    {
+      "path": ".ai-review/drafts/examples/clean.py.txt",
+      "sha256": "d02494f21a5853f8709c6d4ba75d2ee0e1a516c2940908581bd071f39a8f2255",
+      "bytes": 110
+    },
+    {
+      "path": ".ai-review/drafts/examples/static-results.json",
+      "sha256": "941f1a97ceb50f762cbaab4d5d711d449de576f7eac7e4353202f6baa7bda058",
+      "bytes": 1161
+    },
+    {
+      "path": ".ai-review/drafts/examples/violating.diff",
+      "sha256": "aa2c0e423c6af1b7432b0173936e3134dc1c1d80dbf9c9e79f8fa7820c5b2ee3",
+      "bytes": 276
+    },
+    {
+      "path": ".ai-review/drafts/examples/violating.py.txt",
+      "sha256": "0363c9fb4ff4f8c060e6ac01d4430ce4c15c6aa32dab3e8f812e4017b3c31ef6",
+      "bytes": 200
+    },
+    {
+      "path": ".ai-review/drafts/facts.json",
+      "sha256": "2fcd7d4e5f5d6f9bfce8c35087a5d30cdbd86fe540e8a8f51c74766f3e6746fe",
+      "bytes": 933
+    },
+    {
+      "path": ".ai-review/drafts/profile.json",
+      "sha256": "2f6a41e2821de460688d518033789bc807acc19b39f77a6b9adba46c127cf88e",
+      "bytes": 4882
+    },
+    {
+      "path": ".ai-review/drafts/prompt.json",
+      "sha256": "31d0ad62921c2b93b54b6f9ff68b5728d4783102b8113bde9c4e7acc72401f2c",
+      "bytes": 23310
+    },
+    {
+      "path": ".ai-review/drafts/review.md",
+      "sha256": "7ee43778329f7c7cbef8aeaa078f0a2849719866e95e0109ea473975c18b3abf",
+      "bytes": 8158
+    }
+  ],
+  "limitations": [
+    "No semantic review was run; handwritten semantic expectations are not a quality eval.",
+    "The template has empty criteria/fragments/candidates and omits real PR snapshots/evidence until runtime.",
+    "Source-quote validation is not proof of engineer approval or a complete authority decision."
+  ],
+  "answer_quote_line_references_valid": true
+}

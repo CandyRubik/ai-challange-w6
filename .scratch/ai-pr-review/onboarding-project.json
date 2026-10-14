@@ -1,0 +1,12 @@
+{
+  "revision": "344ca54b9739f1b42e38857521c475ab17c2d46f",
+  "files": 177,
+  "bytes": 1052166,
+  "omissions": [],
+  "rules": 13,
+  "profile_hash": "f68794429438b5abf7bd590a31e9a1b6c61032b44eb50814fb51db367548760e",
+  "template_bytes": 15595,
+  "unresolved": [],
+  "api_calls": 0,
+  "canonical_profile_unchanged": true
+}

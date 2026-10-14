@@ -27,6 +27,9 @@ already approved in this conversation or project; interview only the remaining g
    counterexample; resolve conflicts and accepted alternatives with the engineer.
    Use should for recommendations, must for explicitly confirmed blocking rules.
 4. Save the answer record and schema-valid draft profile under `.ai-review/drafts/`.
+   Keep workflow/data/budget decisions in the answer record; Profile stores owners/rules.
+   Static examples verify import boundaries; record unchecked semantic criteria and
+   evaluate full incomplete/gate behavior through CI, not a static-only success label.
    Compile `python scripts/onboard_review.py prompt --revision HEAD --profile DRAFT`.
    Review architecture/forbidden/best_practice/invariant coverage, source warnings and
    an example clean/violating diff. This is a policy/schema template: runtime adds PR

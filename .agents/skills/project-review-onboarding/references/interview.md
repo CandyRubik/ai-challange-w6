@@ -2,7 +2,8 @@
 
 Use existing answers first. Ask only decisions the repository cannot establish.
 
-- Ownership and data: who may authorize rules/exceptions; may selected code/docs leave
+- Ownership and data: record exact hosting logins, keeping role labels unresolved.
+  Who may authorize rules/exceptions; may selected code/docs leave
   CI for the chosen API? Recommend existing approved owners/provider and limits.
 - Architecture: responsibility and dependency boundaries; which current patterns are
   intended, legacy or exceptions? Ask for a valid alternative to each proposed ban.
