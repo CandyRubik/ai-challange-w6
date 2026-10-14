@@ -1,4 +1,4 @@
-"""A bounded attempt to refute every semantic finding on pinned evidence."""
+"""Bounded counterproof on pinned evidence."""
 import hashlib
 import json
 
