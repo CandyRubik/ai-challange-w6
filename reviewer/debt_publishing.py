@@ -4,6 +4,11 @@ from fnmatch import fnmatchcase
 import hashlib
 
 from .debt import assess, expiry, load_registry, validate_registry
+from .github import GitHubError, bot_authored, raw_body
+from .report import debt_details, normalize_comment, text
+
+DEBT_MARKER = '<!-- ai-review:debt:v1 -->'
+ASSESSMENT_MARKER = '<!-- ai-review:debt:assessment:v1 -->'
 
 
 
@@ -53,4 +58,33 @@ def verify_debt(repository, context, result):
         raise ValueError('Publishing debt registry differs from trusted base')
     if result.debt_sha256 and result.project_debt != assess(repository, context.head_sha, registry, context.profile):
         raise ValueError('Publishing debt assessment differs from the actual pinned head')
+
+
+def publish_debt(api, context, result, *, guard):
+    from .publishing import upsert_comment
+    existing = [c for c in api.items(f'/issues/{context.pr_number}/comments')
+                if bot_authored(c) and raw_body(c).startswith(DEBT_MARKER)]
+    if not context.debt_registry.entries and not existing:
+        return
+    complete = result.status != 'error' and result.execution == 'complete'
+    previous = raw_body(existing[-1]).partition(ASSESSMENT_MARKER)[2] if existing else ''
+    if complete:
+        details = normalize_comment('\n\n'.join([*debt_details(result)[1:], *[
+            f'Owner: {text(e.confirmed_by or "unconfirmed")}; {text(e.id)}: {text(e.reason or "candidate")}.'
+            for e in context.debt_registry.entries]]))
+        if len(details.encode()) > 54_000:
+            details = details.encode()[:54_000].decode('utf-8',errors='ignore')+'\n\nDetails shortened; full assessment is in the run artifact.'
+        assessment = '\n\n'.join([f'Assessed head: `{context.head_sha}`; registry: `{result.debt_sha256}`.',
+            f'[Assessment run]({context.run_url})', details])
+    else:
+        assessment = previous or 'No completed project debt assessment is available; inspect the run artifact.'
+    note = ('Owner-confirmed debt is assessed separately from new PR findings.' if complete else
+            'Review incomplete; the previous assessment below is retained and project debt is not cleared.')
+    body = normalize_comment('\n\n'.join([DEBT_MARKER, '# Project debt',
+        f'Current head: `{context.head_sha}`; review status: **{result.status}**.', note,
+        f'[Current workflow run]({context.run_url})', ASSESSMENT_MARKER, assessment.strip()]))
+    if len(body.encode()) > 58_000:
+        raise GitHubError('Project debt comment cannot preserve the prior assessment within the presentation budget')
+    upsert_comment(api,context.pr_number,body,marker=DEBT_MARKER,before_write=guard)
+    guard()
 

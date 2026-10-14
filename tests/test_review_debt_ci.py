@@ -64,7 +64,7 @@ def test_trusted_ci_debt_lifecycle(tmp_path,monkeypatch,case,state,verdict):
     assert preview(context,result)['state'] == state
     assert result['result']['project_debt'][0]['verdict'] == verdict
     assert publish(api,context,result,repository=repo) == state
-    assert len(comments) == 1 and 'Project debt' in comments[0]['body']
+    assert len(comments) == 2 and all('Project debt' in c['body'] for c in comments)
 
 
 def test_nonempty_registry_needs_actual_git_objects_for_publication(tmp_path):
