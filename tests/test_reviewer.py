@@ -157,7 +157,7 @@ def test_cli_emits_json_and_policy_markdown_without_executing_head(tmp_path):
     assert output.returncode == 1
     assert json.loads(output.stdout)["status"] == "failure"
     output = subprocess.run([*command, "--explain-policy"], capture_output=True, text=True)
-    assert ("## Policy" in output.stdout or "## Правила проекта" in output.stdout) and "No storage dependencies" in output.stdout
+    assert "## Policy" in output.stdout and "No storage dependencies" in output.stdout
     assert not sentinel.exists()
 
 
