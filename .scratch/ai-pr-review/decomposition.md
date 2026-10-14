@@ -3,7 +3,7 @@
 - Дата: 2026-10-13.
 - Основание: [план и Q1–Q11](plan.md), [исследование GitHub](research.md).
 - Trunk: `main`, исследован на `f7a4d1e`.
-- Статус карты: согласована пользователем 2026-10-13; PR №4–11, №13–16, №18–35 слиты (№33 — временный smoke, закрыт без merge). Project-debt gate включён в CI; чистый artifact module готов. Все26paired offline inputs калибровочных сценариев сохранены.
+- Статус карты: согласована пользователем 2026-10-13; PR №4–11, №13–16, №18–37 слиты (№33 — временный smoke, закрыт без merge). Project-debt gate включён в CI; чистый artifact module готов. Все26paired offline inputs калибровочных сценариев сохранены.
 - Бюджет: целевой размер ≤600 reviewable lines (added + removed), максимум 1000 с отдельным обоснованием. Это оценки; при росте срез делится до открытия PR. Документация и большие входные fixtures не входят в кодовый бюджет; prompt/profile, ручные тесты и workflow считаются проверяемой логикой.
 
 ## Последовательность
@@ -40,8 +40,8 @@
 | 7d2a | Owner notes | Оригинал inline/debt сохраняется при добавлении или снятии owner note | Optional hooks не дают полномочий и не меняют verdict | 64 фактически | 7d1 | merged |
 | 7d2 | Сервис применения решений | Проверенный journal меняет effective check и оформляет owner notes | Journal/expiry guard вокруг writes; original неизменён | 264 фактически | 7d2a | merged |
 | 7d3a | Owner context module | Typed journal/hash/cache selection и строгий replay guard | Самостоятельный API; CI activation отдельно | 144 фактически | 7d2 | merged |
-| 7d3b | CI wiring | Prepare/analyze/publish подключают проверенный owner context | Включается только при ownerworkflow вtrustedbase | 58 фактически | 7d3a | in-progress |
-| 7d3c | Owner dispatch | Authorize/apply workflow на main, без LLM | Owner actor+trigger, source freshness/provenance, perPR concurrency | 400–600 | 7d3b | planned |
+| 7d3b | CI wiring | Prepare/analyze/publish подключают проверенный owner context | Включается только при ownerworkflow вtrustedbase | 48 фактически | 7d3a | merged |
+| 7d3c | Owner dispatch | Authorize/apply workflow на main, без LLM | Owner actor+trigger, source freshness/provenance, perPR concurrency | 356 фактически | 7d3b | in-progress |
 | 7e | Истечение решений | Zero-LLM sweeper инвалидирует success с истёкшим exception | Bounded20PR, отдельный error до rerun; schedule best effort | 200–400 | 7d3c | planned |
 | 5f | Опровержение advisory findings | Советующие semantic findings также проходят adversarial verification | Прежние4calls/96KB/4000tokens; raw historical counts сохранены | 100–300 | 7e | planned |
 | 8 | Интервью по проекту, после MVP | Skill собирает факты, проводит интервью и формирует профиль/preview prompt для утверждения | Отдельный onboarding; CI использует прежний валидированный артефакт | 350–550 | 5f | planned |
@@ -146,7 +146,7 @@
 
 - 2026-10-13: PR №10 слит после396local tests, зелёного CI и обоих subset-review0open. Workflow4c восстановлен без конфликтов на main2cf7136. В полном review закрыты retarget edited, deferred draft и failed-only rerun (same-run older attempt→error; newer run сохраняется). Cloud key/recurring CI ещё не разрешены и не настроены.
 
-- 2026-10-13: PR №11 слит (CIgreen,413local, обе оси0open). Пользователь явно разрешил W5→Actions Secret DEEPSEEK_API_KEY и recurring CI:4requests/PR run,96KB/4000tokens,20PRqueue. Secret настроен после merge, без W6 file/argv/log copy. Bootstrap main run38454906674 success. Temporary PR12: failure/complete для forbidden import(2calls), success/complete для pure helper(1call); тот же summary6153557233 обновлён. PR закрыт без merge, smoke branch удалён. [Evidence](ci-smoke.json). Дополнительных calibration runs нет, прежний бюджет79/104 не менялся.
+- 2026-10-13: PR №11 слит (CIgreen,413local, обе оси0open). Пользователь явно разрешил W5→Actions Secret DEEPSEEK_API_KEY и recurring CI:4requests/PR run,96KB/4000tokens,20PRqueue. Secret настроен после merge, без W6 file/argv/log copy. Bootstrap main run38454906674 success. Temporary PR12: failure/complete для forbidden import(2calls), success/complete для pure helper(1call); тот же summary6153567233 обновлён. PR закрыт без merge, smoke branch удалён. [Evidence](ci-smoke.json). Дополнительных calibration runs нет, прежний бюджет79/104 не менялся.
 
 - 2026-10-14: полный inline self-review0open и455localtests, но CIдал2InvalidModelResponseпри92KB. Разделён общий formatter5c0 и inline5c, чтобы уменьшить mandatory context без ослабления validation/caps. Полныйdiffсохранён, PR15сужендоformatter.
 
@@ -173,3 +173,5 @@
 - 2026-10-14: PR35 mergedae556cd после finalCIgreen/Standards0/Spec0;14application+8report tests. AI38500003169 complete/success1call92412bytes, findings0. Captured replay отдельно отdispatch:169reviewablelines,9runtime+28CI/reusepass.
 
 - 2026-10-14: Fullreplay mandatory103619bytes потребовал разделитьcontext module иCI wiring. Source deletion теперь проверяется как mismatch ожидаемогоcache/origin, безpaidfallback. Limitsнерасширены.
+
+- 2026-10-14: PR36 merged4a65c06, CIgreen/two-axis0. PR37 firstAI38500918480 incomplete: test helper отсутствовалвсnapshot. Existingreplay/freshcases теперьпроверяютactualCI, requiredhelpersвfirst60; offline95569bytes. CorrectedAI38501572277 complete/success1call95569bytes/findings0; PR37 merged7cd1119 послеCIgreen/two-axis0. Dispatcher17tests и55547wire offline, no realcalls.

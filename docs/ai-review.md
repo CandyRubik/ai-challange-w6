@@ -466,3 +466,15 @@ Human comments/replies не меняются, APPROVE/REQUEST_CHANGES и авт�
 ### Повтор без модели
 
 Owner может вручную запустить `AI Review` на main с `pr`, `reuse_run` и `reuse_attempt` (1–20). Источник должен быть complete результатом канонического AI workflow на точно тех же head/base/profile/debt/diff. CI перепроверяет run/job/artifact provenance, digest и фактический долг до использования. Неподходящий или недоступный источник даёт error без платного fallback. Findings, критерии и исходный verdict сохраняются; trace текущего запуска содержит ноль model/API calls и ссылку на исходные расходы. При обычном запуске без `reuse_run` анализ выполняется заново. Это повтор исходного анализа; решения владельца подключаются отдельно.
+
+### Решения владельца в Actions
+
+`AI Review Owner` запускается вручную на main. Укажите канонический номер `pr`, `action`, JSON-массив `targets`, причину `reason`, при необходимости JSON-массив `scope`, UTC `expires_at` и исходные `review_run`/`review_attempt`. Source должен быть complete на тех же base/head/profile/debt и моложе7дней. Владелец и triggering actor проверяются по профилю main. По умолчанию решение живёт24часа, максимум7дней от создания dispatch.
+
+`dismiss` принимает точный fingerprint finding из offline preview; `waive_rule` — ID правила с явным path scope; `waive_debt` — ID открытого подтверждённого долга. `resolve_debt` требует согласованную resolved-запись в head для owner-attestation. `revoke` принимает ID решения `run-attempt` и причину, без source, scope или срока. Если после отзыва нет актуального complete-анализа, check получает error до нового AI Review.
+
+Успешный job `Authorize owner decision` и artifact являются authority даже при сбое apply. Comments — отображение: их удаление не отменяет решение. Исходный verdict/findings/flags остаются в result; summary разделяет original/effective, inline и общий долг показывают причину, owner, scope и срок. Applied failure означает завершённое применение с неуспешным PR status; это не ошибка авторизации.
+
+Обычный CI закрепляет журнал и повторно использует подходящий complete source без модели. Manual `reuse_run` имеет приоритет; `fresh=true` пропускает автоматический cache. Недоступный/изменённый source даёт error без платного fallback. Rerun после изменения main заменяйте новым dispatch; для текущего run нужны all jobs, поскольку artifacts привязаны к attempt. Artifact retention14дней; журнал ограничен100records/100attempts и20attempts наrun.
+
+Истечение GitHub status требует отдельного sweeper: сам status не имеет TTL. Пока он не подключён, следующие публикации уже перепроверяют срок; автоматическая инвалидация ранее опубликованного success поставляется следующим срезом.
