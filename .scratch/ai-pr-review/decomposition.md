@@ -39,8 +39,8 @@
 | 7d1 | Явный reuse анализа | Owner dispatch повторно использует complete source того же снимка без LLM | Канонический Actions proof, digest, actual debt; нет paid fallback | 194 фактически | 7d0 | merged |
 | 7d2a | Owner notes | Оригинал inline/debt сохраняется при добавлении или снятии owner note | Optional hooks не дают полномочий и не меняют verdict | 64 фактически | 7d1 | merged |
 | 7d2 | Сервис применения решений | Проверенный journal меняет effective check и оформляет owner notes | Journal/expiry guard вокруг writes; original неизменён | 264 фактически | 7d2a | merged |
-| 7d3a | Owner context module | Typed journal/hash/cache selection и строгий replay guard | Самостоятельный API; CI activation отдельно | 144 фактически | 7d2 | in-progress |
-| 7d3b | CI wiring | Prepare/analyze/publish подключают проверенный owner context | Включается только при ownerworkflow вtrustedbase | 100–200 | 7d3a | planned |
+| 7d3a | Owner context module | Typed journal/hash/cache selection и строгий replay guard | Самостоятельный API; CI activation отдельно | 144 фактически | 7d2 | merged |
+| 7d3b | CI wiring | Prepare/analyze/publish подключают проверенный owner context | Включается только при ownerworkflow вtrustedbase | 58 фактически | 7d3a | in-progress |
 | 7d3c | Owner dispatch | Authorize/apply workflow на main, без LLM | Owner actor+trigger, source freshness/provenance, perPR concurrency | 400–600 | 7d3b | planned |
 | 7e | Истечение решений | Zero-LLM sweeper инвалидирует success с истёкшим exception | Bounded20PR, отдельный error до rerun; schedule best effort | 200–400 | 7d3c | planned |
 | 5f | Опровержение advisory findings | Советующие semantic findings также проходят adversarial verification | Прежние4calls/96KB/4000tokens; raw historical counts сохранены | 100–300 | 7e | planned |
