@@ -1,0 +1,18 @@
+{
+  "pr": 33,
+  "head": "aa176ee1f472eef59eaf260fb49726f15b8db204",
+  "base": "bcdaef2cddd41ca3b4bcbab2cf6d05d59e1da899",
+  "source_run": 38498722722,
+  "repeat_run": 38498881674,
+  "source_calls": 1,
+  "repeat_calls": 0,
+  "original_fields_equal": [
+    "status",
+    "execution",
+    "findings",
+    "criteria",
+    "policy",
+    "project_debt"
+  ],
+  "closed_without_merge": true
+}
