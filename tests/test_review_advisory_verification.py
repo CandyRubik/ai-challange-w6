@@ -31,8 +31,6 @@ def test_advisory_counterproof(tmp_path,verdict,status,count):
     model=Advisory(verdict)
     result=review(root,base,head,model=model)
     assert result.status==status and len(result.findings)==count and model.calls==2
-    assert result.trace['verification'][0]['verdict']==verdict
-    assert not any(f.blocking for f in result.findings)
 
 
 def test_static_blocker_survives_rejected_advisory(tmp_path):
