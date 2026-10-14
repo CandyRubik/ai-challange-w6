@@ -2,10 +2,13 @@ from datetime import datetime,timedelta,timezone
 import json
 import subprocess
 import sys
+from copy import deepcopy
 
 from reviewer.decisions import OwnerProposal,effects,fingerprint,propose
 from reviewer.models import ReviewResult
 from reviewer.owner_report import debt_note,finding_note,journal,render
+from reviewer.publishing import make_artifact
+from tests.test_reviewer import PROFILE
 from tests.review_debt_fixtures import setup
 from tests.test_review_publishing import fixture
 
@@ -59,7 +62,7 @@ def test_large_journal_retains_head_and_all_artifact_links(tmp_path):
     records = {f'{i}-1':d for i in range(1,101)}
     body = journal(ctx,records,effects(ctx,result,records,now=NOW))
     assert len(body.encode())<=58_000 and ctx.head_sha in body and ctx.run_url in body
-    assert 'presentation shortened' in body and '/runs/100/attempts/1' in body
+    assert 'Presentation shortened' in body and '/runs/100/attempts/1' in body
 
 
 def test_cli_markdown_is_explicitly_offline_preview(tmp_path):
@@ -68,3 +71,40 @@ def test_cli_markdown_is_explicitly_offline_preview(tmp_path):
     result = subprocess.run([sys.executable,'scripts/preview_review_decision.py','--artifact',str(path),'--markdown'],capture_output=True,text=True)
     assert result.returncode==0 and result.stdout.startswith('OFFLINE PREVIEW — no CI authority.')
     assert 'Project review' in result.stdout and not result.stderr
+
+
+def test_partial_original_without_decisions_still_renders_effective_error(tmp_path):
+    profile = deepcopy(PROFILE);profile['rules'][0]['level']='should'
+    _,ctx,raw,*_ = fixture(tmp_path,profile=profile)
+    result = ReviewResult.model_validate(raw['result'])
+    criteria = [c.model_copy(update={'verdict':'inconclusive','reason':'Advisory source unavailable'}) if c.rule_id=='ARCH-STATE-PURE' else c for c in result.criteria]
+    result = result.model_copy(update={'findings':[],'criteria':criteria,'status':'success','execution':'partial'})
+    rendered,plan = render(ctx,make_artifact(ctx,result),{})
+    assert rendered['state']==plan.state=='error' and 'Effective check: **error**' in rendered['body']
+
+
+def test_long_acceptances_do_not_hide_head_deadline_or_remaining_blocker(tmp_path):
+    _,ctx,raw,*_ = fixture(tmp_path,code=''.join(f'import sqlite3.m{i}\n' for i in range(17)))
+    result = ReviewResult.model_validate(raw['result'])
+    records = {f'{i+20}-1':accepted(ctx,result,'dismiss',[fingerprint(f)],reason='Ж'*2000)
+               for i,f in enumerate(result.findings[:-1])}
+    rendered,plan = render(ctx,raw,records,now=NOW)
+    assert rendered['state']=='failure' and len(plan.remaining_findings)==1
+    assert ctx.head_sha in rendered['body'] and ctx.run_url in rendered['body']
+    assert 'Remaining blocking findings: 1' in rendered['body'] and plan.expires_at in rendered['body']
+    assert len(rendered['body'].encode())<=58_000
+
+
+def test_finding_and_debt_notes_normalize_mentions_and_control_chars(tmp_path):
+    first = tmp_path/'finding';first.mkdir()
+    _,ctx,raw,*_ = fixture(first)
+    result = ReviewResult.model_validate(raw['result'])
+    d = accepted(ctx,result,'dismiss',[fingerprint(result.findings[0])],reason='@maintainer\x1b accepted')
+    note = finding_note(result.findings,effects(ctx,result,{'20-1':d},now=NOW),{'20-1':d})
+    assert '@maintainer' not in note and '\x1b' not in note
+    second = tmp_path/'debt';second.mkdir()
+    _,ctx,raw,*_ = setup(second)
+    result = ReviewResult.model_validate(raw['result'])
+    d = accepted(ctx,result,'waive_debt',['state-storage'],reason='@maintainer\x1b accepted')
+    note = debt_note('state-storage',effects(ctx,result,{'20-1':d},now=NOW),{'20-1':d})
+    assert '@maintainer' not in note and '\x1b' not in note

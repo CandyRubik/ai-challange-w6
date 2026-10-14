@@ -2,9 +2,19 @@
 from .artifacts import preview
 from .contracts import SUMMARY_MARKER,workflow_url
 from .decisions import effects,fingerprint
-from .report import normalize_comment,safe_comment,text
+from .report import normalize_comment,text
 
 OWNER_MARKER = '<!-- ai-review:owner-journal:v1 -->'
+
+
+def bounded_body(header,content,footer):
+    content = normalize_comment(content)
+    budget = min(54_000,58_000-len(normalize_comment('\n\n'.join([*header,*footer])).encode())-300)
+    if budget<0:
+        raise ValueError('Owner report metadata exceeds presentation budget')
+    if len(content.encode())>budget:
+        content = content.encode()[:budget].decode('utf-8',errors='ignore')+'\n\nPresentation shortened; full records and original analysis are in the workflow artifacts.'
+    return normalize_comment('\n\n'.join([*header,content,*footer]))
 
 
 def decision_details(identity,decision):
@@ -24,16 +34,18 @@ def render(context,raw,decisions,*,now=None):
     from .contracts import ReviewArtifact
     result = ReviewArtifact.model_validate(raw).result
     plan = effects(context,result,decisions,now=now)
-    if not decisions:
+    if not decisions and plan.state==original['state']:
         return original,plan
     prefix = [SUMMARY_MARKER,'# Project review',f'Effective check: **{plan.state}**; original analysis: **{result.status}** / **{result.execution}**.',
-        'Original findings, severity and blocking flags are retained below. Owner exceptions affect only the effective check.',
-        '## Owner decisions',*owner_notes(plan,decisions)]
+        f'Head: `{context.head_sha}`; base: `{context.base_sha}`.',
+        f'Remaining blocking findings: {len(plan.remaining_findings)}; project debt: {len(plan.remaining_debt)}.',
+        f'Exception deadline: {text(plan.expires_at or "none")}.',
+        'Original findings, severity and blocking flags are unchanged in the full result. Owner exceptions affect only the effective check.']
+    details = ['## Owner decisions',*owner_notes(plan,decisions)]
     if not plan.accepted_findings and not plan.accepted_debt:
-        prefix.append('No applicable owner acceptance; expired, revoked or out-of-scope records do not change this check.')
-    prefix += [f'Remaining blocking findings: {len(plan.remaining_findings)}; project debt: {len(plan.remaining_debt)}.',
-        f'Exception deadline: {text(plan.expires_at or "none")}.','## Original analysis',original['body'].partition('\n')[2]]
-    return dict(state=plan.state,body=safe_comment('\n\n'.join(prefix))+f'\n\n[Current workflow run]({context.run_url})'),plan
+        details.append('No applicable owner acceptance; expired, revoked or out-of-scope records do not change this check.')
+    details += ['## Original analysis',original['body'].partition('\n')[2]]
+    return dict(state=plan.state,body=bounded_body(prefix,'\n\n'.join(details),[f'[Current workflow run]({context.run_url})'])),plan
 
 
 def finding_note(findings,plan,decisions):
@@ -41,12 +53,12 @@ def finding_note(findings,plan,decisions):
     lines = [f'Finding `{identity}`: '+decision_details(owner,decisions[owner]) for identity,owner in accepted if owner]
     if not lines:
         return ''
-    return '\n\n'.join(['Owner acceptance for the findings listed below. Original report is preserved; check the latest summary/journal for current applicability.',*lines])
+    return normalize_comment('\n\n'.join(['Owner acceptance for the findings listed below. Original report is preserved; check the latest summary/journal for current applicability.',*lines]))
 
 
 def debt_note(debt_id,plan,decisions):
     identity = plan.accepted_debt.get(debt_id)
-    return 'Owner acceptance: '+decision_details(identity,decisions[identity]) if identity else ''
+    return normalize_comment('Owner acceptance: '+decision_details(identity,decisions[identity])) if identity else ''
 
 
 def journal(context,decisions,plan=None):
@@ -58,12 +70,4 @@ def journal(context,decisions,plan=None):
     footer = ['Decision artifact runs: '+', '.join(f'[{text(identity)}]({workflow_url(context.repository,*map(int,identity.split("-")))})'
         for identity in sorted(decisions) if identity.count('-')==1 and all(p.isdigit() for p in identity.split('-'))),
         f'[Current workflow run]({context.run_url})']
-    budget = min(54_000,58_000-len(normalize_comment('\n\n'.join([*header,*footer])).encode())-300)
-    if budget<0:
-        raise ValueError('Owner journal metadata exceeds presentation budget')
-    if len(content.encode())>budget:
-        content = content.encode()[:budget].decode('utf-8',errors='ignore')+'\n\nJournal presentation shortened; full records are in the workflow artifacts.'
-    body = normalize_comment('\n\n'.join([*header,content,*footer]))
-    if len(body.encode())>58_000:
-        raise ValueError('Owner journal metadata exceeds presentation budget')
-    return body
+    return bounded_body(header,content,footer)
