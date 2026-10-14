@@ -282,6 +282,9 @@ Human comments и чужие markers не меняются. Неопределё
 # Только моделирование scoped решения, без CI authority, сети или изменения артефакта:
 .venv/bin/python scripts/preview_review_decision.py --artifact /tmp/result.json \
   --proposal /tmp/proposal.json --actor CandyRubik
+# Тот же результат как reviewable Markdown, всё ещё offline-only:
+.venv/bin/python scripts/preview_review_decision.py --artifact /tmp/result.json \
+  --proposal /tmp/proposal.json --actor CandyRubik --markdown
 ```
 
 Proposal содержит `action`, `targets`, `reason`, `scope`, `expires_at`. Действия:
