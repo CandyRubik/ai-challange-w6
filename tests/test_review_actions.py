@@ -93,8 +93,9 @@ def test_streaming_archive_budget_rejects_large_blob():
 
 @pytest.mark.parametrize('responses',[
     [[]], [dict(total_count=True,jobs=[])], [dict(total_count=1000,jobs=[])],
-    [dict(total_count=2,jobs=[{}])],
-    [dict(total_count=101,jobs=[{}]*100),dict(total_count=102,jobs=[{}]*2)],
+    [dict(total_count=2,jobs=[dict(id=1)])],
+    [dict(total_count=101,jobs=[dict(id=i) for i in range(1,101)]),dict(total_count=102,jobs=[dict(id=101),dict(id=102)])],
+    [dict(total_count=101,jobs=[dict(id=i) for i in range(1,101)]),dict(total_count=101,jobs=[dict(id=100)])],
 ])
 def test_collection_rejects_wrong_shape_truncation_overflow_or_racing_count(responses):
     calls = []
@@ -110,7 +111,7 @@ def test_successful_job_proof_uses_complete_specific_attempt():
     def request(req):
         calls.append(req)
         page = int(req.url.params['page'])
-        jobs = [dict(name='other')]*100 if page==1 else [dict(name='Authorize',status='completed',conclusion='success')]
+        jobs = [dict(id=i,name='other') for i in range(1,101)] if page==1 else [dict(id=101,name='Authorize',status='completed',conclusion='success')]
         return httpx.Response(200,json=dict(total_count=101,jobs=jobs))
     api = GitHub('owner/repo','test',transport=httpx.MockTransport(request))
     assert Actions(api).successful_job(10,2,'Authorize')
@@ -118,8 +119,8 @@ def test_successful_job_proof_uses_complete_specific_attempt():
 
 
 @pytest.mark.parametrize('jobs',[
-    [], [dict(name='Authorize',status='completed',conclusion='failure')],
-    [dict(name='Authorize',status='in_progress',conclusion=None)],
+    [], [dict(id=1,name='Authorize',status='completed',conclusion='failure')],
+    [dict(id=1,name='Authorize',status='in_progress',conclusion=None)],
 ])
 def test_missing_failed_or_pending_job_is_not_authorization(jobs):
     api = GitHub('owner/repo','test',transport=httpx.MockTransport(
@@ -128,9 +129,9 @@ def test_missing_failed_or_pending_job_is_not_authorization(jobs):
 
 
 def test_duplicate_job_or_artifact_proof_is_rejected():
-    job = dict(name='Authorize',status='completed',conclusion='success')
+    job = dict(id=1,name='Authorize',status='completed',conclusion='success')
     api = GitHub('owner/repo','test',transport=httpx.MockTransport(
-        lambda req:httpx.Response(200,json=dict(total_count=2,jobs=[job,job]))))
+        lambda req:httpx.Response(200,json=dict(total_count=2,jobs=[job,{**job,'id':2}]))))
     with pytest.raises(GitHubError): Actions(api).successful_job(10,1,'Authorize')
     actions,run,_ = client()
     original = actions.api.request
@@ -138,4 +139,21 @@ def test_duplicate_job_or_artifact_proof_is_rejected():
         data = original(method,path,body,**kwargs)
         return dict(total_count=2,artifacts=data['artifacts']*2)
     actions.api.request = duplicate
+    with pytest.raises(GitHubError): actions.artifact_json(run,1,'decision-10-1','decision.json')
+
+
+@pytest.mark.parametrize('metadata',[{'workflow_run':'PRIVATE_SENTINEL'},{'digest':{}},{'size_in_bytes':'PRIVATE_SENTINEL'}])
+def test_malformed_metadata_has_only_sanitized_error(metadata):
+    actions,run,_ = client(metadata=metadata)
+    with pytest.raises(GitHubError) as error: actions.artifact_json(run,1,'decision-10-1','decision.json')
+    assert 'PRIVATE_SENTINEL' not in str(error.value)
+
+
+def test_corrupt_deflate_stream_is_sanitized_before_json():
+    content = bytearray(archive())
+    with zipfile.ZipFile(io.BytesIO(content)) as zipped:
+        info = zipped.infolist()[0]
+        offset = info.header_offset+30+len(info.filename.encode())+len(info.extra)
+    content[offset:offset+2] = b'\xff\xff'
+    actions,run,_ = client(zip_bytes=bytes(content))
     with pytest.raises(GitHubError): actions.artifact_json(run,1,'decision-10-1','decision.json')

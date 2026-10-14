@@ -4,6 +4,7 @@ import io
 import json
 import re
 import zipfile
+import zlib
 
 import httpx
 
@@ -21,7 +22,7 @@ class Actions:
         self.api,self.blob_transport = api,blob_transport
 
     def collection(self,path,key,*,params=None):
-        rows,total = [],None
+        rows,total,seen = [],None,set()
         for page in range(1,11):
             data = self.api.request('GET',path,params={**(params or {}),'page':page,'per_page':100})
             if not isinstance(data,dict):
@@ -33,6 +34,11 @@ class Actions:
             if total is not None and total!=count:
                 raise GitHubError('Actions collection changed during pagination')
             total = count
+            for item in items:
+                identifier = positive(item.get('id'))
+                if identifier in seen:
+                    raise GitHubError('Actions collection contains duplicate object IDs')
+                seen.add(identifier)
             rows.extend(items)
             if len(rows)==total:
                 return rows
@@ -51,6 +57,14 @@ class Actions:
         return bool(matches and matches[0].get('status')=='completed' and matches[0].get('conclusion')=='success')
 
     def artifact_json(self,run,attempt,name,member,*,member_limit=512_000):
+        try:
+            return self._artifact_json(run,attempt,name,member,member_limit=member_limit)
+        except GitHubError:
+            raise
+        except (KeyError,TypeError,AttributeError,ValueError,OSError,RuntimeError,zipfile.BadZipFile,zlib.error):
+            raise GitHubError('Actions artifact metadata or archive is invalid') from None
+
+    def _artifact_json(self,run,attempt,name,member,*,member_limit):
         positive(attempt)
         if type(member_limit) is not int or not 0<member_limit<=2_000_000:
             raise GitHubError('Actions member budget is invalid')
