@@ -76,7 +76,7 @@ def test_confirmed_same_anchor_bug_is_a_duplicate_not_a_different_defect():
     assert (row['tp'], row['fp'], row['fn'], row['duplicates']) == (1, 0, 0, 1)
     assert metrics([row])['duplicates'] == 1
     assert len(finding_groups(result.findings)) == 1
-    findings_text = markdown(result).split('## Findings')[1].split('## Coverage')[0]
+    findings_text = markdown(result).replace('## Замечания','## Findings').replace('## Покрытие','## Coverage').split('## Findings')[1].split('## Coverage')[0]
     assert findings_text.count('- **') == 1
     assert len(result.findings) == 2
     unrelated = bug.model_copy(update={'evidence': evidence.model_copy(update={'line': 3})})
