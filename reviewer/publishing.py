@@ -120,6 +120,8 @@ def _publish(api, context, rendered, raw, repository):
         except ValueError as error:
             raise StaleReview('Debt lifecycle changed during publication; rerun required') from error
     guard()
+    from .debt_publishing import publish_debt
+    publish_debt(api,context,result,guard=guard)
     if repository is not None:
         from .inline_publishing import publish_inline
         fallback = publish_inline(api,context,ReviewResult.model_validate(raw['result']),repository,
