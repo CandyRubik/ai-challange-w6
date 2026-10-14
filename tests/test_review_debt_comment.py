@@ -126,7 +126,7 @@ def test_expiry_during_general_comment_uses_lifecycle_guard(tmp_path,monkeypatch
     assert comments[0]['body'].startswith(DEBT_MARKER) and statuses[0]['state'] == 'error'
 
 
-@pytest.mark.parametrize('title',['x'*60_000,'Ж'*30_000])
+@pytest.mark.parametrize('title',['x'*60_000,'Ж'*30_000],ids=['ascii','unicode'])
 def test_large_assessment_keeps_original_metadata_and_survives_incomplete_rerun(tmp_path,title):
     api,ctx,raw,repo,comments,statuses,calls = setup(tmp_path,title=title)
     start(api,ctx)
