@@ -6,6 +6,7 @@ from reviewer.ci import analyze_snapshot,check_context,prepare_snapshot
 from reviewer.contracts import ReviewArtifact
 from reviewer.github import GitHubError
 from reviewer.reuse import reuse_result,source_inputs
+from tests.test_review_ci import setup
 from tests.test_review_owner_journal import Proofs
 from tests.test_review_publishing import fixture
 
@@ -86,3 +87,13 @@ def test_repeated_reuse_does_not_nest_original_trace(tmp_path,monkeypatch):
 def test_invalid_or_non_manual_source_is_rejected_before_api(env):
     with pytest.raises(ValueError) as error: source_inputs(env)
     assert 'PRIVATE_VALUE' not in str(error.value)
+
+
+def test_non_owner_cannot_read_source_or_start_reuse(tmp_path,monkeypatch):
+    api,old,env,pr,calls,statuses,root = setup(tmp_path)
+    env.update(GITHUB_EVENT_NAME='workflow_dispatch',GITHUB_ACTOR='another-writer',SOURCE_REVIEW_RUN='10')
+    def forbidden(api): raise AssertionError('No source API read before owner validation')
+    monkeypatch.setattr('reviewer.reuse.Actions',forbidden)
+    with pytest.raises(ValueError,match='owner'):
+        prepare_snapshot(api,root,4,env,fetcher=lambda *args:old.head_sha)
+    assert not statuses
