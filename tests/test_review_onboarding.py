@@ -15,10 +15,12 @@ def test_facts_use_committed_data_and_report_unsupported_paths_without_execution
     root,base=repository(tmp_path)
     head=commit(root,{'requirements.txt':'fastapi==0.115\n--index-url https://PRIVATE_VALUE@invalid.test\n',
         'src/server.py':'import fastapi\nraise RuntimeError("Never execute")\ndef handle(): pass\n',
+        'app/Worker.kt':'class Worker\n',
         'private.env':'PRIVATE_VALUE=secret\n'})
     result=facts(root,head)
     assert dict(name='fastapi',path='requirements.txt') in result['dependencies']
     assert 'src/server.py' in result['unsupported_review_paths']
+    assert 'app/Worker.kt' in result['unsupported_review_paths']
     assert next(m for m in result['modules'] if m['path']=='src/server.py')['symbols'][0]['name']=='handle'
     assert 'PRIVATE_VALUE' not in json.dumps(result) and result['authority']=='facts-only-not-project-rules'
     assert facts(root,head,file_limit=1)['omissions']

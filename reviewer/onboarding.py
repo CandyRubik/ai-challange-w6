@@ -55,7 +55,9 @@ def facts(root,revision,*,file_limit=500,byte_limit=2_000_000):
     return dict(authority='facts-only-not-project-rules',revision=sha,files_considered=count,source_bytes_budgeted=used,omissions=omissions,
         extensions=dict(sorted(Counter(PurePosixPath(p).suffix for p in paths).items())),dependencies=dependencies,modules=modules,
         documentation=[p for p in paths if document(p)],workflows=[p for p in paths if p.startswith('.github/workflows/')],
-        unsupported_review_paths=[m['path'] for m in modules if not readable(m['path'])],static_checks=['python-import-boundary'])
+        unsupported_review_paths=[p for p in paths if PurePosixPath(p).suffix in
+            {'.py','.js','.ts','.tsx','.jsx','.java','.kt','.go','.rs','.swift','.rb','.cs','.c','.cpp','.h'} and not readable(p)],
+        static_checks=['python-import-boundary'])
 
 
 def policy_template(root,revision,profile_path):
