@@ -138,3 +138,12 @@ def test_cli_lists_exact_ids_and_has_no_ci_authority(tmp_path):
     output = json.loads(process.stdout)
     assert output['authority'] == 'offline-preview-only'
     assert output['finding_ids'][0]['id'] == fingerprint(result.findings[0])
+
+
+def test_unknown_failure_and_future_decision_do_not_turn_green(tmp_path):
+    ctx,result,_ = finding_review(tmp_path)
+    decision = propose(ctx,result,proposal('dismiss',[fingerprint(result.findings[0])]),'maintainer',now=NOW)
+    future = decision.model_copy(update={'created_at':(NOW+timedelta(hours=1)).isoformat()})
+    assert effects(ctx,result,{'10-1':future},now=NOW).state == 'failure'
+    unknown = result.model_copy(update={'findings':[],'criteria':[]})
+    assert effects(ctx,unknown,{},now=NOW).state == 'failure'

@@ -112,7 +112,8 @@ def propose(context,result,proposal,actor,*,now=None,proposed_registry=None,know
             bindings[target] = fingerprint(entry)
         else:
             previous = (known_decisions or {}).get(target)
-            if previous is None or previous.proposal.action == 'revoke':
+            if previous is None or previous.proposal.action == 'revoke' or (
+                previous.repository_id,previous.pr_number)!=(context.repository_id,context.pr_number):
                 raise ValueError('Revocation requires an existing authenticated decision ID')
             bindings[target] = fingerprint(previous)
     return OwnerDecision(proposal=proposal,actor=actor,repository_id=context.repository_id,pr_number=context.pr_number,
@@ -126,7 +127,7 @@ def effects(context,result,decisions,*,now=None):
     accepted,debts,deadlines = {},{},[]
     owners = {o.casefold() for o in context.profile.owners}
     eligible = {key:d for key,d in decisions.items() if d.repository_id==context.repository_id
-                and d.pr_number==context.pr_number and d.actor.casefold() in owners}
+                and d.pr_number==context.pr_number and d.actor.casefold() in owners and expiry(d.created_at)<=now}
     revoked = {target for d in eligible.values() if d.proposal.action=='revoke'
                for target,binding in d.bindings.items() if target in eligible and fingerprint(eligible[target])==binding}
     findings = {fingerprint(f):f for f in result.findings}

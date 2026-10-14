@@ -7,7 +7,8 @@ import sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from reviewer.artifacts import preview
 from reviewer.contracts import ReviewArtifact
-from reviewer.decisions import OwnerProposal, effects, fingerprint, propose
+from reviewer.debt import DebtRegistry
+from reviewer.decisions import OwnerDecision, OwnerProposal, effects, fingerprint, propose
 
 
 def load(path):
@@ -21,6 +22,8 @@ def main():
     parser.add_argument('--artifact',type=Path,required=True)
     parser.add_argument('--proposal',type=Path)
     parser.add_argument('--actor')
+    parser.add_argument('--proposed-registry',type=Path)
+    parser.add_argument('--known-decisions',type=Path)
     args = parser.parse_args()
     try:
         raw = load(args.artifact)
@@ -30,8 +33,10 @@ def main():
             path=f.evidence.path,blocking=f.blocking,message=f.message) for f in artifact.result.findings])
         if args.proposal:
             proposal = OwnerProposal.model_validate(load(args.proposal))
-            decision = propose(artifact.context,artifact.result,proposal,args.actor or '')
-            output.update(decision=decision.model_dump(),effects=effects(artifact.context,artifact.result,{'preview':decision}).model_dump())
+            registry = DebtRegistry.model_validate(load(args.proposed_registry)) if args.proposed_registry else None
+            known = {key:OwnerDecision.model_validate(value) for key,value in load(args.known_decisions).items()} if args.known_decisions else {}
+            decision = propose(artifact.context,artifact.result,proposal,args.actor or '',proposed_registry=registry,known_decisions=known)
+            output.update(decision=decision.model_dump(),effects=effects(artifact.context,artifact.result,{**known,'preview':decision}).model_dump())
         print(json.dumps(output,ensure_ascii=False,indent=2))
         return 0
     except (ValueError,KeyError,TypeError,OSError) as error:
