@@ -8,7 +8,7 @@ from .debt import load_registry
 from .artifacts import make_artifact, preview
 from .contracts import (SHA, DIGEST, STATUS_CONTEXT, SUMMARY_MARKER, RunContext, ReviewArtifact, digest, workflow_url)
 from .git import Repository
-from .github import GitHubError, UncertainSummaryPost, bot_authored, raw_body
+from .github import GitHubError, UncertainCommentPost, UncertainSummaryPost, bot_authored, raw_body
 from .models import Profile, ReviewResult
 from .report import safe_comment, text
 from .retrieval import code
@@ -81,9 +81,9 @@ def fail(api, context, reason='Review did not complete; rerun required'):
     set_status(api, context, 'error', reason)
 
 
-def upsert_summary(api, number, body, *, before_write):
+def upsert_comment(api, number, body, *, marker, before_write):
     comments = api.items(f'/issues/{number}/comments')
-    existing = [c for c in comments if bot_authored(c) and raw_body(c).startswith(SUMMARY_MARKER)]
+    existing = [c for c in comments if bot_authored(c) and raw_body(c).startswith(marker)]
     before_write()
     if existing:
         api.request('PATCH', f'/issues/comments/{existing[-1]["id"]}', {'body': body})
@@ -101,7 +101,13 @@ def upsert_summary(api, number, body, *, before_write):
                     break
                 if any(bot_authored(c) and raw_body(c) == body for c in recovered):
                     return
-            raise UncertainSummaryPost('Summary POST could not be confirmed; no blind retry; rerun required') from None
+            uncertain = UncertainSummaryPost if marker == SUMMARY_MARKER else UncertainCommentPost
+            raise uncertain('Comment POST could not be confirmed; no blind retry; rerun required') from None
+
+
+
+def upsert_summary(api, number, body, *, before_write):
+    return upsert_comment(api,number,body,marker=SUMMARY_MARKER,before_write=before_write)
 
 
 def _publish(api, context, rendered, raw, repository):
