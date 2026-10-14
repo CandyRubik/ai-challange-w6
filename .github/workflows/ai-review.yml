@@ -12,6 +12,15 @@ on:
         description: PR number to review from current main
         required: true
         type: string
+      reuse_run:
+        description: Optional completed AI run to reuse on the exact same snapshot (owner only)
+        required: false
+        type: string
+      reuse_attempt:
+        description: Source attempt (1–20)
+        required: false
+        default: '1'
+        type: string
 
 permissions:
   contents: read

@@ -19,6 +19,8 @@ permissions:
 
 env:
   PR_NUMBER: ${{ inputs.pr }}
+  SOURCE_REVIEW_RUN: ${{ github.event.inputs.reuse_run || '' }}
+  SOURCE_REVIEW_ATTEMPT: ${{ github.event.inputs.reuse_attempt || '1' }}
 
 jobs:
   prepare:
@@ -29,6 +31,7 @@ jobs:
       contents: read
       pull-requests: read
       statuses: write
+      actions: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -60,6 +63,7 @@ jobs:
       contents: read
       pull-requests: read
       statuses: read
+      actions: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
