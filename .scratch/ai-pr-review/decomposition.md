@@ -3,7 +3,7 @@
 - Дата: 2026-10-13.
 - Основание: [план и Q1–Q11](plan.md), [исследование GitHub](research.md).
 - Trunk: `main`, исследован на `f7a4d1e`.
-- Статус карты: согласована пользователем 2026-10-13; PR №4–11, №13–16, №18–29 слиты. Project-debt gate включён в CI; чистый artifact module готов. Все26paired offline inputs калибровочных сценариев сохранены.
+- Статус карты: согласована пользователем 2026-10-13; PR №4–11, №13–16, №18–30 слиты. Project-debt gate включён в CI; чистый artifact module готов. Все26paired offline inputs калибровочных сценариев сохранены.
 - Бюджет: целевой размер ≤600 reviewable lines (added + removed), максимум 1000 с отдельным обоснованием. Это оценки; при росте срез делится до открытия PR. Документация и большие входные fixtures не входят в кодовый бюджет; prompt/profile, ручные тесты и workflow считаются проверяемой логикой.
 
 ## Последовательность
@@ -34,8 +34,9 @@
 | 6b2 | Общий комментарий долга | Один обновляемый project-level comment отдельно от inline новых дефектов | Snapshot/lifecycle guards и восстановление uncertain POST | 213 фактически | 6b2a | merged |
 | 7a | Offline policy владельца | Preview scoped dismiss/waiver/resolve/revoke без CI authority | Оригинальный result/flags неизменны; pure validation | 402 фактически | 6b2 | merged |
 | 7b | Actions provenance adapter | Bounded collections и безопасный artifact JSON download для решений/analysis | Fixed GitHub origin, no auth to signed blob, exact member/digest/caps | 306 фактически | 7a | merged |
-| 7c | Проверенный источник и журнал | Read-only source CLI и replay reader по Actions job/artifact proof | actor+trigger_actor/current owners/main code; comments не authority | 411 фактически | 7b | in-progress |
-| 7d | Решения в check и отчёте | Применение/отзыв решений, same-snapshot analysis cache без LLM, owner notes | Неполный original анализ не обходится; journal перепроверяется | 400–600 | 7c | planned |
+| 7c | Проверенный источник и журнал | Read-only source CLI и replay reader по Actions job/artifact proof | actor+trigger_actor/current owners/main code; comments не authority | 411 фактически | 7b | merged |
+| 7d0 | Reviewable owner report | Offline Markdown показывает effective/original, remaining blockers и owner notes | Pure rendering, без CI authority или записи | 196 фактически | 7c | in-progress |
+| 7d | Решения в check и отчёте | Применение/отзыв решений, same-snapshot analysis cache без LLM, owner notes | Неполный original анализ не обходится; journal перепроверяется | 400–600 | 7d0 | planned |
 | 7e | Истечение решений | Zero-LLM sweeper инвалидирует success с истёкшим exception | Bounded20PR, отдельный error до rerun; schedule best effort | 200–400 | 7d | planned |
 | 5f | Опровержение advisory findings | Советующие semantic findings также проходят adversarial verification | Прежние4calls/96KB/4000tokens; raw historical counts сохранены | 100–300 | 7e | planned |
 | 8 | Интервью по проекту, после MVP | Skill собирает факты, проводит интервью и формирует профиль/preview prompt для утверждения | Отдельный onboarding; CI использует прежний валидированный артефакт | 350–550 | 5f | planned |
@@ -155,3 +156,5 @@
 - 2026-10-14: PR28 mergedf80e8dc,CIgreen/Standards0/Spec0,23policytests; AI38491992951 complete/success2calls68765/69101bytes(formatretry). Actionsadapter306code/38tests/live-read smoke verified; journal remains separate.
 
 - 2026-10-14: PR29 mergedd47f15e afterCIgreen/38tests/Standards0/Spec0/liveread; AI38492986348 complete/success1call69914bytes,findings0. 7c keepsworkflowactivationwithapplicationservice; readonlysource/journal reader411code28tests+live verified, race/mainanchor fixed. NoAtomicGETpromise.
+
+- 2026-10-14: PR30 merged3146bea, CIgreen/Standards0/Spec0/28tests+live source; AI38495921898 complete/success1call63822bytes,findings0. Owner presentation cut7d0 provides standalone offlineMarkdown196code/8tests, protectsmetadata and no-input-leak notes. Application/workflow remainsnext, sameapprovedscope.
