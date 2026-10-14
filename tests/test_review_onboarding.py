@@ -14,7 +14,7 @@ SCRIPT=Path(__file__).resolve().parents[1]/'scripts/onboard_review.py'
 def test_facts_use_committed_data_and_report_unsupported_paths_without_execution(tmp_path):
     root,base=repository(tmp_path)
     head=commit(root,{'requirements.txt':'fastapi==0.115\n--index-url https://PRIVATE_VALUE@invalid.test\n',
-        'src/server.py':'import fastapi\nraise RuntimeError("Never execute")\ndef handle(): pass\n',
+        'src/server.py':'import fastapi\nfrom .generation import prompt\nfrom .. import config\nraise RuntimeError("Never execute")\ndef handle(): pass\n',
         'app/Worker.kt':'class Worker\n',
         'private.env':'PRIVATE_VALUE=secret\n'})
     result=facts(root,head)
@@ -22,6 +22,7 @@ def test_facts_use_committed_data_and_report_unsupported_paths_without_execution
     assert 'src/server.py' in result['unsupported_review_paths']
     assert 'app/Worker.kt' in result['unsupported_review_paths']
     assert next(m for m in result['modules'] if m['path']=='src/server.py')['symbols'][0]['name']=='handle'
+    assert next(m for m in result['modules'] if m['path']=='src/server.py')['imports']==['..','.generation','fastapi']
     assert 'PRIVATE_VALUE' not in json.dumps(result) and result['authority']=='facts-only-not-project-rules'
     assert facts(root,head,file_limit=1)['omissions']
 
@@ -49,12 +50,15 @@ def test_unapproved_sources_are_visible_and_reserved_rule_is_rejected(tmp_path):
     with pytest.raises(ValueError,match='credential'): policy_template(root,base,credential)
 
 
-@pytest.mark.parametrize('kind',['canonical','symlink','hardlink'])
+@pytest.mark.parametrize('kind',['canonical','symlink','hardlink','directory-symlink'])
 def test_cli_cannot_overwrite_canonical_profile_through_draft_path(tmp_path,kind):
     root,base=repository(tmp_path)
     canonical=root/'.ai-review/profile.json';original=canonical.read_bytes()
     output=canonical
-    if kind!='canonical':
+    if kind=='directory-symlink':
+        (root/'.ai-review/drafts').symlink_to(root/'.ai-review',target_is_directory=True)
+        output=root/'.ai-review/drafts/profile.json'
+    elif kind!='canonical':
         output=root/'.ai-review/drafts/profile.json';output.parent.mkdir()
         if kind=='symlink': output.symlink_to(canonical)
         else: output.hardlink_to(canonical)

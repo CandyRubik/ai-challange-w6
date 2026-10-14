@@ -37,7 +37,7 @@ def facts(root,revision,*,file_limit=500,byte_limit=2_000_000):
             content=repo.read(sha,path)
             if path.endswith('.py'):
                 tree=ast.parse(content)
-                imports={n.module.split('.')[0] for n in ast.walk(tree) if isinstance(n,ast.ImportFrom) and n.module}
+                imports={'.'*n.level+(n.module or '').split('.')[0] for n in ast.walk(tree) if isinstance(n,ast.ImportFrom)}
                 imports|={a.name.split('.')[0] for n in ast.walk(tree) if isinstance(n,ast.Import) for a in n.names}
                 modules.append(dict(path=path,imports=sorted(imports),symbols=[dict(name=n.name,line=n.lineno) for n in tree.body if isinstance(n,(ast.ClassDef,ast.FunctionDef,ast.AsyncFunctionDef))]))
             entries=[]
