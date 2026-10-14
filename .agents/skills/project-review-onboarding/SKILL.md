@@ -6,8 +6,11 @@ description: Configure project-specific AI PR review by interviewing its enginee
 Produce a reviewable project profile and offline prompt template. Reuse decisions
 already approved in this conversation or project; interview only the remaining gaps.
 
-1. Read the existing `.ai-review/profile.json`, project standards and current approval
-   records. Run `python scripts/onboard_review.py facts --revision HEAD` from the repo.
+1. Locate [the helper](../../../scripts/onboard_review.py) in the reviewer checkout and
+   use its Python environment. Run the helper by absolute path with the target repo as
+   cwd; commands below use the path relative to this reviewer repository. Read any
+   existing `.ai-review/profile.json`, standards and current approval records. Run
+   `python scripts/onboard_review.py facts --revision HEAD`.
    Facts come from bounded committed Git data, not execution. Read the architecture
    docs behind the fact paths. Distinguish observed code, inferred conventions and
    requirements explicitly confirmed by the engineer. Existing patterns are examples,
