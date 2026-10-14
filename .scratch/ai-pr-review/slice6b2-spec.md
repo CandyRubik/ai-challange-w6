@@ -13,3 +13,7 @@
 - Same snapshot/generation and debt lifecycle guards around all writes, including
   force push and expiry during general-comment publication. No success on failure.
 - Unit contracts use committed temporary Git and mocked GitHub, no cloud calls.
+
+- Large complete details are capped once at54KB, reserving metadata/banner space.
+  Head/registry/original run link remain outside truncation. A retained oversized
+  legacy block fails before PATCH and remains untouched, with an error check.
