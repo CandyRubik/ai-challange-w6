@@ -34,7 +34,10 @@ def main():
         if args.proposal:
             proposal = OwnerProposal.model_validate(load(args.proposal))
             registry = DebtRegistry.model_validate(load(args.proposed_registry)) if args.proposed_registry else None
-            known = {key:OwnerDecision.model_validate(value) for key,value in load(args.known_decisions).items()} if args.known_decisions else {}
+            history = load(args.known_decisions) if args.known_decisions else {}
+            if not isinstance(history,dict) or len(history)>100:
+                raise ValueError('Offline decision history must be a bounded object')
+            known = {key:OwnerDecision.model_validate(value) for key,value in history.items()}
             decision = propose(artifact.context,artifact.result,proposal,args.actor or '',proposed_registry=registry,known_decisions=known)
             output.update(decision=decision.model_dump(),effects=effects(artifact.context,artifact.result,{**known,'preview':decision}).model_dump())
         print(json.dumps(output,ensure_ascii=False,indent=2))
