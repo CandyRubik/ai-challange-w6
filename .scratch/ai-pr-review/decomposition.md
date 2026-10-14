@@ -3,7 +3,7 @@
 - Дата: 2026-10-13.
 - Основание: [план и Q1–Q11](plan.md), [исследование GitHub](research.md).
 - Trunk: `main`, исследован на `f7a4d1e`.
-- Статус карты: согласована пользователем 2026-10-13; PR №4–11, №13–16, №18–22 слиты; quality gate и реальные summary/inline CI smoke пройдены. PR23/gate в draft: модель обоснованно запросила expiry dependency. Чистый модуль артефактов выделяется для уменьшения mandatory context.
+- Статус карты: согласована пользователем 2026-10-13; PR №4–11, №13–16, №18–22 и №24 слиты. PR23/gate в draft до точного function context; чистый artifact module готов. Все26paired offline inputs калибровочных сценариев сохранены.
 - Бюджет: целевой размер ≤600 reviewable lines (added + removed), максимум 1000 с отдельным обоснованием. Это оценки; при росте срез делится до открытия PR. Документация и большие входные fixtures не входят в кодовый бюджет; prompt/profile, ручные тесты и workflow считаются проверяемой логикой.
 
 ## Последовательность
@@ -27,8 +27,9 @@
 | 5e2 | Смежные mandatory spans | Уже выбранные смежные окна кода объединяются, evidence может пересекать старый seam | Точный текст/path/SHA/role; gaps, normative и optional не меняются | 60 фактически | 5e1 | merged |
 | 6a | Локальный реестр долга | CLI проверяет active debt на head отдельно от PR findings и предлагает статические candidates | Явный локальный opt-in, пустой реестр; текущий CI не включает долг | 422 фактически | 5e2 | merged |
 | 6b0 | Trusted debt context | Registry/hash из base закреплены в Actions context; старые raw artifacts читаются с прежним digest | Metadata/provenance этого среза; пустой реестр | 85 фактически | 6a | merged |
-| 6b0r | Чистый модуль артефактов | Data contract и pure validation отделены от GitHub writes; прежние импорты совместимы | Механический перенос без изменения AST/JSON/поведения | 255 фактически | 6b0 | in-progress |
-| 6b1 | Долг в CI gate | Покрытие и actual head валидируются, active долг влияет на check/summary | Registry из base, повторный expiry guard вокруг writes | 181 фактически | 6b0r | draft |
+| 6b0r | Чистый модуль артефактов | Data contract и pure validation отделены от GitHub writes; прежние импорты совместимы | Механический перенос без изменения AST/JSON/поведения | 255 фактически | 6b0 | merged |
+| 6b0s | Точные imported-function contexts | Полные определения функций с imports имеют приоритет над большими lexical windows | Статический поиск без исполнения; прежниеallowlist/corpus/budgets | 253 фактически | 6b0r | in-progress |
+| 6b1 | Долг в CI gate | Покрытие и actual head валидируются, active долг влияет на check/summary | Registry из base, повторный expiry guard вокруг writes | 181 фактически | 6b0s | draft |
 | 6b2 | Общий комментарий долга | Один обновляемый project-level comment отдельно от inline новых дефектов | Snapshot/lifecycle guards и восстановление uncertain POST | 100–250 | 6b1 | planned |
 | 7 | Решения владельца | Scoped dismiss/waiver/resolve с причиной и сроком переживают rerun и пересчитывают check | Trusted manual workflow, проверка владельца и provenance журнала | 400–600 | 6b2 | planned |
 | 8 | Интервью по проекту, после MVP | Skill собирает факты, проводит интервью и формирует профиль/preview prompt для утверждения | Отдельный onboarding; CI использует прежний валидированный артефакт | 350–550 | 7 | planned |

@@ -182,6 +182,13 @@ verdict/finding отклоняются. BUGS предназначен для д�
 Normative quotes и optional ranked chunks остаются отдельными. Code SHA и digest
 фактического входа закрепляют конкретную реализацию retrieval contract.
 
+Для module-level Python `from … import …` retrieval ищет полное определение
+используемой функции в существующем Git-модуле. Новые/изменённые runtime-вызовы
+имеют приоритет перед общими утилитами и test helpers; затем выбираются меньшие
+функции. Передаются необходимые imports либо небольшой exact prefix/module,
+без исполнения. Неоднозначные paths, shadowed names и неподдерживаемые формы
+остаются на lexical fallback. Прежние8optional/corpus/byte budgets сохраняются.
+
 Causal intervals вычисляются Git Myers, включая файлы с повторяющимися строками.
 Координаты поддерживают LF и CRLF. Одиночный CR и другие необработанные Unicode
 разделители строк дают явный error до модели; используйте escape-последовательности

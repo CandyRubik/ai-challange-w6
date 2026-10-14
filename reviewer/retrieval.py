@@ -7,6 +7,7 @@ import re
 import time
 
 from .models import ReviewResult
+from .dependencies import function_contexts, imported_functions
 from .git import line_edits
 from .semantic_models import Fragment
 
@@ -81,6 +82,8 @@ def windows(path, sha, text, role, spans=None):
 
 def retrieve(repository, result: ReviewResult, changes, limits) -> Retrieved:
     snapshot = result.snapshot
+    head_paths = repository.paths(snapshot.head_sha)
+    path_set, wanted, ranks, head_contents = set(head_paths), {}, {}, {}
     sources = {}
     for rule in result.policy:
         if not document(rule.source.path):
@@ -111,17 +114,40 @@ def retrieve(repository, result: ReviewResult, changes, limits) -> Retrieved:
                     "bytes": len(content.encode()), "sha256": hashlib.sha256(content.encode()).hexdigest()})
                 fragments.append(fragment(path, sha, metadata, role, 0, "file_metadata"))
         if change.status != "D":
-            fragments += windows(change.path, snapshot.head_sha, after, "head", [(op[3], op[4]) for op in edits])
+            selected = windows(change.path, snapshot.head_sha, after, "head", [(op[3], op[4]) for op in edits])
+            fragments += selected
+            head_contents[change.path] = after
+            spans = [(op[3],op[4]) for op in edits]
+            direct = imported_functions(change.path,after,spans,path_set,direct_only=True)
+            for path, names in imported_functions(change.path,after,spans,path_set).items():
+                wanted.setdefault(path,set()).update(names)
+                for name in names:
+                    key = (path,name)
+                    rank = (int(change.path.startswith('tests/')),int(name not in direct.get(path,set())))
+                    ranks[key] = min(ranks.get(key,rank),rank)
         if change.status != "A":
             fragments += windows(change.before_path, snapshot.merge_base_sha, before, "before", [(op[1], op[2]) for op in edits])
     required_count = len(fragments)
+    groups = []
+    def covered(ref, choices):
+        return any((f.path,f.sha,f.role,f.kind)==(ref.path,ref.sha,ref.role,ref.kind)
+            and f.line <= ref.line and ref.line+len(ref.text.splitlines()) <= f.line+len(f.text.splitlines()) for f in choices)
+    def dependencies(path, content):
+        for context in function_contexts(content,wanted.get(path,set())):
+            refs = [fragment(path,snapshot.head_sha,text,'head',line) for line,text in context.spans]
+            refs = [f for f in refs if not covered(f,fragments)]
+            if refs:
+                groups.append((ranks[(path,context.name)],context.priority,path,refs))
+    for path, content in head_contents.items():
+        if path in wanted:
+            dependencies(path,content)
     query = set(re.findall(r"\w{3,}", (" ".join(f.text + " " + f.path for f in fragments
                 if f.role != "normative" and f.kind == "text") + " ".join(c.path for c in changes)).casefold()))
     candidates, omissions, total_bytes, scanned = [], [], 0, 0
     deadline = time.monotonic() + 30
     changed = {change.path for change in changes}
     for sha, role in ((snapshot.head_sha, "head"), (snapshot.base_sha, "normative")):
-        for path in repository.paths(sha):
+        for path in head_paths if role == 'head' else repository.paths(sha):
             if path.startswith(".ai-review/"):
                 continue
             if not (code(path) if role == "head" else document(path)) or role == "head" and path in changed:
@@ -137,11 +163,21 @@ def retrieve(repository, result: ReviewResult, changes, limits) -> Retrieved:
             total_bytes += len(content.encode())
             if total_bytes > limits.corpus_bytes:
                 raise ContextUnavailable("Retrieval corpus byte budget exceeded")
+            if role == 'head' and path in wanted:
+                dependencies(path,content)
             for candidate in windows(path, sha, content, role):
                 tokens = set(re.findall(r"\w{3,}", (path + " " + candidate.text).casefold()))
                 score = len(tokens & query)
                 if score:
                     candidates.append((score, candidate))
     candidates.sort(key=lambda item: (-item[0], item[1].path, item[1].line))
-    fragments += [candidate for _, candidate in candidates[:8]]
+    priority = []
+    for _,_,path,refs in sorted(groups,key=lambda g:(g[0],g[1],g[2],g[3][-1].line)):
+        if len(priority) == 8:
+            break
+        refs = [f for f in refs if not covered(f,priority)]
+        if len(priority)+len(refs) <= 8:
+            priority += refs
+    lexical = [f for _,f in candidates if not covered(f,priority)]
+    fragments += priority + lexical[:8-len(priority)]
     return Retrieved(fragments, required_count, omissions, changed_lines, causes)
