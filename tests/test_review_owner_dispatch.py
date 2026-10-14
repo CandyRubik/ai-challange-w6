@@ -34,3 +34,7 @@ def test_apply_stage_uses_authenticated_source_without_model_or_secret(tmp_path,
     raw=json.loads((directory/'result.json').read_text())
     assert raw['result']['trace']['model_calls']==0 and raw['result']['status']=='failure'
     assert raw['result']['findings']==proofs.review['result']['findings']
+    comments = [c['body'] for c in api.items('/issues/4/comments')]
+    monkeypatch.setattr(sys,'argv',['github_review_owner.py','finalize'])
+    assert entry.main()==0 and statuses[0]['state']=='error'
+    assert [c['body'] for c in api.items('/issues/4/comments')]==comments
