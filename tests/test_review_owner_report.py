@@ -28,11 +28,11 @@ def test_effective_report_distinguishes_original_and_remaining_blockers(tmp_path
     d = accepted(ctx,result,'dismiss',[fingerprint(result.findings[0])],reason='@maintainer <script> accepted')
     rendered,plan = render(ctx,raw,{'20-1':d},now=NOW)
     assert rendered['state']=='failure' and len(plan.remaining_findings)==1
-    assert 'Effective check: **failure**' in rendered['body'] and 'Original analysis' in rendered['body']
+    assert 'Итог проверки: **failure**' in rendered['body'] and 'Исходный анализ' in rendered['body']
     assert '@maintainer' not in rendered['body'] and '<script>' not in rendered['body']
     assert json.dumps(raw,sort_keys=True)==original
     note = finding_note(result.findings,plan,{'20-1':d})
-    assert '20-1' in note and fingerprint(result.findings[0]) in note and 'preserved' in note
+    assert '20-1' in note and fingerprint(result.findings[0]) in note and 'сохранён' in note
 
 
 def test_expired_acceptance_is_not_presented_as_current(tmp_path):
@@ -41,7 +41,7 @@ def test_expired_acceptance_is_not_presented_as_current(tmp_path):
     d = accepted(ctx,result,'dismiss',[fingerprint(result.findings[0])])
     rendered,plan = render(ctx,raw,{'20-1':d},now=NOW+timedelta(days=1))
     assert rendered['state']=='failure' and not plan.accepted_findings
-    assert 'No applicable owner acceptance' in rendered['body']
+    assert 'Нет применимого принятия владельцем' in rendered['body']
     assert not finding_note(result.findings,plan,{'20-1':d})
 
 
@@ -51,8 +51,8 @@ def test_waived_debt_is_open_in_original_and_explicitly_accepted(tmp_path):
     d = accepted(ctx,result,'waive_debt',['state-storage'])
     rendered,plan = render(ctx,raw,{'20-1':d},now=NOW)
     assert rendered['state']=='success' and result.project_debt[0].verdict=='open'
-    assert 'original analysis: **failure**' in rendered['body']
-    assert 'Owner acceptance' in debt_note('state-storage',plan,{'20-1':d})
+    assert 'исходный анализ: **failure**' in rendered['body']
+    assert 'Принятие владельцем' in debt_note('state-storage',plan,{'20-1':d})
     assert result.status=='failure' and 'fixed' not in debt_note('state-storage',plan,{'20-1':d})
 
 
@@ -63,7 +63,7 @@ def test_large_journal_retains_head_and_all_artifact_links(tmp_path):
     records = {f'{i}-1':d for i in range(1,101)}
     body = journal(ctx,records,effects(ctx,result,records,now=NOW))
     assert len(body.encode())<=58_000 and ctx.head_sha in body and ctx.run_url in body
-    assert 'Presentation shortened' in body and '/runs/100/attempts/1' in body
+    assert 'Отчёт сокращён' in body and '/runs/100/attempts/1' in body
 
 
 def test_cli_markdown_is_explicitly_offline_preview(tmp_path):
@@ -81,7 +81,7 @@ def test_partial_original_without_decisions_still_renders_effective_error(tmp_pa
     criteria = [c.model_copy(update={'verdict':'inconclusive','reason':'Advisory source unavailable'}) if c.rule_id=='ARCH-STATE-PURE' else c for c in result.criteria]
     result = result.model_copy(update={'findings':[],'criteria':criteria,'status':'success','execution':'partial'})
     rendered,plan = render(ctx,make_artifact(ctx,result),{})
-    assert rendered['state']==plan.state=='error' and 'Effective check: **error**' in rendered['body']
+    assert rendered['state']==plan.state=='error' and 'Итог проверки: **error**' in rendered['body']
 
 
 def test_long_acceptances_do_not_hide_head_deadline_or_remaining_blocker(tmp_path):
@@ -92,7 +92,7 @@ def test_long_acceptances_do_not_hide_head_deadline_or_remaining_blocker(tmp_pat
     rendered,plan = render(ctx,raw,records,now=NOW)
     assert rendered['state']=='failure' and len(plan.remaining_findings)==1
     assert ctx.head_sha in rendered['body'] and ctx.run_url in rendered['body']
-    assert 'Remaining blocking findings: 1' in rendered['body'] and f'Exception deadline: {text(plan.expires_at)}' in rendered['body']
+    assert 'Осталось блокирующих замечаний: 1' in rendered['body'] and f'Срок исключения: {text(plan.expires_at)}' in rendered['body']
     assert len(rendered['body'].encode())<=58_000
 
 

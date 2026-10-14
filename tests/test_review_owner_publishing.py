@@ -42,7 +42,7 @@ def test_authenticated_acceptance_changes_only_effective_check_and_preserves_inl
     assert raw==original and raw['result']['status']=='failure' and raw['result']['findings'][0]['blocking']
     assert len(issues)==2 and len(inline)==1
     summary = next(c['body'] for c in issues if c['body'].startswith(SUMMARY_MARKER))
-    assert 'Effective check: **success**; original analysis: **failure**' in summary
+    assert 'Итог проверки: **success**; исходный анализ: **failure**' in summary
     assert '20-1' in inline[0]['body'] and '--- Original report ---' in inline[0]['body']
     assert raw['result']['findings'][0]['message'] in inline[0]['body']
     # A deleted display comment does not revoke the Actions artifact.
@@ -55,7 +55,7 @@ def test_expired_decision_restores_failure_and_removes_current_inline_acceptance
     api,ctx,raw,repo,proofs,issues,inline,pr = setup(tmp_path,monkeypatch)
     assert publish_owned(api,ctx,raw,repo,clock=lambda:NOW)=='success'
     assert publish_owned(api,ctx,raw,repo,clock=lambda:NOW+timedelta(days=1))=='failure'
-    assert 'Owner acceptance' not in inline[0]['body'] and raw['result']['findings'][0]['message'] in inline[0]['body']
+    assert 'Принятие владельцем' not in inline[0]['body'] and raw['result']['findings'][0]['message'] in inline[0]['body']
     assert len(issues)==2 and len(inline)==1
 
 
@@ -91,7 +91,7 @@ def test_owner_cannot_turn_incomplete_original_into_success(tmp_path,monkeypatch
     api,ctx,raw,repo,proofs,issues,inline,pr = setup(tmp_path,monkeypatch)
     result = ReviewResult.model_validate(raw['result']).model_copy(update={'status':'error','execution':'partial'})
     assert publish_owned(api,ctx,make_artifact(ctx,result),repo,clock=lambda:NOW)=='error'
-    assert not any('Owner acceptance' in c['body'] for c in inline)
+    assert not any('Принятие владельцем' in c['body'] for c in inline)
 
 
 def test_debt_acceptance_is_separate_from_retained_original_assessment(tmp_path,monkeypatch):
@@ -104,12 +104,12 @@ def test_debt_acceptance_is_separate_from_retained_original_assessment(tmp_path,
     start(api,ctx)
     assert publish_owned(api,ctx,raw,repo,clock=lambda:NOW)=='success'
     body = next(c['body'] for c in issues if c['body'].startswith(DEBT_MARKER))
-    assert 'open' in body and 'Owner acceptance' in body
+    assert 'open' in body and 'Принятие владельцем' in body
     original = body.partition(ASSESSMENT_MARKER)[2].partition(OWNER_DEBT_MARKER)[0].strip()
     partial = ReviewResult.model_validate(raw['result']).model_copy(update={'status':'error','execution':'partial'})
     assert publish_owned(api,ctx,make_artifact(ctx,partial),repo,clock=lambda:NOW)=='error'
     body = next(c['body'] for c in issues if c['body'].startswith(DEBT_MARKER))
-    assert body.partition(ASSESSMENT_MARKER)[2].strip()==original and 'Owner acceptance' not in body
+    assert body.partition(ASSESSMENT_MARKER)[2].strip()==original and 'Принятие владельцем' not in body
 
 
 def test_oversized_inline_note_keeps_original_and_uses_summary_fallback(tmp_path,monkeypatch):
@@ -174,8 +174,8 @@ def test_empty_authority_updates_existing_journal_and_keeps_it_unique(tmp_path,m
     proofs.rows = []
     assert publish_owned(api,ctx,raw,repo,clock=lambda:NOW)=='failure'
     journals = [c for c in issues if c['body'].startswith(OWNER_MARKER)]
-    assert len(journals)==1 and 'Effective check: **failure**' in journals[0]['body']
-    assert 'No current authenticated owner decisions.' in journals[0]['body']
+    assert len(journals)==1 and 'Итог проверки: **failure**' in journals[0]['body']
+    assert 'Нет актуальных подтверждённых решений владельца.' in journals[0]['body']
 
 
 def test_incomplete_original_is_error_even_with_empty_owner_journal(tmp_path,monkeypatch):
