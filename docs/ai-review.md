@@ -484,3 +484,30 @@ Owner может вручную запустить `AI Review` на main с `pr`
 Версия `review-v6` проверяет контраргументом все semantic findings, включая major/minor и should. Confirmed advisory остаётся неблокирующим; rejected удаляется, verification-inconclusive даёт explicit partial/error. Если в одном criterion есть confirmed и uncertain candidate, подтверждённый finding/violation сохраняется вместе с неполнотой. Статические findings модель не отменяет.
 
 Generation оценивает введённое/усугублённое влияние diff. Незатронутый механизм правила — pass/unaffected; отсутствие контекста для достижимого влияния — inconclusive. Перед verification actual transport budget сохраняет mandatory и cited fragments, снимая лишь прочие optional. Каждый verifier citation должен остаться во входе. Прежние4calls/96KB/4000tokens сохраняются. Free-form recommendations остаются advisory tips; точность всех фраз ими не доказывается. Исторические calibration counts и raw traces не переписаны; новых paid local eval нет.
+
+### Подключение проекта через интервью
+
+Репозиторный skill [project-review-onboarding](../.agents/skills/project-review-onboarding/SKILL.md)
+собирает факты из закреплённого Git-снимка, переиспользует утверждённые ответы и
+проводит интервью по оставшимся вопросам. Для каждого правила нужны источник,
+область действия, обоснование и примеры; новые блокирующие правила утверждает инженер.
+
+```bash
+.venv/bin/python scripts/onboard_review.py facts --revision HEAD
+.venv/bin/python scripts/onboard_review.py prompt --revision HEAD \
+  --profile .ai-review/profile.json
+```
+
+Помощник сохраняет только локальные `.ai-review/drafts/`, без запросов к модели.
+Preview содержит policy/schema template; реальный PR добавляет diff, критерии и
+code/docs context в пределах runtime budget. Для другого репозитория запускайте
+помощник по абсолютному пути с cwd целевого проекта и Python-окружением reviewer.
+Факты о стеке не становятся нормами автоматически. Статические примеры проверяют
+import boundaries; полный semantic review и gate проверяются отдельно в CI.
+
+На [синтетическом PR №40](https://github.com/CandyRubik/ai-challange-w6/pull/40)
+проверены принятие замечаний владельцем, автоматический повтор без модели,
+инвалидация зелёного check после истечения срока и отзыв решения.
+[Evidence](../.scratch/ai-pr-review/owner-lifecycle-smoke.json) сохраняет исходный
+failure и лимиты вызовов. Тестовый PR закрыт без merge; этот smoke не оценивает
+эксплуатационную точность модели.

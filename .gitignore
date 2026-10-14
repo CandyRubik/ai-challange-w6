@@ -3,6 +3,7 @@
 __pycache__/
 .pytest_cache/
 .review/
+.ai-review/drafts/
 *.py[cod]
 data/
 deploy/private.env

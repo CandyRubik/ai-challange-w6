@@ -1,0 +1,141 @@
+{
+  "pr": 40,
+  "base": "344ca54b9739f1b42e38857521c475ab17c2d46f",
+  "head": "85cbe6fe69a581d1af251ca1d502cdcc49eedf87",
+  "source_result_sha256": "aed91428c05727b671f6f59821b8606365055206eb8a727cc5a81864ca75a7d0",
+  "purpose": "Synthetic forbidden-import lifecycle smoke; never merged",
+  "stages": [
+    {
+      "stage": "v6-source",
+      "run_id": 38506837329,
+      "effective_check": "failure",
+      "original_status": "failure",
+      "execution": "complete",
+      "model_calls": 3,
+      "result_sha256": "aed91428c05727b671f6f59821b8606365055206eb8a727cc5a81864ca75a7d0",
+      "analysis_origin": null,
+      "owner_records": [],
+      "accepted_findings": 0,
+      "original_fields_equal": [
+        "status",
+        "execution",
+        "findings",
+        "criteria",
+        "policy",
+        "project_debt"
+      ]
+    },
+    {
+      "stage": "accepted",
+      "run_id": 38507264106,
+      "effective_check": "success",
+      "original_status": "failure",
+      "execution": "complete",
+      "model_calls": 0,
+      "result_sha256": "2a742278a876fde98db85628f0e8e224a58de767d0f087228ef68f0c81db2912",
+      "analysis_origin": "owner_journal",
+      "owner_records": [
+        "38507264106-1"
+      ],
+      "accepted_findings": 2,
+      "original_fields_equal": [
+        "status",
+        "execution",
+        "findings",
+        "criteria",
+        "policy",
+        "project_debt"
+      ]
+    },
+    {
+      "stage": "replay",
+      "run_id": 38507931114,
+      "effective_check": "failure",
+      "original_status": "failure",
+      "execution": "complete",
+      "model_calls": 0,
+      "result_sha256": "2a742278a876fde98db85628f0e8e224a58de767d0f087228ef68f0c81db2912",
+      "analysis_origin": "owner_journal",
+      "owner_records": [
+        "38507264106-1"
+      ],
+      "accepted_findings": 0,
+      "original_fields_equal": [
+        "status",
+        "execution",
+        "findings",
+        "criteria",
+        "policy",
+        "project_debt"
+      ]
+    },
+    {
+      "stage": "expiring-accepted",
+      "run_id": 38508276053,
+      "effective_check": "success",
+      "original_status": "failure",
+      "execution": "complete",
+      "model_calls": 0,
+      "result_sha256": "38e00851bbc8f5c4d4d0cdcb2eb1ce24c5fdc5a5b1102bb6551ab075f7914d0c",
+      "analysis_origin": "owner_journal",
+      "owner_records": [
+        "38507264106-1",
+        "38508276053-1"
+      ],
+      "accepted_findings": 2,
+      "original_fields_equal": [
+        "status",
+        "execution",
+        "findings",
+        "criteria",
+        "policy",
+        "project_debt"
+      ]
+    },
+    {
+      "stage": "revoked",
+      "run_id": 38509263504,
+      "effective_check": "failure",
+      "original_status": "failure",
+      "execution": "complete",
+      "model_calls": 0,
+      "result_sha256": "38e00851bbc8f5c4d4d0cdcb2eb1ce24c5fdc5a5b1102bb6551ab075f7914d0c",
+      "analysis_origin": "owner_journal",
+      "owner_records": [
+        "38507264106-1",
+        "38508276053-1",
+        "38509263504-1"
+      ],
+      "accepted_findings": 0,
+      "original_fields_equal": [
+        "status",
+        "execution",
+        "findings",
+        "criteria",
+        "policy",
+        "project_debt"
+      ]
+    }
+  ],
+  "expiry": {
+    "run_id": 38508992886,
+    "deadline": "2026-10-14T03:55:57.230279+00:00",
+    "status_created_at": "2026-10-14T03:59:09Z",
+    "previous_check": "success",
+    "check": "error",
+    "description": "Owner exception expired or no longer applies; rerun AI Review",
+    "model_calls": 0,
+    "log": "invalidated; model calls: 0"
+  },
+  "revoke": {
+    "record": "38509263504-1",
+    "target": "38508276053-1",
+    "target_already_expired": true
+  },
+  "closed_without_merge": true,
+  "limitations": [
+    "The static and semantic findings share one forbidden-import cause; this smoke is not a precision evaluation.",
+    "The live revoke targets an expired record; active-revoke behavior is covered by unit tests.",
+    "Expiry scheduling is best effort, not an instant GitHub status TTL."
+  ]
+}
