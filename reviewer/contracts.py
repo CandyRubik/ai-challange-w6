@@ -4,7 +4,7 @@ import json
 from typing import Annotated
 from pydantic import Field,model_validator
 from .debt import DebtRegistry
-from .decision_records import AnalysisSource
+from .decision_records import AnalysisSource,DecisionEnvelope
 from .models import Profile, Record, ReviewResult
 
 SHA = Annotated[str, Field(pattern=r'^[0-9a-f]{40}$')]
@@ -34,7 +34,9 @@ class RunContext(Record):
     run_attempt: int = Field(gt=0)
     external: bool
     analysis_source: AnalysisSource | None = None
-    analysis_origin: Annotated[str,Field(pattern=r'^manual$')] | None = None
+    analysis_origin: Annotated[str,Field(pattern=r'^(manual|owner_journal)$')] | None = None
+    owner_records: dict[str,DecisionEnvelope] = Field(default_factory=dict,max_length=100)
+    owner_sha256: DIGEST | None = None
 
     @model_validator(mode='after')
     def source_origin(self):
