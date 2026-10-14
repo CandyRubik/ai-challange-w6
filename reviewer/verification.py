@@ -17,6 +17,8 @@ Confirm only when the proposed counterargument fails and the causal defect is su
 Reject only with concrete evidence disproving the defect; use inconclusive when context is insufficient.
 Assess every candidate index exactly once. Cite unique exact quotes from current code (before for deletion)
 or related head code, not policy alone. Explain the strongest counterargument and its outcome.
+Write reasons and counterarguments in Russian. Preserve evidence quotes, code, paths,
+rule IDs and schema enum values exactly; never translate them.
 You cannot change scope, policy, severity, snapshots or publication settings."""
 
 
@@ -99,6 +101,6 @@ def verify(draft, findings, criteria, payload, model, limits, trace, evidence, r
     for criterion in criteria:
         pair = (criterion.path, criterion.rule_id)
         verdict = "violation" if pair in pairs else "inconclusive" if pair in uncertain else "pass"
-        updated.append(criterion.model_copy(update={"verdict": verdict, "reason": "Counterargument verification: " + verdict})
+        updated.append(criterion.model_copy(update={"verdict": verdict, "reason": "Проверка контраргументом: " + verdict})
                        if pair in assessed else criterion)
     return kept, updated
