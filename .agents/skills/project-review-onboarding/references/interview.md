@@ -15,7 +15,8 @@ Use existing answers first. Ask only decisions the repository cannot establish.
   mechanisms pass. Existing debt blocks only through confirmed active registry entries.
 - Workflow: diff/base/head evidence, report/inline/check, incomplete behavior, forks,
   quotas, source freshness, exception reason/scope/expiry and revocation. Explain that
-  private Free checks currently do not guarantee merge prevention and schedules have delays.
+  actual merge protection and quotas. This repo currently accepts failing checks without
+  guaranteed merge prevention; scheduled expiry can be delayed.
 - Counterexamples: a clean change that looks suspicious, an old defect, a rename/deletion,
   a missing caller, an unavailable provider and conflicting norms. Resolve decisions
   explicitly; do not turn a model hypothesis or existing implementation into a new must.

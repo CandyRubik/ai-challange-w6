@@ -45,6 +45,8 @@ def facts(root,revision,*,file_limit=500,byte_limit=2_000_000):
                 project=tomllib.loads(content).get('project',{})
                 entries=project.get('dependencies',[])
             elif manifest.startswith('requirements') and manifest.endswith('.txt'): entries=content.splitlines()
+            if not isinstance(entries,list) or any(not isinstance(entry,str) for entry in entries):
+                raise ValueError('Unsupported dependency declaration')
             for entry in entries:
                 match=re.fullmatch(r'([A-Za-z0-9][A-Za-z0-9_.-]*)(?:\[[^\]]+\])?(?:\s*[<>=!~].*)?',entry.split('#',1)[0].strip())
                 if match: dependencies.append(dict(name=match[1].lower(),path=path))
@@ -57,6 +59,8 @@ def facts(root,revision,*,file_limit=500,byte_limit=2_000_000):
 
 
 def policy_template(root,revision,profile_path):
+    if any(p.startswith('.env') or p in ('credentials.json','private.env') for p in profile_path.resolve().parts):
+        raise ValueError('A profile must not be read from a credential path')
     if profile_path.stat().st_size>512_000: raise ValueError('Draft profile exceeds size limit')
     profile=Profile.model_validate_json(profile_path.read_bytes())
     if any(r.id=='BUGS' for r in profile.rules): raise ValueError('BUGS is reserved for the runtime general check')

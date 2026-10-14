@@ -43,6 +43,8 @@ def test_unapproved_sources_are_visible_and_reserved_rule_is_rejected(tmp_path):
     assert policy_template(root,base,draft)['unresolved_normative_rules']==['ARCH-STATE-PURE']
     profile['rules'][0]['id']='BUGS';draft.write_text(json.dumps(profile))
     with pytest.raises(ValueError,match='reserved'): policy_template(root,base,draft)
+    credential=root/'private.env';credential.write_text(json.dumps(profile))
+    with pytest.raises(ValueError,match='credential'): policy_template(root,base,credential)
 
 
 @pytest.mark.parametrize('kind',['canonical','symlink','hardlink'])
