@@ -16,3 +16,8 @@
   (decision lifetime<=7d), complete bounded Actions collections. Comments ignored.
 - Missing/malformed/unproven artifacts fail closed with safe diagnostics. Source
   and decision archive bounds/auth separation come from the tested Actions adapter.
+- Repeat matching run/attempt snapshot and observed authorize-job proofs before
+  returning; observed changes require retry. Callers re-read before application and
+  serialize canonical writers perPR; Actions GET does not provide atomic snapshots.
+- Decision expiry cannot exceed official run.created_at+7days. Historical source
+  inspection anchors to validated main SHA from GitHub, never arbitrary local HEAD.

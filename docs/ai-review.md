@@ -297,6 +297,21 @@ History preview — bounded ID→record JSON, ID вида `run-attempt`; нов�
 подтверждённым решением GitHub и пока не влияет на автоматический check. Trusted
 workflow и проверяемый журнал подключаются следующими частями среза7.
 
+Источник CI можно прочитать отдельно с `GITHUB_TOKEN` (Actions read):
+
+```bash
+git fetch origin main
+.venv/bin/python scripts/inspect_review_source.py --repository CandyRubik/ai-challange-w6 \
+  --run 38491021152 --attempt 1 --pr 27
+```
+
+Inspect проверяет canonical workflow/analyze job, полный artifact/digest, профиль
+в Git и ancestry относительно `main` GitHub. Он не применяет решения и не пишет
+комментарии/status. Для применения источник должен совпадать с текущим PR snapshot.
+Journal reader использует успешный authorize-job каждой попытки, даже если apply
+или следующий rerun не удался. Повторная сверка списка и proofs обнаруживает изменения
+во время чтения; применение потребует нового чтения и общей perPR serialization.
+
 ### GitHub-адаптер
 
 `reviewer.contracts` хранит pinned context/artifact records, digest и run URL;
