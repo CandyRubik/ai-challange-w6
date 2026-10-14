@@ -97,13 +97,13 @@ def plan_inline(context, result, files, repository):
     for finding in sorted(result.findings, key=lambda f:(not f.blocking, {'critical':0,'major':1,'minor':2}[f.severity],f.evidence.path,f.evidence.line,f.rule_id)):
         target = anchor(context, finding, files, repository)
         if target is None:
-            fallback.append(f'{finding.evidence.path}: no verified changed-line anchor')
+            fallback.append(f'{finding.evidence.path}: нет подтверждённой привязки к изменённой строке')
             continue
         key = hashlib.sha256(json.dumps([context.head_sha,target],sort_keys=True).encode()).hexdigest()
         groups.setdefault(key, dict(key=key, anchor=target, findings=[]))['findings'].append(finding)
     selected = list(groups.values())[:LIMIT]
-    fallback += ['Inline comment limit reached'] * max(0,len(groups)-LIMIT)
+    fallback += ['Достигнут лимит inline-комментариев'] * max(0,len(groups)-LIMIT)
     for group in selected:
         group['marker'] = f'{PREFIX}{context.head_sha}:{group["key"]} -->'
-        group['body'] = safe_comment(group['marker']+'\n'+'\n\n'.join(finding_details(group['findings']))+f'\n\n[Workflow run]({context.run_url})')
+        group['body'] = safe_comment(group['marker']+'\n'+'\n\n'.join(finding_details(group['findings']))+f'\n\n[Запуск проверки]({context.run_url})')
     return selected, fallback
