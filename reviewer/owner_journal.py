@@ -76,7 +76,9 @@ def read_review(actions,repository,run_id,attempt,number,*,context=None):
                 raise GitHubError('Original main review run is invalid')
         else:
             raise GitHubError('Original review event is unsupported')
-        trusted = context.base_sha if context else repository.run('rev-parse','HEAD^{commit}').decode().strip()
+        trusted = context.base_sha if context else actions.api.request('GET','/branches/main')['commit']['sha']
+        if not isinstance(trusted,str) or not re.fullmatch(r'[0-9a-f]{40}',trusted):
+            raise GitHubError('Trusted main SHA is invalid')
         repository.run('merge-base','--is-ancestor',source.code_sha,trusted)
         if pinned_profile(repository,source.base_sha,source.profile_sha256)!=source.profile:
             raise GitHubError('Original review policy differs from trusted Git')

@@ -9,6 +9,8 @@ from reviewer.decisions import OwnerProposal,fingerprint,propose
 from reviewer.github import GitHubError
 from reviewer.git import Repository
 from reviewer.models import ReviewResult
+from reviewer import review
+from reviewer.publishing import make_artifact
 from reviewer.owner_journal import AUTHORIZE_JOB,OWNER_WORKFLOW,REVIEW_WORKFLOW,read_journal,read_review
 from reviewer.contracts import digest
 from tests.test_review_publishing import fixture
@@ -36,6 +38,7 @@ class Proofs:
 
     def request(self,method,path,**kwargs):
         if path=='': return dict(id=1)
+        if path=='/branches/main': return dict(commit=dict(sha=self.context.base_sha))
         return dict(id=101 if 'ai-review-owner' in path else 100,path=OWNER_WORKFLOW if 'ai-review-owner' in path else REVIEW_WORKFLOW)
 
     def run_attempt(self,run,attempt):
@@ -144,3 +147,14 @@ def test_unauthorized_job_and_other_pr_title_are_ignored_before_download(tmp_pat
 def test_attempt_overflow_fails_closed(tmp_path):
     actions,repo,ctx,raw = setup(tmp_path);actions.rows[0]['run_attempt'] = 21
     with pytest.raises(GitHubError): read_journal(actions,repo,ctx,now=NOW)
+
+
+def test_historical_source_uses_remote_main_instead_of_local_feature_head(tmp_path):
+    actions,repo,ctx,raw = setup(tmp_path)
+    result = review(repo.root,ctx.head_sha,ctx.head_sha)
+    local = ctx.model_copy(update={'base_sha':ctx.head_sha,'code_sha':ctx.head_sha,'merge_base_sha':ctx.head_sha,
+        'diff_sha256':result.snapshot.diff_sha256,'checks':{},'before_paths':{},'change_status':{}})
+    actions.review = make_artifact(local,result)
+    with pytest.raises(GitHubError): read_review(actions,repo,10,1,4)
+    actions.review = raw
+    assert read_review(actions,repo,10,1,4).result.status=='failure'
