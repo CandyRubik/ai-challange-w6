@@ -38,7 +38,7 @@
 | 7d0 | Reviewable owner report | Offline Markdown показывает effective/original, remaining blockers и owner notes | Pure rendering, без CI authority или записи | 196 фактически | 7c | merged |
 | 7d1 | Явный reuse анализа | Owner dispatch повторно использует complete source того же снимка без LLM | Канонический Actions proof, digest, actual debt; нет paid fallback | 194 фактически | 7d0 | merged |
 | 7d2a | Owner notes | Оригинал inline/debt сохраняется при добавлении или снятии owner note | Optional hooks не дают полномочий и не меняют verdict | 64 фактически | 7d1 | merged |
-| 7d2 | Сервис применения решений | Проверенный journal меняет effective check и оформляет owner notes | Journal/expiry guard вокруг writes; original неизменён | 249 фактически | 7d2a | in-progress |
+| 7d2 | Сервис применения решений | Проверенный journal меняет effective check и оформляет owner notes | Journal/expiry guard вокруг writes; original неизменён | 264 фактически | 7d2a | in-progress |
 | 7d3 | Owner workflow и replay | Trusted dispatch и автоматический same-snapshot cache; fresh owner retry | Apply готов до activation; actor/source/journal proof | 400–600 | 7d2 | planned |
 | 7e | Истечение решений | Zero-LLM sweeper инвалидирует success с истёкшим exception | Bounded20PR, отдельный error до rerun; schedule best effort | 200–400 | 7d3 | planned |
 | 5f | Опровержение advisory findings | Советующие semantic findings также проходят adversarial verification | Прежние4calls/96KB/4000tokens; raw historical counts сохранены | 100–300 | 7e | planned |
