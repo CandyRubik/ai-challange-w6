@@ -71,23 +71,23 @@ def publish_debt(api, context, result, *, guard, owner_notes=None):
     previous = raw_body(existing[-1]).partition(ASSESSMENT_MARKER)[2].partition(OWNER_DEBT_MARKER)[0].rstrip() if existing else ''
     if complete:
         details = normalize_comment('\n\n'.join([*debt_details(result)[1:], *[
-            f'Owner: {text(e.confirmed_by or "unconfirmed")}; {text(e.id)}: {text(e.reason or "candidate")}.'
+            f'Владелец: {text(e.confirmed_by or "не подтверждён")}; {text(e.id)}: {text(e.reason or "кандидат")}.'
             for e in context.debt_registry.entries]]))
         if len(details.encode()) > 54_000:
-            details = details.encode()[:54_000].decode('utf-8',errors='ignore')+'\n\nDetails shortened; full assessment is in the run artifact.'
-        assessment = '\n\n'.join([f'Assessed head: `{context.head_sha}`; registry: `{result.debt_sha256}`.',
-            f'[Assessment run]({context.run_url})', details])
+            details = details.encode()[:54_000].decode('utf-8',errors='ignore')+'\n\nДетали сокращены; полная оценка доступна в артефакте запуска.'
+        assessment = '\n\n'.join([f'Проверенный коммит: `{context.head_sha}`; реестр: `{result.debt_sha256}`.',
+            f'[Запуск оценки]({context.run_url})', details])
     else:
-        assessment = previous or 'No completed project debt assessment is available; inspect the run artifact.'
-    note = ('Owner-confirmed debt is assessed separately from new PR findings.' if complete else
-            'Review incomplete; the previous assessment below is retained and project debt is not cleared.')
-    body = normalize_comment('\n\n'.join([DEBT_MARKER, '# Project debt',
-        f'Current head: `{context.head_sha}`; review status: **{result.status}**.', note,
-        f'[Current workflow run]({context.run_url})', ASSESSMENT_MARKER, assessment.strip()]))
+        assessment = previous or 'Завершённой оценки долга проекта нет; проверьте артефакт запуска.'
+    note = ('Подтверждённый владельцем долг оценён отдельно от новых замечаний PR.' if complete else
+            'Ревью не завершено; ниже сохранена прежняя оценка, долг проекта не снят.')
+    body = normalize_comment('\n\n'.join([DEBT_MARKER, '# Долг проекта',
+        f'Текущий коммит: `{context.head_sha}`; результат ревью: **{result.status}**.', note,
+        f'[Текущий запуск проверки]({context.run_url})', ASSESSMENT_MARKER, assessment.strip()]))
     if owner_notes and complete:
         notes = normalize_comment('\n\n'.join(owner_notes.values()))
-        addition = '\n\n'+OWNER_DEBT_MARKER+'\n## Current owner decisions\n'+notes
-        body += addition if len((body+addition).encode())<=58_000 else '\n\n'+OWNER_DEBT_MARKER+'\nOwner decisions are in the current summary/journal.'
+        addition = '\n\n'+OWNER_DEBT_MARKER+'\n## Текущие решения владельца\n'+notes
+        body += addition if len((body+addition).encode())<=58_000 else '\n\n'+OWNER_DEBT_MARKER+'\nРешения владельца доступны в текущем отчёте и журнале.'
     if len(body.encode()) > 58_000:
         raise GitHubError('Project debt comment cannot preserve the prior assessment within the presentation budget')
     upsert_comment(api,context.pr_number,body,marker=DEBT_MARKER,before_write=guard)

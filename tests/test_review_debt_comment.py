@@ -22,7 +22,7 @@ def test_one_project_comment_updates_independently_of_summary_and_human_marker(t
     general = next(c for c in comments if c['id'] != 100 and c['body'].startswith(DEBT_MARKER))
     original_id = general['id']
     assert 'open' in general['body'] and ctx.head_sha in general['body']
-    assert 'Owner: maintainer' in general['body'] and len(comments) == 3
+    assert 'Владелец: maintainer' in general['body'] and len(comments) == 3
     assert publish(api,ctx,raw,repository=repo) == 'failure'
     assert len(comments) == 3 and general['id'] == original_id
     assert human['body'] == DEBT_MARKER+' human note'
@@ -44,7 +44,7 @@ def test_empty_registry_updates_prior_project_comment(tmp_path):
     start(api,ctx)
     assert publish(api,ctx,raw,repository=Repository(root)) == 'success'
     comments = api.items('/issues/4/comments')
-    assert 'contains no project debt entries' in comments[0]['body']
+    assert 'нет записей о долге проекта' in comments[0]['body']
     assert 'old debt' not in comments[0]['body']
 
 
@@ -58,7 +58,7 @@ def test_incomplete_review_retains_prior_assessment_without_nested_banners(tmp_p
     for _ in range(2):
         assert publish(api,ctx,incomplete,repository=repo) == 'error'
         assert comments[0]['body'].partition(ASSESSMENT_MARKER)[2].strip() == old
-        assert comments[0]['body'].count('Review incomplete;') == 1
+        assert comments[0]['body'].count('Ревью не завершено;') == 1
     assert len(comments) == 2 and statuses[0]['state'] == 'error'
 
 
@@ -133,7 +133,7 @@ def test_large_assessment_keeps_original_metadata_and_survives_incomplete_rerun(
     publish(api,ctx,raw,repository=repo)
     old = comments[0]['body'].partition(ASSESSMENT_MARKER)[2].strip()
     assert ctx.run_url in old and ctx.head_sha in old and ctx.debt_sha256 in old
-    assert 'Details shortened;' in old and len(comments[0]['body'].encode()) <= 58_000
+    assert 'Детали сокращены;' in old and len(comments[0]['body'].encode()) <= 58_000
     newer = ctx.model_copy(update={'run_attempt':2})
     result = ReviewResult.model_validate(raw['result']).model_copy(update={'status':'error','execution':'partial'})
     incomplete = make_artifact(newer,result)
