@@ -28,7 +28,7 @@
 | 6a | Локальный реестр долга | CLI проверяет active debt на head отдельно от PR findings и предлагает статические candidates | Явный локальный opt-in, пустой реестр; текущий CI не включает долг | 422 фактически | 5e2 | merged |
 | 6b0 | Trusted debt context | Registry/hash из base закреплены в Actions context; старые raw artifacts читаются с прежним digest | Metadata/provenance этого среза; пустой реестр | 85 фактически | 6a | merged |
 | 6b0r | Чистый модуль артефактов | Data contract и pure validation отделены от GitHub writes; прежние импорты совместимы | Механический перенос без изменения AST/JSON/поведения | 255 фактически | 6b0 | merged |
-| 6b0s | Точные imported-function contexts | Полные определения функций с imports имеют приоритет над большими lexical windows | Статический поиск без исполнения; прежниеallowlist/corpus/budgets | 189 фактически | 6b0r | in-progress |
+| 6b0s | Точные imported-function contexts | Полные определения функций с imports имеют приоритет над большими lexical windows | Статический поиск без исполнения; прежниеallowlist/corpus/budgets | 253 фактически | 6b0r | in-progress |
 | 6b1 | Долг в CI gate | Покрытие и actual head валидируются, active долг влияет на check/summary | Registry из base, повторный expiry guard вокруг writes | 181 фактически | 6b0s | draft |
 | 6b2 | Общий комментарий долга | Один обновляемый project-level comment отдельно от inline новых дефектов | Snapshot/lifecycle guards и восстановление uncertain POST | 100–250 | 6b1 | planned |
 | 7 | Решения владельца | Scoped dismiss/waiver/resolve с причиной и сроком переживают rerun и пересчитывают check | Trusted manual workflow, проверка владельца и provenance журнала | 400–600 | 6b2 | planned |
