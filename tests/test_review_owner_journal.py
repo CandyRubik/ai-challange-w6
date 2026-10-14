@@ -19,7 +19,7 @@ NOW = datetime(2030,1,1,tzinfo=timezone.utc)
 
 
 class Proofs:
-    def __init__(self,ctx,raw):
+    def __init__(self,ctx,raw,decision=None):
         self.context,self.review = ctx,raw
         self.owner_run = dict(id=20,run_attempt=1,repository=dict(id=1),workflow_id=101,path=OWNER_WORKFLOW,
             head_sha=ctx.base_sha,head_branch='main',head_repository=dict(id=1),event='workflow_dispatch',
@@ -27,9 +27,10 @@ class Proofs:
         self.review_run = {**self.owner_run,'id':10,'workflow_id':100,'path':REVIEW_WORKFLOW,
                            'head_sha':ctx.head_sha,'head_branch':'feature','event':'pull_request_target'}
         self.rows = [dict(id=20,run_attempt=1,display_title='Review decision PR #4')]
-        proposal = OwnerProposal(action='dismiss',targets=[fingerprint(ReviewResult.model_validate(raw['result']).findings[0])],
-            reason='Confirmed false positive',expires_at=(NOW+timedelta(days=1)).isoformat())
-        decision = propose(ctx,ReviewResult.model_validate(raw['result']),proposal,'maintainer',now=NOW)
+        if decision is None:
+            proposal = OwnerProposal(action='dismiss',targets=[fingerprint(ReviewResult.model_validate(raw['result']).findings[0])],
+                reason='Confirmed false positive',expires_at=(NOW+timedelta(days=1)).isoformat())
+            decision = propose(ctx,ReviewResult.model_validate(raw['result']),proposal,'maintainer',now=NOW)
         self.envelope = DecisionEnvelope(schema_version=1,run_id=20,run_attempt=1,code_sha=ctx.base_sha,
             triggering_actor='maintainer',decision=decision,source=AnalysisSource(run_id=10,run_attempt=1,result_sha256=raw['result_sha256'])).model_dump()
         self.jobs = {(10,1,f'review (4) / analyze'):True,(20,1,AUTHORIZE_JOB):True}

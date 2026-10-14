@@ -110,22 +110,24 @@ def upsert_summary(api, number, body, *, before_write):
     return upsert_comment(api,number,body,marker=SUMMARY_MARKER,before_write=before_write)
 
 
-def _publish(api, context, rendered, raw, repository):
+def _publish(api, context, rendered, raw, repository, *, owner_guard=None, finding_note=None, debt_notes=None):
     from .debt_publishing import validate_debt
     result = ReviewResult.model_validate(raw['result'])
     def guard():
         assert_current(api, context)
+        if owner_guard:
+            owner_guard()
         try:
             validate_debt(context, result)
         except ValueError as error:
             raise StaleReview('Debt lifecycle changed during publication; rerun required') from error
     guard()
     from .debt_publishing import publish_debt
-    publish_debt(api,context,result,guard=guard)
+    publish_debt(api,context,result,guard=guard,owner_notes=debt_notes)
     if repository is not None:
         from .inline_publishing import publish_inline
         fallback = publish_inline(api,context,ReviewResult.model_validate(raw['result']),repository,
-                                  guard=guard)
+                                  guard=guard,owner_note=finding_note)
         if fallback:
             rendered = {**rendered,'body':safe_comment(rendered['body']+'\n\n## Inline coverage\n'+
                 '\n'.join('- '+text(reason) for reason in fallback))}
