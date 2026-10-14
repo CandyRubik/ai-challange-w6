@@ -3,7 +3,7 @@
 - Дата: 2026-10-13.
 - Основание: [план и Q1–Q11](plan.md), [исследование GitHub](research.md).
 - Trunk: `main`, исследован на `f7a4d1e`.
-- Статус карты: согласована пользователем 2026-10-13; PR №4–11, №13–16, №18–27 слиты. Project-debt gate включён в CI; чистый artifact module готов. Все26paired offline inputs калибровочных сценариев сохранены.
+- Статус карты: согласована пользователем 2026-10-13; PR №4–11, №13–16, №18–28 слиты. Project-debt gate включён в CI; чистый artifact module готов. Все26paired offline inputs калибровочных сценариев сохранены.
 - Бюджет: целевой размер ≤600 reviewable lines (added + removed), максимум 1000 с отдельным обоснованием. Это оценки; при росте срез делится до открытия PR. Документация и большие входные fixtures не входят в кодовый бюджет; prompt/profile, ручные тесты и workflow считаются проверяемой логикой.
 
 ## Последовательность
@@ -32,8 +32,8 @@
 | 6b1 | Долг в CI gate | Покрытие и actual head валидируются, active долг влияет на check/summary | Registry из base, повторный expiry guard вокруг writes | 181 фактически | 6b0s | merged |
 | 6b2a | Общий upsert комментариев | Recoverable POST/owned marker общий для summary и будущего debt | Прежний summary API и status-only finalizer сохранены | 53 фактически | 6b1 | merged |
 | 6b2 | Общий комментарий долга | Один обновляемый project-level comment отдельно от inline новых дефектов | Snapshot/lifecycle guards и восстановление uncertain POST | 213 фактически | 6b2a | merged |
-| 7a | Offline policy владельца | Preview scoped dismiss/waiver/resolve/revoke без CI authority | Оригинальный result/flags неизменны; pure validation | 402 фактически | 6b2 | in-progress |
-| 7b | Actions provenance adapter | Bounded collections и безопасный artifact JSON download для решений/analysis | Fixed GitHub origin, no auth to signed blob, exact member/digest/caps | 250–450 | 7a | planned |
+| 7a | Offline policy владельца | Preview scoped dismiss/waiver/resolve/revoke без CI authority | Оригинальный result/flags неизменны; pure validation | 402 фактически | 6b2 | merged |
+| 7b | Actions provenance adapter | Bounded collections и безопасный artifact JSON download для решений/analysis | Fixed GitHub origin, no auth to signed blob, exact member/digest/caps | 306 фактически | 7a | in-progress |
 | 7c | Authenticated owner journal | Trusted manual authorize workflow и replay по Actions job/artifact proof | actor+trigger_actor/current owners/main code; comments не authority | 400–600 | 7b | planned |
 | 7d | Решения в check и отчёте | Применение/отзыв решений, same-snapshot analysis cache без LLM, owner notes | Неполный original анализ не обходится; journal перепроверяется | 400–600 | 7c | planned |
 | 7e | Истечение решений | Zero-LLM sweeper инвалидирует success с истёкшим exception | Bounded20PR, отдельный error до rerun; schedule best effort | 200–400 | 7d | planned |
@@ -151,3 +151,5 @@
 - 2026-10-14: PR26 merged after CIgreen,Standards0/Spec0,43localchecks; AI38490129020 complete/success,1call69279bytes,findings0. General report213code/36checks fits95741bytes offline. Full self-review0open after one-time54KB details cap, originalmetadata outside truncation and preserved oversizedlegacy failure.
 
 - 2026-10-14: PR27 merged e9bf732 after CI560green and Standards0/Spec0. Linux-only oversized pytestID fixed with explicitascii/unicode IDs, runtime unchanged. Final AI38491021152 complete/success1call95855bytes. Owner work remains same approved scope; split policy/provenance/journal/apply/expiry to stay review-sized. Actual advisory false BUGS from PR25/27 require same bounded counterargument stage before onboarding; no new blocking rules or model budget.
+
+- 2026-10-14: PR28 mergedf80e8dc,CIgreen/Standards0/Spec0,23policytests; AI38491992951 complete/success2calls68765/69101bytes(formatretry). Actionsadapter306code/38tests/live-read smoke verified; journal remains separate.
