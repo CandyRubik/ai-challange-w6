@@ -29,7 +29,7 @@ def main():
         inputs = event['inputs'];pr=number(inputs.get('pr'))
         api = GitHub(env['GITHUB_REPOSITORY'],env['GITHUB_TOKEN'])
         if args.stage=='finalize':
-            mark_unfinished(api,pr,env,'Owner decision pipeline did not complete; inspect the run and retry')
+            mark_unfinished(api,pr,env,'Owner decision pipeline did not complete; inspect the run and retry',summary=False)
             return 0
         if args.stage=='authorize':
             envelope = authorize(api,Path.cwd(),env,inputs,fetcher=fetch_head)
