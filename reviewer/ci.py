@@ -137,7 +137,7 @@ def analyze_snapshot(api, root, context, env, *, model_factory=None, fetcher=fet
     except (ValueError, RuntimeError):
         result = review(root, context.base_sha, context.head_sha, project_debt=True)
         result = result.model_copy(update={'status':'error', 'execution':'failed',
-            'limitations':[*result.limitations, 'Review model is not configured; no cloud request sent']})
+            'limitations':[*result.limitations, 'Модель ревью не настроена; облачный запрос не отправлен']})
     else:
         result = review(root, context.base_sha, context.head_sha, model=model, limits=CI_LIMITS, project_debt=True)
     return make_artifact(context, result)
@@ -154,15 +154,15 @@ def write_state(api, head, env, state, reason):
     return True
 
 
-def mark_unfinished(api, number, env, reason='Review did not complete; inspect workflow and rerun', *, summary=True):
+def mark_unfinished(api, number, env, reason='Ревью не завершено; проверьте workflow и повторите запуск', *, summary=True):
     head = api.pull(number)['head']['sha']
     _, run_id, attempt = identity(env)
     current = generation(api, head)
     if current[0] == run_id and current[1] <= attempt:
-        write_state(api, head, env, 'error', 'Review did not complete; inspect workflow and rerun')
+        write_state(api, head, env, 'error', 'Ревью не завершено; проверьте workflow и повторите запуск')
         if summary and generation(api, head) == (run_id, attempt):
             url = workflow_url(api.repository, run_id, attempt)
-            body = f'{SUMMARY_MARKER}\n# Project review\nStatus: **error**; execution: **failed**.\n\n{text(reason).replace("@", "@\u200b")}\n\n[Workflow run]({url})'
+            body = f'{SUMMARY_MARKER}\n# Ревью проекта\nРезультат: **error**; выполнение: **failed**.\n\nДиагностика: {text(reason).replace("@", "@\u200b")}\n\n[Запуск проверки]({url})'
             def still_ours():
                 if api.pull(number)['head']['sha'] != head or generation(api, head) != (run_id, attempt):
                     raise StaleReview('PR or workflow generation changed before error publication')
@@ -187,7 +187,7 @@ def select_prs(api, event, env, *, capacity=20):
     overflow = len(rows) > capacity
     for pr in rows:
         write_state(api, pr['head']['sha'], env, 'error' if overflow else 'pending',
-                    'Review queue capacity exceeded; manual retry required' if overflow else 'AI review queued')
+                    'Очередь ревью переполнена; нужен ручной повтор' if overflow else 'AI-ревью в очереди')
     if overflow:
         raise ValueError('Review queue capacity exceeded; no paid analysis started')
     return [pr['number'] for pr in rows]
