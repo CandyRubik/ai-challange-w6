@@ -8,6 +8,7 @@ from reviewer.decisions import OwnerProposal,effects,fingerprint,propose
 from reviewer.models import ReviewResult
 from reviewer.owner_report import debt_note,finding_note,journal,render
 from reviewer.publishing import make_artifact
+from reviewer.report import text
 from tests.test_reviewer import PROFILE
 from tests.review_debt_fixtures import setup
 from tests.test_review_publishing import fixture
@@ -91,7 +92,7 @@ def test_long_acceptances_do_not_hide_head_deadline_or_remaining_blocker(tmp_pat
     rendered,plan = render(ctx,raw,records,now=NOW)
     assert rendered['state']=='failure' and len(plan.remaining_findings)==1
     assert ctx.head_sha in rendered['body'] and ctx.run_url in rendered['body']
-    assert 'Remaining blocking findings: 1' in rendered['body'] and plan.expires_at in rendered['body']
+    assert 'Remaining blocking findings: 1' in rendered['body'] and f'Exception deadline: {text(plan.expires_at)}' in rendered['body']
     assert len(rendered['body'].encode())<=58_000
 
 
