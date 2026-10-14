@@ -3,7 +3,7 @@
 - Дата: 2026-10-13.
 - Основание: [план и Q1–Q11](plan.md), [исследование GitHub](research.md).
 - Trunk: `main`, исследован на `f7a4d1e`.
-- Статус карты: согласована пользователем 2026-10-13; PR №4–11, №13–16, №18–22 и №24 слиты. PR23/gate в draft до точного function context; чистый artifact module готов. Все26paired offline inputs калибровочных сценариев сохранены.
+- Статус карты: согласована пользователем 2026-10-13; PR №4–11, №13–16, №18–22 и №24–25 слиты. PR23/gate восстановлен с точным function context; чистый artifact module готов. Все26paired offline inputs калибровочных сценариев сохранены.
 - Бюджет: целевой размер ≤600 reviewable lines (added + removed), максимум 1000 с отдельным обоснованием. Это оценки; при росте срез делится до открытия PR. Документация и большие входные fixtures не входят в кодовый бюджет; prompt/profile, ручные тесты и workflow считаются проверяемой логикой.
 
 ## Последовательность
@@ -28,7 +28,7 @@
 | 6a | Локальный реестр долга | CLI проверяет active debt на head отдельно от PR findings и предлагает статические candidates | Явный локальный opt-in, пустой реестр; текущий CI не включает долг | 422 фактически | 5e2 | merged |
 | 6b0 | Trusted debt context | Registry/hash из base закреплены в Actions context; старые raw artifacts читаются с прежним digest | Metadata/provenance этого среза; пустой реестр | 85 фактически | 6a | merged |
 | 6b0r | Чистый модуль артефактов | Data contract и pure validation отделены от GitHub writes; прежние импорты совместимы | Механический перенос без изменения AST/JSON/поведения | 255 фактически | 6b0 | merged |
-| 6b0s | Точные imported-function contexts | Полные определения функций с imports имеют приоритет над большими lexical windows | Статический поиск без исполнения; прежниеallowlist/corpus/budgets | 253 фактически | 6b0r | in-progress |
+| 6b0s | Точные imported-function contexts | Полные определения функций с imports имеют приоритет над большими lexical windows | Статический поиск без исполнения; прежниеallowlist/corpus/budgets | 253 фактически | 6b0r | merged |
 | 6b1 | Долг в CI gate | Покрытие и actual head валидируются, active долг влияет на check/summary | Registry из base, повторный expiry guard вокруг writes | 181 фактически | 6b0s | draft |
 | 6b2 | Общий комментарий долга | Один обновляемый project-level comment отдельно от inline новых дефектов | Snapshot/lifecycle guards и восстановление uncertain POST | 100–250 | 6b1 | planned |
 | 7 | Решения владельца | Scoped dismiss/waiver/resolve с причиной и сроком переживают rerun и пересчитывают check | Trusted manual workflow, проверка владельца и provenance журнала | 400–600 | 6b2 | planned |
@@ -137,3 +137,5 @@
 - 2026-10-13: PR №11 слит (CIgreen,413local, обе оси0open). Пользователь явно разрешил W5→Actions Secret DEEPSEEK_API_KEY и recurring CI:4requests/PR run,96KB/4000tokens,20PRqueue. Secret настроен после merge, без W6 file/argv/log copy. Bootstrap main run38454906674 success. Temporary PR12: failure/complete для forbidden import(2calls), success/complete для pure helper(1call); тот же summary6153557233 обновлён. PR закрыт без merge, smoke branch удалён. [Evidence](ci-smoke.json). Дополнительных calibration runs нет, прежний бюджет79/104 не менялся.
 
 - 2026-10-14: полный inline self-review0open и455localtests, но CIдал2InvalidModelResponseпри92KB. Разделён общий formatter5c0 и inline5c, чтобы уменьшить mandatory context без ослабления validation/caps. Полныйdiffсохранён, PR15сужендоformatter.
+
+- 2026-10-14: PR25 merged b372fc9 after CIgreen and Standards0/Spec0. AI38489005837 complete/success,1call94140bytes. Full local529 +final dependency21. Gate restored after module split:181code,76checks,95075wire offline, expiry present. No additional paid calibration.
