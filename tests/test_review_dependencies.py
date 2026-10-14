@@ -1,3 +1,5 @@
+import pytest
+
 from reviewer import review
 from reviewer.dependencies import function_contexts, imported_functions
 from reviewer.git import Repository
@@ -35,6 +37,44 @@ def test_definition_preserves_decorators_and_exact_large_function():
     assert function_contexts(text,{'unknown'}) == []
 
 
+@pytest.mark.parametrize('rebind',[
+    'from app.other import *',
+    'import app.other as work',
+    'from app.other import work',
+    'def local():\n    from app.other import work',
+    'try:\n    pass\nexcept Exception as work:\n    pass',
+    'match value:\n    case {"work": work}:\n        pass',
+    'match value:\n    case {**work}:\n        pass',
+])
+def test_rebound_import_names_fall_back_to_lexical(rebind):
+    text = 'from app.helpers import work\n'+rebind+'\ndef changed():\n    return work()\n'
+    line = len(text.splitlines())-1
+    assert imported_functions('app/check.py',text,[(line,line+1)],{'app/helpers.py','app/other.py'}) == {}
+
+
+@pytest.mark.parametrize('definition',[
+    '@contextmanager\ndef work(contextmanager):\n    yield 1\n',
+    'def work(contextmanager=contextmanager):\n    return contextmanager\n',
+    'def work(contextmanager: contextmanager) -> contextmanager:\n    return contextmanager\n',
+])
+def test_definition_scope_import_survives_same_named_parameter(definition):
+    text = 'from contextlib import contextmanager\n'+''.join(f'PAD_{i} = '+repr('x'*100)+'\n' for i in range(35))+definition
+    context, = function_contexts(text,{'work'})
+    assert context.spans[0] == (1,'from contextlib import contextmanager\n')
+    assert context.spans[1] == (37,definition)
+
+
+@pytest.mark.parametrize('rebind',[
+    'work = lambda: "new"\n',
+    'def work():\n    return "new"\n',
+    'from other import work\n',
+    'from other import *\n',
+])
+def test_rebound_export_does_not_prioritize_obsolete_definition(rebind):
+    text = 'def work():\n    return "old"\n'+rebind
+    assert function_contexts(text,{'work'}) == []
+
+
 def test_priority_dependency_is_small_exact_and_never_executed(tmp_path):
     root, _ = repository(tmp_path)
     sentinel = root/'should-not-exist'
@@ -67,3 +107,4 @@ def test_import_candidate_outside_allowlist_is_not_read(tmp_path,monkeypatch):
     _,changes = git.snapshot(base,head)
     context = retrieve(git,result,changes,Limits())
     assert not any(f.path == 'secrets.py' for f in context.fragments)
+

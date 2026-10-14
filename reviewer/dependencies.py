@@ -1,5 +1,6 @@
 """Conservative import candidates; inspect Python syntax without importing code."""
 import ast
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 
@@ -11,6 +12,17 @@ class FunctionContext:
     spans: list[tuple[int, str]]
 
 
+def _bindings(nodes):
+    names = [n.arg for n in nodes if isinstance(n,ast.arg)] + [
+        n.id for n in nodes if isinstance(n,ast.Name) and isinstance(n.ctx,ast.Store)] + [
+        n.name for n in nodes if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef,ast.ClassDef,
+                                             ast.ExceptHandler,ast.MatchAs,ast.MatchStar))] + [
+        n.rest for n in nodes if isinstance(n,ast.MatchMapping)] + [
+        a.asname or (a.name.split('.')[0] if isinstance(n,ast.Import) else a.name)
+        for n in nodes if isinstance(n,(ast.Import,ast.ImportFrom)) for a in n.names]
+    return Counter(name for name in names if name)
+
+
 def imported_functions(path, text, spans, paths, *, direct_only=False):
     if not path.endswith('.py'):
         return {}
@@ -18,6 +30,10 @@ def imported_functions(path, text, spans, paths, *, direct_only=False):
         tree = ast.parse(text)
     except (SyntaxError, RecursionError):
         return {}
+    nodes = list(ast.walk(tree))
+    if any(isinstance(n,ast.ImportFrom) and any(a.name == '*' for a in n.names) for n in nodes):
+        return {}
+    bindings = _bindings(nodes)
     edits = [(start,max(stop,start+1)) for start,stop in spans]
     ranges = list(edits)
     for node in ([] if direct_only else ast.walk(tree)):
@@ -25,9 +41,7 @@ def imported_functions(path, text, spans, paths, *, direct_only=False):
             first = min([node.lineno,*[d.lineno for d in node.decorator_list]])-1
             if any(start < node.end_lineno and stop > first for start,stop in ranges):
                 ranges.append((first,node.end_lineno))
-    shadowed = {n.arg for n in ast.walk(tree) if isinstance(n,ast.arg)} | {
-        n.id for n in ast.walk(tree) if isinstance(n,ast.Name) and isinstance(n.ctx,ast.Store)} | {
-        n.name for n in ast.walk(tree) if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef,ast.ClassDef))}
+    shadowed = {name for name,count in bindings.items() if count != 1}
     all_called = {n.func.id for n in ast.walk(tree) if isinstance(n,ast.Call) and isinstance(n.func,ast.Name)} - shadowed
     called = {n.func.id for n in ast.walk(tree) if isinstance(n,ast.Call) and isinstance(n.func,ast.Name)
               and any(start < n.end_lineno and stop > n.lineno-1 for start,stop in ranges)} - shadowed
@@ -50,10 +64,15 @@ def function_contexts(text, names):
         tree = ast.parse(text)
     except (SyntaxError, RecursionError):
         return []
+    if any(isinstance(n,ast.ImportFrom) and any(a.name == '*' for a in n.names) for n in ast.walk(tree)):
+        return []
     lines, contexts, file_bytes = text.splitlines(keepends=True), [], len(text.encode())
     imports = [n for n in tree.body if isinstance(n,(ast.Import,ast.ImportFrom))]
+    bindings = _bindings(list(ast.walk(tree)))
     for node in tree.body:
         if not isinstance(node,(ast.FunctionDef,ast.AsyncFunctionDef)) or node.name not in names:
+            continue
+        if bindings[node.name] != 1:
             continue
         first = min([node.lineno,*[d.lineno for d in node.decorator_list]])
         body = ''.join(lines[first-1:node.end_lineno])
@@ -68,7 +87,9 @@ def function_contexts(text, names):
         used = {n.id for n in ast.walk(node) if isinstance(n,ast.Name) and isinstance(n.ctx,ast.Load)}
         bound = {n.arg for n in ast.walk(node) if isinstance(n,ast.arg)} | {
             n.id for n in ast.walk(node) if isinstance(n,ast.Name) and isinstance(n.ctx,ast.Store)}
-        needed = [n for n in imports if any((a.asname or a.name.split('.')[0]) in used-bound for a in n.names)]
+        definition_used = {n.id for expression in [*node.decorator_list,node.args,node.returns] if expression
+                           for n in ast.walk(expression) if isinstance(n,ast.Name) and isinstance(n.ctx,ast.Load)}
+        needed = [n for n in imports if any((a.asname or a.name.split('.')[0]) in (used-bound)|definition_used for a in n.names)]
         spans = []
         if needed:
             start, stop = min(n.lineno for n in needed), max(n.end_lineno for n in needed)
