@@ -8,7 +8,11 @@ class GitHubError(RuntimeError):
     pass
 
 
-class UncertainSummaryPost(GitHubError):
+class UncertainCommentPost(GitHubError):
+    """A comment may already exist; do not blindly repeat its POST."""
+
+
+class UncertainSummaryPost(UncertainCommentPost):
     """A summary may already exist; failure finalization must not create another."""
 
 
