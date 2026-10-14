@@ -116,7 +116,7 @@ def test_oversized_inline_note_keeps_original_and_uses_summary_fallback(tmp_path
     from reviewer.inline_publishing import publish_inline
     api,ctx,result,repo,files,inline,reviews,writes,guard,pr = inline_setup(tmp_path)
     fallback = publish_inline(api,ctx,result,repo,guard=guard,owner_note=lambda findings:'Ж'*40_000)
-    assert fallback and 'Owner inline note' in fallback[0]
+    assert fallback and 'Примечание владельца' in fallback[0]
     assert '--- Original report ---' not in inline[0]['body'] and result.findings[0].message in inline[0]['body']
 
 

@@ -103,7 +103,7 @@ def publish_inline(api, context, result, repository, *, guard, owner_note=None):
                 if len(body.encode())<=64_000:
                     group['body'] = body
                 else:
-                    fallback.append('Owner inline note exceeds presentation budget; see summary/journal')
+                    fallback.append('Примечание владельца превышает лимит inline-комментария; см. отчёт и журнал')
     comments = api.items(f'/pulls/{context.pr_number}/comments')
     batches = owned_batches(api.items(f'/pulls/{context.pr_number}/reviews'))
     observed = set()
@@ -154,10 +154,10 @@ def publish_inline(api, context, result, repository, *, guard, owner_note=None):
             if note in body:
                 continue
             original = body.split('\n\n--- Original report ---\n\n')[-1]
-            retired = normalize_comment(marker+'\n'+note+'\nSuperseded by the latest complete review; check its summary for current findings. This does not prove a fix.\n'
-                +f'[Current run]({context.run_url})\n\n--- Original report ---\n\n'+original)
+            retired = normalize_comment(marker+'\n'+note+'\nЗаменено последним завершённым ревью; актуальные замечания смотрите в его отчёте. Это не доказывает исправление.\n'
+                +f'[Текущий запуск]({context.run_url})'+'\n\n--- Original report ---\n\n'+original)
             if len(retired.encode())>64_000 or not retired.endswith(original):
-                fallback.append('Existing inline cannot be marked superseded while preserving its original text')
+                fallback.append('Не удалось пометить прежний inline-комментарий заменённым с сохранением исходного текста')
                 continue
             update_comment(api,comment,retired,guard)
     return fallback
