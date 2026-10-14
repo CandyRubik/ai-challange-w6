@@ -63,7 +63,7 @@ def debt_note(debt_id,plan,decisions):
 
 def journal(context,decisions,plan=None):
     lines = [decision_details(identity,decision) for identity,decision in sorted(decisions.items())]
-    content = normalize_comment('\n\n'.join(lines))
+    content = normalize_comment('\n\n'.join(lines) if lines else 'No current authenticated owner decisions.')
     header = [OWNER_MARKER,'# Owner decision journal',f'Head: `{context.head_sha}`.',
         'Authority comes from canonical Actions authorize jobs and artifacts. Deleting or editing this comment does not change decisions.',
         f'Effective check: **{plan.state if plan else "error"}**.']

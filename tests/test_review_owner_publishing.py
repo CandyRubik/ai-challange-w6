@@ -128,7 +128,51 @@ def test_early_authority_failure_invalidates_previous_own_success(tmp_path,monke
     proofs.jobs[(20,1,'Authorize owner decision')] = False
     with pytest.raises(StaleReview): publish_owned(api,ctx,raw,repo,expected=stamp,clock=lambda:NOW)
     assert api.items(f'/commits/{ctx.head_sha}/statuses')[0]['state']=='error'
+
     def unavailable(*args,**kwargs): raise GitHubError('Journal temporarily unavailable')
     monkeypatch.setattr('reviewer.owner_publishing.read_journal',unavailable)
     with pytest.raises(GitHubError): publish_owned(api,ctx,raw,repo,clock=lambda:NOW)
     assert api.items(f'/commits/{ctx.head_sha}/statuses')[0]['state']=='error'
+
+
+def test_new_authority_during_empty_journal_publication_requires_retry(tmp_path,monkeypatch):
+    api,ctx,raw,repo,proofs,issues,inline,pr = setup(tmp_path,monkeypatch)
+    rows = proofs.rows
+    proofs.rows = []
+    original = api.request
+    def request(method,path,body=None,**kwargs):
+        response = original(method,path,body,**kwargs)
+        if method=='POST' and path=='/issues/4/comments': proofs.rows=rows
+        return response
+    api.request = request
+    with pytest.raises(StaleReview): publish_owned(api,ctx,raw,repo,clock=lambda:NOW)
+    assert api.items(f'/commits/{ctx.head_sha}/statuses')[0]['state']=='error'
+
+
+def test_debt_lifecycle_value_error_inside_owner_guard_invalidates_success(tmp_path,monkeypatch):
+    from reviewer.debt_publishing import validate_debt
+    api,ctx,raw,repo,proofs,issues,inline,pr = setup(tmp_path,monkeypatch)
+    assert publish_owned(api,ctx,raw,repo,clock=lambda:NOW)=='success'
+    original = api.request
+    expired = [False]
+    def request(method,path,body=None,**kwargs):
+        response = original(method,path,body,**kwargs)
+        if method=='PATCH' and path.startswith('/issues/comments/'): expired[0]=True
+        return response
+    def lifecycle(context,result):
+        if expired[0]: raise ValueError('Debt lifecycle expired')
+        return validate_debt(context,result)
+    api.request = request
+    monkeypatch.setattr('reviewer.debt_publishing.validate_debt',lifecycle)
+    with pytest.raises(StaleReview): publish_owned(api,ctx,raw,repo,clock=lambda:NOW)
+    assert api.items(f'/commits/{ctx.head_sha}/statuses')[0]['state']=='error'
+
+
+def test_empty_authority_updates_existing_journal_and_keeps_it_unique(tmp_path,monkeypatch):
+    api,ctx,raw,repo,proofs,issues,inline,pr = setup(tmp_path,monkeypatch)
+    assert publish_owned(api,ctx,raw,repo,clock=lambda:NOW)=='success'
+    proofs.rows = []
+    assert publish_owned(api,ctx,raw,repo,clock=lambda:NOW)=='failure'
+    journals = [c for c in issues if c['body'].startswith(OWNER_MARKER)]
+    assert len(journals)==1 and 'Effective check: **failure**' in journals[0]['body']
+    assert 'No current authenticated owner decisions.' in journals[0]['body']
