@@ -38,6 +38,7 @@ def test_definition_preserves_decorators_and_exact_large_function():
 
 
 @pytest.mark.parametrize('rebind',[
+    'del work',
     'from app.other import *',
     'import app.other as work',
     'from app.other import work',
@@ -65,6 +66,7 @@ def test_definition_scope_import_survives_same_named_parameter(definition):
 
 
 @pytest.mark.parametrize('rebind',[
+    'del work\n',
     'work = lambda: "new"\n',
     'def work():\n    return "new"\n',
     'from other import work\n',

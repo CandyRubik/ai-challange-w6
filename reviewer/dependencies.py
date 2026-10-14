@@ -14,7 +14,7 @@ class FunctionContext:
 
 def _bindings(nodes):
     names = [n.arg for n in nodes if isinstance(n,ast.arg)] + [
-        n.id for n in nodes if isinstance(n,ast.Name) and isinstance(n.ctx,ast.Store)] + [
+        n.id for n in nodes if isinstance(n,ast.Name) and isinstance(n.ctx,(ast.Store,ast.Del))] + [
         n.name for n in nodes if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef,ast.ClassDef,
                                              ast.ExceptHandler,ast.MatchAs,ast.MatchStar))] + [
         n.rest for n in nodes if isinstance(n,ast.MatchMapping)] + [
