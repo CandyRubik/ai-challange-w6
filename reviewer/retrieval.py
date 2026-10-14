@@ -83,7 +83,7 @@ def windows(path, sha, text, role, spans=None):
 def retrieve(repository, result: ReviewResult, changes, limits) -> Retrieved:
     snapshot = result.snapshot
     head_paths = repository.paths(snapshot.head_sha)
-    path_set, wanted, head_contents = set(head_paths), {}, {}
+    path_set, wanted, ranks, head_contents = set(head_paths), {}, {}, {}
     sources = {}
     for rule in result.policy:
         if not document(rule.source.path):
@@ -117,8 +117,14 @@ def retrieve(repository, result: ReviewResult, changes, limits) -> Retrieved:
             selected = windows(change.path, snapshot.head_sha, after, "head", [(op[3], op[4]) for op in edits])
             fragments += selected
             head_contents[change.path] = after
-            for path, names in imported_functions(change.path,after,[(op[3],op[4]) for op in edits],path_set).items():
+            spans = [(op[3],op[4]) for op in edits]
+            direct = imported_functions(change.path,after,spans,path_set,direct_only=True)
+            for path, names in imported_functions(change.path,after,spans,path_set).items():
                 wanted.setdefault(path,set()).update(names)
+                for name in names:
+                    key = (path,name)
+                    rank = (int(change.path.startswith('tests/')),int(name not in direct.get(path,set())))
+                    ranks[key] = min(ranks.get(key,rank),rank)
         if change.status != "A":
             fragments += windows(change.before_path, snapshot.merge_base_sha, before, "before", [(op[1], op[2]) for op in edits])
     required_count = len(fragments)
@@ -131,7 +137,7 @@ def retrieve(repository, result: ReviewResult, changes, limits) -> Retrieved:
             refs = [fragment(path,snapshot.head_sha,text,'head',line) for line,text in context.spans]
             refs = [f for f in refs if not covered(f,fragments)]
             if refs:
-                groups.append((context.priority,path,refs))
+                groups.append((ranks[(path,context.name)],context.priority,path,refs))
     for path, content in head_contents.items():
         if path in wanted:
             dependencies(path,content)
@@ -166,7 +172,7 @@ def retrieve(repository, result: ReviewResult, changes, limits) -> Retrieved:
                     candidates.append((score, candidate))
     candidates.sort(key=lambda item: (-item[0], item[1].path, item[1].line))
     priority = []
-    for _,path,refs in sorted(groups,key=lambda g:(g[0],g[1],g[2][-1].line)):
+    for _,_,path,refs in sorted(groups,key=lambda g:(g[0],g[1],g[2],g[3][-1].line)):
         if len(priority) == 8:
             break
         refs = [f for f in refs if not covered(f,priority)]

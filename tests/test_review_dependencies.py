@@ -20,6 +20,7 @@ def test_shadowing_star_import_and_unaffected_function_are_conservative():
     paths = {'app/helpers.py'}
     assert imported_functions('app/check.py',text,[(3,4)],paths) == {}
     assert imported_functions('app/check.py',text,[(6,7)],paths) == {'app/helpers.py':{'work'}}
+    assert imported_functions('app/check.py',text,[(5,6)],paths,direct_only=True) == {}
     assert imported_functions('app/check.py',text.replace('other():','other(work):'),[(6,7)],paths) == {}
     assert imported_functions('app/check.py',text.replace('import work','import *'),[(6,7)],paths) == {}
     assert imported_functions('app/check.py','invalid (',[(0,1)],paths) == {}

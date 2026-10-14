@@ -6,11 +6,12 @@ from pathlib import PurePosixPath
 
 @dataclass
 class FunctionContext:
+    name: str
     priority: int
     spans: list[tuple[int, str]]
 
 
-def imported_functions(path, text, spans, paths):
+def imported_functions(path, text, spans, paths, *, direct_only=False):
     if not path.endswith('.py'):
         return {}
     try:
@@ -19,7 +20,7 @@ def imported_functions(path, text, spans, paths):
         return {}
     edits = [(start,max(stop,start+1)) for start,stop in spans]
     ranges = list(edits)
-    for node in ast.walk(tree):
+    for node in ([] if direct_only else ast.walk(tree)):
         if isinstance(node,(ast.FunctionDef,ast.AsyncFunctionDef)):
             first = min([node.lineno,*[d.lineno for d in node.decorator_list]])-1
             if any(start < node.end_lineno and stop > first for start,stop in ranges):
@@ -57,12 +58,12 @@ def function_contexts(text, names):
         first = min([node.lineno,*[d.lineno for d in node.decorator_list]])
         body = ''.join(lines[first-1:node.end_lineno])
         if file_bytes <= 1500:
-            contexts.append(FunctionContext(priority=len(body.encode()),spans=[(1,text)]))
+            contexts.append(FunctionContext(name=node.name,priority=len(body.encode()),spans=[(1,text)]))
             continue
         if first <= 30:
             prefix = ''.join(lines[:node.end_lineno])
             if len(prefix.encode()) <= 1500:
-                contexts.append(FunctionContext(priority=len(body.encode()),spans=[(1,prefix)]))
+                contexts.append(FunctionContext(name=node.name,priority=len(body.encode()),spans=[(1,prefix)]))
                 continue
         used = {n.id for n in ast.walk(node) if isinstance(n,ast.Name) and isinstance(n.ctx,ast.Load)}
         bound = {n.arg for n in ast.walk(node) if isinstance(n,ast.arg)} | {
@@ -73,5 +74,5 @@ def function_contexts(text, names):
             start, stop = min(n.lineno for n in needed), max(n.end_lineno for n in needed)
             spans.append((start,''.join(lines[start-1:stop])))
         spans.append((first,body))
-        contexts.append(FunctionContext(priority=len(body.encode()),spans=spans))
+        contexts.append(FunctionContext(name=node.name,priority=len(body.encode()),spans=spans))
     return contexts
