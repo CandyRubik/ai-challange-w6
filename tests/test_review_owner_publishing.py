@@ -176,3 +176,19 @@ def test_empty_authority_updates_existing_journal_and_keeps_it_unique(tmp_path,m
     journals = [c for c in issues if c['body'].startswith(OWNER_MARKER)]
     assert len(journals)==1 and 'Effective check: **failure**' in journals[0]['body']
     assert 'No current authenticated owner decisions.' in journals[0]['body']
+
+
+def test_incomplete_original_is_error_even_with_empty_owner_journal(tmp_path,monkeypatch):
+    from reviewer.git import Repository
+    from tests.test_review_publishing import fixture
+    from tests.test_reviewer import PROFILE
+    profile = deepcopy(PROFILE);profile['rules'][0]['level']='should'
+    api,ctx,raw,pr,calls,statuses,root = fixture(tmp_path,profile=profile)
+    result = ReviewResult.model_validate(raw['result'])
+    criteria = [c.model_copy(update={'verdict':'inconclusive','reason':'Advisory context unavailable'})
+                if c.rule_id=='ARCH-STATE-PURE' else c for c in result.criteria]
+    partial = result.model_copy(update={'findings':[],'criteria':criteria,'status':'success','execution':'partial'})
+    monkeypatch.setattr('reviewer.owner_publishing.read_journal',lambda *args,**kwargs:{})
+    start(api,ctx)
+    assert publish_owned(api,ctx,make_artifact(ctx,partial),Repository(root),clock=lambda:NOW)=='error'
+    assert statuses[0]['state']=='error'

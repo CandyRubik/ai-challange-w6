@@ -5,7 +5,6 @@ from .actions import Actions
 from .artifacts import preview
 from .contracts import digest
 from .debt_publishing import verify_debt
-from .decisions import DecisionEffects
 from .github import bot_authored,raw_body
 from .models import ReviewResult
 from .owner_journal import read_journal
@@ -29,11 +28,11 @@ def publish_owned(api,context,raw,repository,*,expected=None,clock=None):
         if expected is not None and stamp!=expected:
             raise StaleReview('Owner journal changed since capture; rerun required')
         decisions = {key:value.decision for key,value in records.items()}
-        rendered,plan = render(context,raw,decisions,now=clock()) if records else (preview(context,raw),DecisionEffects(state=result.status))
+        rendered,plan = render(context,raw,decisions,now=clock())
         def guard():
             assert_current(api,context)
             current = read_journal(Actions(api),repository,context,now=clock())
-            if record_digest(current)!=stamp or records and render(context,raw,decisions,now=clock())[1]!=plan:
+            if record_digest(current)!=stamp or render(context,raw,decisions,now=clock())[1]!=plan:
                 raise StaleReview('Owner journal or exception applicability changed; rerun required')
         guard()
         if records or any(bot_authored(c) and raw_body(c).startswith(OWNER_MARKER) for c in api.items(f'/issues/{context.pr_number}/comments')):

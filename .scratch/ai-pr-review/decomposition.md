@@ -3,7 +3,7 @@
 - Дата: 2026-10-13.
 - Основание: [план и Q1–Q11](plan.md), [исследование GitHub](research.md).
 - Trunk: `main`, исследован на `f7a4d1e`.
-- Статус карты: согласована пользователем 2026-10-13; PR №4–11, №13–16, №18–32 слиты. Project-debt gate включён в CI; чистый artifact module готов. Все26paired offline inputs калибровочных сценариев сохранены.
+- Статус карты: согласована пользователем 2026-10-13; PR №4–11, №13–16, №18–34 слиты (№33 — временный smoke, закрыт без merge). Project-debt gate включён в CI; чистый artifact module готов. Все26paired offline inputs калибровочных сценариев сохранены.
 - Бюджет: целевой размер ≤600 reviewable lines (added + removed), максимум 1000 с отдельным обоснованием. Это оценки; при росте срез делится до открытия PR. Документация и большие входные fixtures не входят в кодовый бюджет; prompt/profile, ручные тесты и workflow считаются проверяемой логикой.
 
 ## Последовательность
@@ -37,9 +37,10 @@
 | 7c | Проверенный источник и журнал | Read-only source CLI и replay reader по Actions job/artifact proof | actor+trigger_actor/current owners/main code; comments не authority | 411 фактически | 7b | merged |
 | 7d0 | Reviewable owner report | Offline Markdown показывает effective/original, remaining blockers и owner notes | Pure rendering, без CI authority или записи | 196 фактически | 7c | merged |
 | 7d1 | Явный reuse анализа | Owner dispatch повторно использует complete source того же снимка без LLM | Канонический Actions proof, digest, actual debt; нет paid fallback | 194 фактически | 7d0 | merged |
-| 7d2a | Owner notes | Оригинал inline/debt сохраняется при добавлении или снятии owner note | Optional hooks не дают полномочий и не меняют verdict | 61 фактически | 7d1 | in-progress |
-| 7d | Решения в check и отчёте | Применение/отзыв решений, same-snapshot analysis cache без LLM, owner notes | Неполный original анализ не обходится; journal перепроверяется | 200–400 | 7d2a | planned |
-| 7e | Истечение решений | Zero-LLM sweeper инвалидирует success с истёкшим exception | Bounded20PR, отдельный error до rerun; schedule best effort | 200–400 | 7d | planned |
+| 7d2a | Owner notes | Оригинал inline/debt сохраняется при добавлении или снятии owner note | Optional hooks не дают полномочий и не меняют verdict | 64 фактически | 7d1 | merged |
+| 7d2 | Сервис применения решений | Проверенный journal меняет effective check и оформляет owner notes | Journal/expiry guard вокруг writes; original неизменён | 249 фактически | 7d2a | in-progress |
+| 7d3 | Owner workflow и replay | Trusted dispatch и автоматический same-snapshot cache; fresh owner retry | Apply готов до activation; actor/source/journal proof | 400–600 | 7d2 | planned |
+| 7e | Истечение решений | Zero-LLM sweeper инвалидирует success с истёкшим exception | Bounded20PR, отдельный error до rerun; schedule best effort | 200–400 | 7d3 | planned |
 | 5f | Опровержение advisory findings | Советующие semantic findings также проходят adversarial verification | Прежние4calls/96KB/4000tokens; raw historical counts сохранены | 100–300 | 7e | planned |
 | 8 | Интервью по проекту, после MVP | Skill собирает факты, проводит интервью и формирует профиль/preview prompt для утверждения | Отдельный onboarding; CI использует прежний валидированный артефакт | 350–550 | 5f | planned |
 
@@ -164,3 +165,5 @@
 - 2026-10-14: PR31 merged9fb41d5 после CIgreen/Standards0/Spec0/8presentation tests. Срез7d1 отдельно даёт ручной zero-model reuse; owner application остаётся следующим срезом, без расширения полномочий или API budget.
 
 - 2026-10-14: PR32 mergedbcdaef2 после CIgreen/Standards0/Spec0; AI38498491557 complete/success1call93851bytes. PR33 temporary: source38498722722 complete/success1call49869; reuse38498881674 complete/success0calls, исходные verdict/findings/criteria/policy/debt совпали. PR закрыт без merge. Full application8717 потребовал103447bytes mandatory; notes выделены отдельно, лимиты прежние.
+
+- 2026-10-14: PR34 merged1ceae44 после finalreadyCIgreen/Standards0/Spec0;4focused notes cases+35prior combined. Auto-review первоначально связал merge с локальнымservice84441a5, проверка точногоheadf26f782 иtree подтвердиларазделение, повтор разрешён. Service initial/empty journal иValueError expiry races закрыты,21tests pass.
