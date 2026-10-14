@@ -84,10 +84,10 @@ def publish_debt(api, context, result, *, guard, owner_notes=None):
     body = normalize_comment('\n\n'.join([DEBT_MARKER, '# Project debt',
         f'Current head: `{context.head_sha}`; review status: **{result.status}**.', note,
         f'[Current workflow run]({context.run_url})', ASSESSMENT_MARKER, assessment.strip()]))
-    if owner_notes:
+    if owner_notes and complete:
         notes = normalize_comment('\n\n'.join(owner_notes.values()))
         addition = '\n\n'+OWNER_DEBT_MARKER+'\n## Current owner decisions\n'+notes
-        body += addition if len((body+addition).encode())<=58_000 else '\n\nOwner decisions are in the current summary/journal.'
+        body += addition if len((body+addition).encode())<=58_000 else '\n\n'+OWNER_DEBT_MARKER+'\nOwner decisions are in the current summary/journal.'
     if len(body.encode()) > 58_000:
         raise GitHubError('Project debt comment cannot preserve the prior assessment within the presentation budget')
     upsert_comment(api,context.pr_number,body,marker=DEBT_MARKER,before_write=guard)

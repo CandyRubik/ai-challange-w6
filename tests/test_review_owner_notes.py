@@ -1,3 +1,5 @@
+import pytest
+
 from reviewer.debt_publishing import ASSESSMENT_MARKER,DEBT_MARKER,OWNER_DEBT_MARKER,publish_debt
 from reviewer.inline_publishing import publish_inline
 from reviewer.models import ReviewResult
@@ -24,17 +26,18 @@ def test_oversized_inline_note_keeps_original_and_uses_summary_fallback(tmp_path
     assert '--- Original report ---' not in inline[0]['body'] and result.findings[0].message in inline[0]['body']
 
 
-def test_debt_note_is_outside_original_and_does_not_nest_on_incomplete_repeat(tmp_path):
+@pytest.mark.parametrize('note',['Owner acceptance; reason and expiry','Ж'*40_000],ids=['normal','oversized'])
+def test_debt_note_is_outside_original_and_does_not_nest_on_incomplete_repeat(tmp_path,note):
     api,ctx,raw,repo,issues,statuses,calls = debt_setup(tmp_path)
     start(api,ctx)
     guard = lambda:assert_current(api,ctx)
     result = ReviewResult.model_validate(raw['result'])
-    publish_debt(api,ctx,result,guard=guard,owner_notes={'state-storage':'Owner acceptance; reason and expiry'})
+    publish_debt(api,ctx,result,guard=guard,owner_notes={'state-storage':note})
     body = next(c['body'] for c in issues if c['body'].startswith(DEBT_MARKER))
     original = body.partition(ASSESSMENT_MARKER)[2].partition(OWNER_DEBT_MARKER)[0].strip()
     assert 'open' in original and 'Owner acceptance' not in original
     partial = result.model_copy(update={'status':'error','execution':'partial'})
     for _ in range(2):
-        publish_debt(api,ctx,partial,guard=guard)
+        publish_debt(api,ctx,partial,guard=guard,owner_notes={'state-storage':note})
         body = next(c['body'] for c in issues if c['body'].startswith(DEBT_MARKER))
         assert body.partition(ASSESSMENT_MARKER)[2].strip()==original and 'Owner acceptance' not in body
