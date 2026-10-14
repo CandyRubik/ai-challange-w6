@@ -39,8 +39,8 @@ def main():
             output.update(decision=decision.model_dump(),effects=effects(artifact.context,artifact.result,{**known,'preview':decision}).model_dump())
         print(json.dumps(output,ensure_ascii=False,indent=2))
         return 0
-    except (ValueError,KeyError,TypeError,OSError) as error:
-        print(str(error),file=sys.stderr)
+    except (ValueError,KeyError,TypeError,OSError):
+        print('Decision preview input or policy is invalid; check artifact, owner, scope and UTC expiry',file=sys.stderr)
         return 2
 
 

@@ -147,3 +147,21 @@ def test_unknown_failure_and_future_decision_do_not_turn_green(tmp_path):
     assert effects(ctx,result,{'10-1':future},now=NOW).state == 'failure'
     unknown = result.model_copy(update={'findings':[],'criteria':[]})
     assert effects(ctx,unknown,{},now=NOW).state == 'failure'
+
+
+def test_latest_covering_decision_controls_reason_and_expiry(tmp_path):
+    ctx,result,_ = finding_review(tmp_path)
+    p = proposal('dismiss',[fingerprint(result.findings[0])])
+    early = propose(ctx,result,p.model_copy(update={'expires_at':(NOW+timedelta(hours=1)).isoformat()}),'maintainer',now=NOW)
+    later = propose(ctx,result,p,'maintainer',now=NOW)
+    plan = effects(ctx,result,{'20-1':early,'100-1':later},now=NOW)
+    assert set(plan.accepted_findings.values()) == {'100-1'} and plan.expires_at == DEADLINE
+
+
+def test_invalid_cli_input_never_echoes_unknown_fields_or_values(tmp_path):
+    _,_,raw = finding_review(tmp_path)
+    raw['result']['PRIVATE_UNKNOWN_FIELD'] = {'value':'PRIVATE_SENTINEL'}
+    path = tmp_path/'artifact.json';path.write_text(json.dumps(raw))
+    process = subprocess.run([sys.executable,'scripts/preview_review_decision.py','--artifact',str(path)],capture_output=True,text=True)
+    assert process.returncode == 2 and not process.stdout
+    assert 'PRIVATE_UNKNOWN_FIELD' not in process.stderr and 'PRIVATE_SENTINEL' not in process.stderr

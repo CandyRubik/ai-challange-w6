@@ -1,6 +1,7 @@
 """Scoped owner policy. These records alone are not authenticated CI authority."""
 from datetime import datetime, timedelta, timezone
 from fnmatch import fnmatchcase
+import re
 from typing import Annotated, Literal
 
 from pydantic import Field, model_validator
@@ -124,7 +125,7 @@ def propose(context,result,proposal,actor,*,now=None,proposed_registry=None,know
 def effects(context,result,decisions,*,now=None):
     """Compute effects for authenticated ID→record input without altering findings."""
     now = now or datetime.now(timezone.utc)
-    accepted,debts,deadlines = {},{},[]
+    accepted,debts = {},{}
     owners = {o.casefold() for o in context.profile.owners}
     eligible = {key:d for key,d in decisions.items() if d.repository_id==context.repository_id
                 and d.pr_number==context.pr_number and d.actor.casefold() in owners and expiry(d.created_at)<=now}
@@ -134,23 +135,23 @@ def effects(context,result,decisions,*,now=None):
     entries = {e.id:e for e in context.debt_registry.entries}
     rules = {r.id:r for r in context.profile.rules}
     if result.status != 'error' and result.execution == 'complete':
-        for key,d in sorted(eligible.items()):
+        order = lambda item: (*map(int,item[0].split('-')),item[0]) if re.fullmatch(r'[1-9]\d*-[1-9]\d*',item[0]) else (0,0,item[0])
+        for key,d in sorted(eligible.items(),key=order):
             p = d.proposal
             if key in revoked or p.action=='revoke' or d.profile_sha256!=context.profile_sha256 or expiry(p.expires_at)<=now:
                 continue
             exact = (d.base_sha,d.head_sha)==(context.base_sha,context.head_sha)
-            used = False
             for target,binding in d.bindings.items():
                 if p.action=='dismiss' and exact and target in findings and binding==target:
-                    accepted[target],used = key,True
+                    accepted[target] = key
                 elif p.action=='waive_rule' and target!='BUGS' and target in rules and fingerprint(rules[target])==binding:
                     for fid,f in findings.items():
                         if f.rule_id==target and any(fnmatchcase(finding_path(context,f),path) for path in p.scope):
-                            accepted[fid],used = key,True
+                            accepted[fid] = key
                 elif target in entries and fingerprint(entries[target])==binding and (
                     p.action=='waive_debt' or p.action=='resolve_debt' and exact):
-                    debts[target],used = key,True
-            if used: deadlines.append(p.expires_at)
+                    debts[target] = key
+    deadlines = [eligible[key].proposal.expires_at for key in set(accepted.values())|set(debts.values())]
     remaining = [fid for fid,f in findings.items() if f.blocking and fid not in accepted]
     remaining_debt = [a.debt_id for a in result.project_debt if a.blocking and a.verdict=='open' and a.debt_id not in debts]
     unexplained_failure = result.status=='failure' and not any(f.blocking for f in findings.values()) and not any(
