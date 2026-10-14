@@ -1,4 +1,4 @@
-"""A bounded attempt to refute semantic blockers using the same pinned context."""
+"""A bounded attempt to refute every semantic finding on pinned evidence."""
 import hashlib
 import json
 
@@ -30,19 +30,38 @@ class Verification(Record):
     decisions: list[Decision] = Field(max_length=10)
 
 
-def verify(draft, findings, criteria, payload, model, limits, trace, evidence, roles):
+def verification_input(data,candidates,schema,model,limits,required_count,trace):
+    data = {**data,'candidates':candidates,'fragments':list(data['fragments'])}
+    retained = {f['id'] for f in data['fragments'][:required_count]} | {
+        ref['fragment_id'] for candidate in candidates for ref in candidate['evidence']}
+    def measured():
+        body = json.dumps(data,ensure_ascii=False)
+        bundle = json.dumps(dict(system=SYSTEM,schema=schema,input=body),ensure_ascii=False).encode()
+        size = len(bundle)
+        measure = getattr(model,'measure_input',None)
+        if callable(measure):
+            transport = measure(messages=[dict(role='system',content=SYSTEM),dict(role='user',content=body)],schema=schema)
+            if type(transport) is not int or transport<0: raise ValueError('Invalid verification input measurement')
+            size = max(size,transport)
+        trace.update(verification_context_sha256=hashlib.sha256(bundle).hexdigest(),verification_context_bytes=len(bundle),
+            verification_input_budget_bytes=size,verification_optional_fragments_omitted=list(removed))
+        return body,bundle,size
+    removed=[]
+    body,bundle,size=measured()
+    while size>limits.context_bytes:
+        index=next((i for i in range(len(data['fragments'])-1,-1,-1) if data['fragments'][i]['id'] not in retained),None)
+        if index is None: raise ValueError('Required verification context exceeds budget')
+        removed.append(data['fragments'].pop(index)['id'])
+        body,bundle,size=measured()
+    return data,body
+
+
+def verify(draft, findings, criteria, payload, model, limits, trace, evidence, roles,*,required_count):
     candidates = [{"index": i, **item.model_dump()} for i, item in enumerate(draft.findings) if findings[i].blocking]
     if not candidates:
         return findings, criteria
-    data = json.loads(payload)
-    data["candidates"] = candidates
     schema = Verification.model_json_schema()
-    body = json.dumps(data, ensure_ascii=False)
-    bundle = json.dumps({"system": SYSTEM, "schema": schema, "input": body}, ensure_ascii=False).encode()
-    trace["verification_context_sha256"] = hashlib.sha256(bundle).hexdigest()
-    trace["verification_context_bytes"] = len(bundle)
-    if len(bundle) > limits.context_bytes:
-        raise ValueError("Verification context exceeds budget")
+    data,body = verification_input(json.loads(payload),candidates,schema,model,limits,required_count,trace)
     raw = generate_json(model, messages=[{"role": "system", "content": SYSTEM}, {"role": "user", "content": body}],
                               max_tokens=limits.output_tokens, schema=schema, context_bytes=limits.context_bytes, trace=trace, validate=Verification.model_validate_json)
     if len(raw.encode()) > limits.output_tokens * 16:
@@ -55,6 +74,8 @@ def verify(draft, findings, criteria, payload, model, limits, trace, evidence, r
     rejected, uncertain = set(), set()
     trace["verification"] = []
     for decision in decisions:
+        if any(c.fragment_id not in fragments for c in decision.evidence):
+            raise ValueError('Verification cited a fragment outside its packed input')
         refs = [evidence(c) for c in decision.evidence]
         finding = findings[decision.index]
         if not any((fragments[c.fragment_id]["role"] == "head" and
