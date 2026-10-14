@@ -77,6 +77,13 @@ def test_lost_authority_before_deadline_invalidates_dependent_success(tmp_path,m
     assert statuses[0]['state']=='error'
 
 
+def test_malformed_owner_metadata_invalidates_unprovable_success(tmp_path,monkeypatch):
+    api,ctx,env,root,records,proofs,statuses,pr=setup(tmp_path,monkeypatch,owner=True)
+    proofs.owner_run['actor']['login']=None
+    assert expire(api,root,4,env,fetcher=lambda *args:ctx.head_sha,now=NOW+timedelta(days=2))=='invalidated'
+    assert statuses[0]['state']=='error'
+
+
 def test_queue_overflow_is_error_without_model_or_worker_dispatch(tmp_path,monkeypatch):
     api,ctx,env,root,records,proofs,statuses,pr=setup(tmp_path,monkeypatch)
     api.open_pulls=lambda:[pr,{**pr,'number':5}]

@@ -77,7 +77,7 @@ def expire(api,root,number,env,*,fetcher,now=None):
         after = effects(current,artifact.result,{key:record.decision for key,record in records.items()},now=now)
         if after.state=='success': return 'unchanged'
         reason = 'Owner exception expired or no longer applies; rerun AI Review'
-    except (ValueError,KeyError,TypeError,GitHubError):
+    except (ValueError,KeyError,TypeError,AttributeError,GitHubError):
         reason = 'Accepted review could not be validated; rerun AI Review'
     guard()
     set_status(api,current,'error',reason)
