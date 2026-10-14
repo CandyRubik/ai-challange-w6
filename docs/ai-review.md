@@ -274,6 +274,29 @@ CI включает аудит trusted base registry после анализа P
 Human comments и чужие markers не меняются. Неопределённый POST подтверждается чтением,
 повторный POST вслепую не выполняется; сбой оставляет check неуспешным.
 
+### Offline preview решения владельца
+
+```bash
+# Список полных finding fingerprints из сохранённого CI result.json:
+.venv/bin/python scripts/preview_review_decision.py --artifact /tmp/result.json
+# Только моделирование scoped решения, без CI authority, сети или изменения артефакта:
+.venv/bin/python scripts/preview_review_decision.py --artifact /tmp/result.json \
+  --proposal /tmp/proposal.json --actor CandyRubik
+```
+
+Proposal содержит `action`, `targets`, `reason`, `scope`, `expires_at`. Действия:
+`dismiss` точного finding на base/head/profile; `waive_rule` известного non-BUGS
+правила с явными paths; `waive_debt` точной записи; `resolve_debt` ручного долга
+с matching resolved entry (`--proposed-registry`); `revoke` известного ID
+(`--known-decisions`). Нужен текущий owner, UTC-срок до7дней, кроме revoke.
+Finding fingerprint включает диагноз и все evidence. Неполное ревью не обходится;
+оставшиеся блокеры видны отдельно. Оригинальные flags/result не меняются.
+
+History preview — bounded ID→record JSON, ID вида `run-attempt`; новая proposal
+следует после прежних. Вывод всегда `offline-preview-only`: он не является
+подтверждённым решением GitHub и пока не влияет на автоматический check. Trusted
+workflow и проверяемый журнал подключаются следующими частями среза7.
+
 ### GitHub-адаптер
 
 `reviewer.contracts` хранит pinned context/artifact records, digest и run URL;
