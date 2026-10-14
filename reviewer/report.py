@@ -48,42 +48,42 @@ def finding_details(group):
 
 
 def debt_details(result):
-    lines = [f'Registry: `{result.debt_sha256}`.']
+    lines = [f'Реестр: `{result.debt_sha256}`.']
     for item in result.project_debt:
         lines += [f'- **{text(item.debt_id)}** / {text(item.rule_id)}: **{item.verdict}** '
-                  f'({"blocking" if item.blocking else "advisory"}) — {text(item.title)}; {text(item.reason)}; '
-                  f'checked files: {len(item.checked_paths)}, violations: {item.violation_count}.']
-        lines += [f'  Evidence: {evidence_text(ref)}' for ref in item.evidence]
+                  f'({"блокирует" if item.blocking else "совет"}) — {text(item.title)}; {text(item.reason)}; '
+                  f'проверено файлов: {len(item.checked_paths)}, нарушений: {item.violation_count}.']
+        lines += [f'  Доказательство: {evidence_text(ref)}' for ref in item.evidence]
     if not result.project_debt:
-        lines.append('The trusted registry contains no project debt entries.')
+        lines.append('В доверенном реестре нет записей о долге проекта.')
     return lines
 
 
 def markdown(result: ReviewResult, *, explain_policy: bool = False) -> str:
-    lines = ["# Project review", f"Status: **{result.status}**; execution: **{result.execution}**."]
+    lines = ["# Ревью проекта", f"Результат: **{result.status}**; выполнение: **{result.execution}**."]
     if result.snapshot:
-        lines += [f"Base: `{result.snapshot.base_sha}`", f"Head: `{result.snapshot.head_sha}`",
-                  f"Diff base: `{result.snapshot.merge_base_sha}`"]
-    lines += [f"Profile: `{result.profile_sha256}` ({result.profile_origin}).",
-              "Only configured checks are assessed; this is not a full architectural review.", "", "## Findings"]
+        lines += [f"База: `{result.snapshot.base_sha}`", f"Коммит PR: `{result.snapshot.head_sha}`",
+                  f"База diff: `{result.snapshot.merge_base_sha}`"]
+    lines += [f"Профиль: `{result.profile_sha256}` ({result.profile_origin}).",
+              "Оценены только настроенные проверки; полное архитектурное ревью не проводилось.", "", "## Замечания"]
     for group in finding_groups(result.findings):
         lines += finding_details(group)
     if not result.findings:
-        lines.append("No new violations found by the configured checks.")
+        lines.append("Настроенные проверки не обнаружили новых нарушений.")
     if result.debt_sha256 or result.project_debt:
-        lines += ['', '## Project debt', *debt_details(result)]
-    lines += ["", "## Coverage"]
+        lines += ['', '## Долг проекта', *debt_details(result)]
+    lines += ["", "## Покрытие проверки"]
     lines += [f"- {text(c.path)} / {text(c.rule_id)}: **{c.verdict}** — {text(c.reason)}" for c in result.criteria]
-    lines += [f"- {text(path)}: outside rule scope (not assessed)." for path in result.not_applicable]
+    lines += [f"- {text(path)}: вне области правил (не проверен)." for path in result.not_applicable]
     if result.limitations:
-        lines += ["", "## Limitations", *[f"- {text(reason)}" for reason in result.limitations]]
+        lines += ["", "## Ограничения", *[f"- {text(reason)}" for reason in result.limitations]]
     if explain_policy:
-        lines += ["", "## Policy"]
-        lines += [f"- **{text(r.id)}** [{r.level}, {r.check}] {text(r.requirement)}; scope: {text(', '.join(r.scope))}" for r in result.policy]
+        lines += ["", "## Правила проекта"]
+        lines += [f"- **{text(r.id)}** [{r.level}, {r.check}] {text(r.requirement)}; область: {text(', '.join(r.scope))}" for r in result.policy]
     if result.recommendations:
-        lines += ["", "## Recommendations", *[f"- {text(item)}" for item in result.recommendations]]
+        lines += ["", "## Рекомендации", *[f"- {text(item)}" for item in result.recommendations]]
     if result.trace:
-        lines += ["", "## Analysis", f"Model: {text(result.trace.get('model', ''))}; calls: {result.trace.get('model_calls', 0)}",
-                  f"Optional fragments omitted: {result.trace.get('optional_fragments_omitted', 0)}; unavailable sources: {len(result.trace.get('optional_sources_unavailable', []))}",
-                  f"Context SHA256: `{result.trace.get('context_sha256', '')}`"]
+        lines += ["", "## Анализ", f"Модель: {text(result.trace.get('model', ''))}; запросов: {result.trace.get('model_calls', 0)}",
+                  f"Необязательных фрагментов пропущено: {result.trace.get('optional_fragments_omitted', 0)}; недоступных источников: {len(result.trace.get('optional_sources_unavailable', []))}",
+                  f"SHA256 контекста: `{result.trace.get('context_sha256', '')}`"]
     return "\n\n".join(lines) + "\n"
