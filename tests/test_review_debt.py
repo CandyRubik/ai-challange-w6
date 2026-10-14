@@ -81,7 +81,7 @@ def test_manual_closure_requires_owner_even_after_code_change(tmp_path):
     root, base, _ = debt_repository(tmp_path, closure='owner-attestation')
     head = commit(root, {'app/state/service.py':'pass\n'})
     item, = review(root, base, head, project_debt=True).project_debt
-    assert item.verdict == 'open' and 'explicit closure' in item.reason
+    assert item.verdict == 'open' and 'явное закрытие' in item.reason
 
 
 def test_expired_waiver_is_rechecked(tmp_path):
