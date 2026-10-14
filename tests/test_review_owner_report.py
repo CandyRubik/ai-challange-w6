@@ -71,7 +71,7 @@ def test_cli_markdown_is_explicitly_offline_preview(tmp_path):
     path = tmp_path/'artifact.json';path.write_text(json.dumps(raw))
     result = subprocess.run([sys.executable,'scripts/preview_review_decision.py','--artifact',str(path),'--markdown'],capture_output=True,text=True)
     assert result.returncode==0 and result.stdout.startswith('OFFLINE PREVIEW — no CI authority.')
-    assert 'Project review' in result.stdout and not result.stderr
+    assert 'Ревью проекта' in result.stdout and not result.stderr
 
 
 def test_partial_original_without_decisions_still_renders_effective_error(tmp_path):
