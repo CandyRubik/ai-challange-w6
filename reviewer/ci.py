@@ -162,7 +162,7 @@ def mark_unfinished(api, number, env, reason='Ревью не завершено
         write_state(api, head, env, 'error', 'Ревью не завершено; проверьте workflow и повторите запуск')
         if summary and generation(api, head) == (run_id, attempt):
             url = workflow_url(api.repository, run_id, attempt)
-            body = f'{SUMMARY_MARKER}\n# Ревью проекта\nРезультат: **error**; выполнение: **failed**.\n\nДиагностика: `{text(reason).replace("@", "@\u200b")}`\n\n[Запуск проверки]({url})'
+            body = f'{SUMMARY_MARKER}\n# Ревью проекта\nРезультат: **error**; выполнение: **failed**.\n\nДиагностика: {text(reason).replace("@", "@\u200b")}\n\n[Запуск проверки]({url})'
             def still_ours():
                 if api.pull(number)['head']['sha'] != head or generation(api, head) != (run_id, attempt):
                     raise StaleReview('PR or workflow generation changed before error publication')
