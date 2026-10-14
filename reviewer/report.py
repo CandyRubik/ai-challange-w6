@@ -68,16 +68,16 @@ def markdown(result: ReviewResult, *, explain_policy: bool = False) -> str:
         lines += [f"База: `{result.snapshot.base_sha}`", f"Коммит PR: `{result.snapshot.head_sha}`",
                   f"База diff: `{result.snapshot.merge_base_sha}`"]
     lines += [f"Профиль: `{result.profile_sha256}` ({result.profile_origin}).",
-              "Оценены только настроенные проверки; полное архитектурное ревью не проводилось.", "", "## Замечания"]
+              "Проверены только правила профиля.", "", "## Замечания"]
     for group in finding_groups(result.findings):
         lines += finding_details(group)
     if not result.findings:
         lines.append("Настроенные проверки не обнаружили новых нарушений.")
     if result.debt_sha256 or result.project_debt:
         lines += ['', '## Долг проекта', *debt_details(result)]
-    lines += ["", "## Покрытие проверки"]
+    lines += ["", "## Покрытие"]
     lines += [f"- {text(c.path)} / {text(c.rule_id)}: **{c.verdict}** — {text(c.reason)}" for c in result.criteria]
-    lines += [f"- {text(path)}: вне области правил (не проверен)." for path in result.not_applicable]
+    lines += [f"- {text(path)}: не проверен (вне правил)." for path in result.not_applicable]
     if result.limitations:
         lines += ["", "## Ограничения", *[f"- {text(reason)}" for reason in result.limitations]]
     if explain_policy:
@@ -87,6 +87,6 @@ def markdown(result: ReviewResult, *, explain_policy: bool = False) -> str:
         lines += ["", "## Рекомендации", *[f"- {text(item)}" for item in result.recommendations]]
     if result.trace:
         lines += ["", "## Анализ", f"Модель: {text(result.trace.get('model', ''))}; запросов: {result.trace.get('model_calls', 0)}",
-                  f"Необязательных фрагментов пропущено: {result.trace.get('optional_fragments_omitted', 0)}; недоступных источников: {len(result.trace.get('optional_sources_unavailable', []))}",
-                  f"SHA256 контекста: `{result.trace.get('context_sha256', '')}`"]
+                  f"Необязательных пропущено: {result.trace.get('optional_fragments_omitted', 0)}; недоступных источников: {len(result.trace.get('optional_sources_unavailable', []))}",
+                  f"Хеш контекста: `{result.trace.get('context_sha256', '')}`"]
     return "\n\n".join(lines) + "\n"
