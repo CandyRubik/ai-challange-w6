@@ -81,6 +81,7 @@ def expire(api,root,number,env,*,fetcher,now=None):
         reason = 'Accepted review could not be validated; rerun AI Review'
     guard()
     set_status(api,current,'error',reason)
+    assert_current(api,current)
     return 'invalidated'
 
 

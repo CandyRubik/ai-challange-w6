@@ -82,3 +82,16 @@ def test_queue_overflow_is_error_without_model_or_worker_dispatch(tmp_path,monke
     api.open_pulls=lambda:[pr,{**pr,'number':5}]
     with pytest.raises(ValueError,match='capacity'): select(api,{},env,capacity=1)
     assert statuses[0]['state']=='error'
+
+
+def test_new_generation_during_status_write_is_detected_without_overwriting_it(tmp_path,monkeypatch):
+    api,ctx,env,root,records,proofs,statuses,pr=setup(tmp_path,monkeypatch)
+    original=api.request
+    def request(method,path,body=None,**kwargs):
+        result=original(method,path,body,**kwargs)
+        if method=='POST' and path.startswith('/statuses/'):
+            statuses.insert(0,dict(state='pending',context=STATUS_CONTEXT,target_url=ctx.run_url.replace('/10/','/40/')))
+        return result
+    api.request=request
+    with pytest.raises(StaleReview): expire(api,root,4,env,fetcher=lambda *args:ctx.head_sha,now=NOW+timedelta(days=2))
+    assert statuses[0]['state']=='pending' and statuses[0]['target_url'].endswith('/runs/40/attempts/1')
