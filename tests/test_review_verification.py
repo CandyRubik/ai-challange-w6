@@ -172,5 +172,5 @@ def test_before_and_head_diagnoses_share_a_causal_edit_without_losing_rules(tmp_
     from reviewer.report import finding_groups
     assert len(finding_groups(result.findings)) == 1
     from reviewer.report import markdown
-    assert 'BUGS evidence:' in markdown(result)
+    assert 'BUGS — доказательство:' in markdown(result)
     assert 'return state' in markdown(result)

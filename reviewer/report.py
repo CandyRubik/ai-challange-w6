@@ -17,7 +17,7 @@ def finding_groups(findings):
 
 
 def evidence_text(ref):
-    location = 'metadata' if ref.kind == 'file_metadata' else str(ref.line)
+    location = 'метаданные' if ref.kind == 'file_metadata' else str(ref.line)
     return f"{text(ref.path)}:{location} @ `{ref.sha}` — {text(ref.quote)}"
 
 
@@ -28,22 +28,22 @@ def normalize_comment(body):
 def safe_comment(body):
     body = normalize_comment(body)
     if len(body.encode()) > 58_000:
-        body = body.encode()[:58_000].decode('utf-8', errors='ignore') + '\n\nPresentation shortened; full result is in the run artifact.'
+        body = body.encode()[:58_000].decode('utf-8', errors='ignore') + '\n\nОтчёт сокращён; полный результат доступен в артефакте запуска.'
     return body
 
 
 def finding_details(group):
     evidence = group[0].evidence
-    lines = [f"- **{text(', '.join(f.rule_id for f in group))}** ({'blocking' if any(f.blocking for f in group) else 'advisory'}): {text('; '.join(f.message for f in group))}",
-             f"  Evidence: {evidence_text(evidence)}"]
+    lines = [f"- **{text(', '.join(f.rule_id for f in group))}** ({'блокирует' if any(f.blocking for f in group) else 'совет'}): {text('; '.join(f.message for f in group))}",
+             f"  Доказательство: {evidence_text(evidence)}"]
     for finding in group:
         if finding.evidence != evidence:
-            lines.append(f"  {text(finding.rule_id)} evidence: {evidence_text(finding.evidence)}")
+            lines.append(f"  {text(finding.rule_id)} — доказательство: {evidence_text(finding.evidence)}")
         if finding.source:
-            lines.append(f"  Rule source: {evidence_text(finding.source)}")
+            lines.append(f"  Основание правила: {evidence_text(finding.source)}")
         if finding.scenario:
-            lines += [f"  {text(finding.rule_id)} scenario: {text(finding.scenario)}; impact: {text(finding.impact)}",
-                      f"  Recommendation: {text(finding.recommendation)}"]
+            lines += [f"  {text(finding.rule_id)} — сценарий: {text(finding.scenario)}; последствия: {text(finding.impact)}",
+                      f"  Рекомендация: {text(finding.recommendation)}"]
     return lines
 
 
