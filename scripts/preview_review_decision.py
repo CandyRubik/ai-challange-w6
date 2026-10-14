@@ -10,6 +10,7 @@ from reviewer.artifacts import preview
 from reviewer.contracts import ReviewArtifact
 from reviewer.debt import DebtRegistry
 from reviewer.decisions import OwnerDecision, OwnerProposal, effects, fingerprint, propose
+from reviewer.owner_report import render
 
 
 def load(path):
@@ -25,6 +26,7 @@ def main():
     parser.add_argument('--actor')
     parser.add_argument('--proposed-registry',type=Path)
     parser.add_argument('--known-decisions',type=Path)
+    parser.add_argument('--markdown',action='store_true')
     args = parser.parse_args()
     try:
         raw = load(args.artifact)
@@ -32,6 +34,7 @@ def main():
         preview(artifact.context,raw)
         output = dict(authority='offline-preview-only',finding_ids=[dict(id=fingerprint(f),rule=f.rule_id,
             path=f.evidence.path,blocking=f.blocking,message=f.message) for f in artifact.result.findings])
+        combined = {}
         if args.proposal:
             proposal = OwnerProposal.model_validate(load(args.proposal))
             registry = DebtRegistry.model_validate(load(args.proposed_registry)) if args.proposed_registry else None
@@ -41,9 +44,14 @@ def main():
             known = {key:OwnerDecision.model_validate(value) for key,value in history.items()}
             decision = propose(artifact.context,artifact.result,proposal,args.actor or '',proposed_registry=registry,known_decisions=known)
             preview_id = f'{max([0,*[int(key.split("-")[0]) for key in known]])+1}-1'
+            combined = {**known,preview_id:decision}
             output.update(preview_decision_id=preview_id,decision=decision.model_dump(),
-                effects=effects(artifact.context,artifact.result,{**known,preview_id:decision}).model_dump())
-        print(json.dumps(output,ensure_ascii=False,indent=2))
+                effects=effects(artifact.context,artifact.result,combined).model_dump())
+        if args.markdown:
+            rendered,_ = render(artifact.context,raw,combined)
+            print('OFFLINE PREVIEW — no CI authority.\n\n'+rendered['body'])
+        else:
+            print(json.dumps(output,ensure_ascii=False,indent=2))
         return 0
     except (ValueError,KeyError,TypeError,OSError):
         print('Decision preview input or policy is invalid; check artifact, owner, scope and UTC expiry',file=sys.stderr)
