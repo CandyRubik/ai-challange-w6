@@ -105,25 +105,35 @@ def upsert_summary(api, number, body, *, before_write):
 
 
 def _publish(api, context, rendered, raw, repository):
-    assert_current(api, context)
+    from .debt_publishing import validate_debt
+    result = ReviewResult.model_validate(raw['result'])
+    def guard():
+        assert_current(api, context)
+        try:
+            validate_debt(context, result)
+        except ValueError as error:
+            raise StaleReview('Debt lifecycle changed during publication; rerun required') from error
+    guard()
     if repository is not None:
         from .inline_publishing import publish_inline
         fallback = publish_inline(api,context,ReviewResult.model_validate(raw['result']),repository,
-                                  guard=lambda: assert_current(api,context))
+                                  guard=guard)
         if fallback:
             rendered = {**rendered,'body':safe_comment(rendered['body']+'\n\n## Inline coverage\n'+
                 '\n'.join('- '+text(reason) for reason in fallback))}
     # Per-PR workflow serialization covers writes; snapshot is rechecked around the operation.
-    upsert_summary(api, context.pr_number, rendered['body'], before_write=lambda: assert_current(api, context))
-    assert_current(api, context)
+    upsert_summary(api, context.pr_number, rendered['body'], before_write=guard)
+    guard()
     set_status(api, context, rendered['state'], f'AI review: {rendered["state"]}')
-    assert_current(api, context)
+    guard()
     return rendered['state']
 
 
 def publish(api, context, raw, *, repository=None):
     # Invalid content must not cause writes; subsequent transport/freshness failure invalidates our prior result.
     rendered = preview(context, raw)
+    from .debt_publishing import verify_debt
+    verify_debt(repository, context, ReviewResult.model_validate(raw['result']))
     try:
         return _publish(api, context, rendered, raw, repository)
     except (StaleReview, RuntimeError):

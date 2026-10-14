@@ -98,6 +98,7 @@ def validate_proposed_profile(repository, head):
     for rule in profile.rules:
         if rule.id == 'BUGS' or not document(rule.source.path) or rule.source.quote not in repository.read(head, rule.source.path):
             raise ValueError('Proposed profile has an invalid rule or normative source')
+    load_registry(repository, head, profile)
 
 
 def analyze_snapshot(api, root, context, env, *, model_factory=None, fetcher=fetch_head):
@@ -118,11 +119,11 @@ def analyze_snapshot(api, root, context, env, *, model_factory=None, fetcher=fet
             model_factory = DeepSeekReviewModel
         model = model_factory()
     except (ValueError, RuntimeError):
-        result = review(root, context.base_sha, context.head_sha)
+        result = review(root, context.base_sha, context.head_sha, project_debt=True)
         result = result.model_copy(update={'status':'error', 'execution':'failed',
             'limitations':[*result.limitations, 'Review model is not configured; no cloud request sent']})
     else:
-        result = review(root, context.base_sha, context.head_sha, model=model, limits=CI_LIMITS)
+        result = review(root, context.base_sha, context.head_sha, model=model, limits=CI_LIMITS, project_debt=True)
     return make_artifact(context, result)
 
 
